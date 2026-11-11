@@ -151,12 +151,10 @@ def recount(device, storage, removed: dict | None = None) -> Recount:
     return Recount(categories, free, capacity, now, dumps)
 
 
-def space_read(session, space: tuple[int | None, int | None],
-               at: datetime | None = None) -> None:
-    """The free space and the capacity of the open device, read (or counted) now or `at`, kept
-    in the session with when: the latest count wins (latest_count)."""
-    session.space = space
-    session.space_at = at or datetime.now()
+def known_capacity(session) -> int | None:
+    """The capacity of the open device as read before (it does not change); None: not yet."""
+    space = getattr(session, "space", None)
+    return space[1] if space is not None else None
 
 
 def counted_again(session, counted: Recount) -> bool:
@@ -170,9 +168,8 @@ def counted_again(session, counted: Recount) -> bool:
     session.recount = counted
     # A free space not told by this count is not known now; a capacity not told is still the
     # one known: it does not change.
-    known = getattr(session, "space", None)
-    space_read(session, (counted.free, counted.capacity if counted.capacity is not None
-                         else known[1] if known is not None else None), counted.at)
+    session.space = (counted.free, counted.capacity if counted.capacity is not None
+                     else known_capacity(session))
     found = getattr(session, "diagnostics", None)
     if found is not None:
         # Not listed by this count: not known now (not those of the opening).
@@ -213,17 +210,16 @@ class Told:
 
 def told(session) -> Told:
     """The crashes of every source (session_crashes), whether the error logs were read, the
-    kinds of file and the space of the latest count: the session's own (at the opening, after
-    a write: session.recount) or the line of this connection in the device log
-    (history.connection_line, put right by the command line later), whichever was counted
-    later; and whether the device has diagnostic data (has_diagnostics, by what the window read
-    at the opening, the copies and the crash logs to copy). Nothing is asked of the device:
-    the page and the row of the device page alike."""
+    space the window read last (session.space: the one source of it), the kinds of file
+    counted last (kinds_counted), and whether the device has diagnostic data (has_diagnostics,
+    by what the window read at the opening, the copies and the crash logs to copy). Nothing is
+    asked of the device: the page, the row of the device page and the report alike."""
     found = getattr(session, "diagnostics", None)
     device, storage = getattr(session, "device", None), getattr(session, "storage", None)
     unit = getattr(device, "unit_id", None)
     test_drive = bool(getattr(storage, "test_drive", False))
-    free, capacity, categories, counted_at, recounted = latest_count(session)
+    free, capacity = getattr(session, "space", None) or (None, None)
+    categories, counted_at, recounted = kinds_counted(session)
     errors_known = found is not None and found.errors_known
     found_crashes = session_crashes(session)
     dumps = found.dumps if found is not None and found.dumps_known else None
@@ -237,49 +233,22 @@ def told(session) -> Told:
                 hidden, copies, has)
 
 
-def latest_count(session) -> tuple[int | None, int | None, dict[str, int], datetime | None,
-                                   bool]:
-    """The free space, the capacity, the kinds of file and when they were counted, of the
-    latest count: the session's own (at the opening, after a write: session.recount) or the
-    line of this connection in the device log (history.connection_line, put right by the
-    command line later), whichever was counted later; and whether it was counted again after
-    the connection. Nothing is asked of the device."""
+def kinds_counted(session) -> tuple[dict[str, int], datetime | None, bool]:
+    """The kinds of file of the open device, when they were counted, and whether that was
+    after the connection: from this connection's line in the device log (history.
+    connection_line; every count, of the window or the command line, puts it right), else
+    from the window's own count (session.recount: a device the log does not keep). Nothing is
+    asked of the device."""
     device, storage = getattr(session, "device", None), getattr(session, "storage", None)
-    unit = getattr(device, "unit_id", None)
-    line = history.connection_line(device, storage) if unit and storage is not None else None
-    free, capacity = getattr(session, "space", None) or (None, None)
-    space_at = session.space_at  # None: read at the opening
+    line = (history.connection_line(device, storage)
+            if getattr(device, "unit_id", None) and storage is not None else None)
     counted = getattr(session, "recount", None)
-    line_counted = (history.counted_time(line) if line is not None and "counted" in line
-                    else None)
-    # The kinds of file: the session's count or the line counted later.
-    if line_counted is not None and (counted is None or line_counted > counted.at):
-        categories, counted_at = dict(line["categories"]), line_counted
-    elif counted is not None:
-        categories, counted_at = dict(counted.categories), counted.at
-    elif line is not None:
-        categories, counted_at = dict(line["categories"]), history.counted_time(line)
-    else:
-        categories, counted_at = {}, None
-    # The space: the session's reading (Refresh, a count) or the line counted later.
-    if line_counted is not None and (space_at is None or line_counted > space_at):
-        free, capacity = line.get("free"), line.get("capacity", capacity)
-    elif line is not None and free is None and space_at is None:
-        free = line.get("free")  # not read at the opening: the connection's
-    if line is not None and capacity is None:
-        capacity = line.get("capacity")
-    return (free, capacity, categories, counted_at,
-            counted is not None or line_counted is not None)
-
-
-def space_now(session) -> tuple[int | None, int | None] | None:
-    """The free space and the capacity of the latest count (latest_count), for the row Device
-    Storage and the report as the page has them; None while the session's space is not read
-    yet."""
-    if getattr(session, "space", None) is None:
-        return None
-    free, capacity, *_rest = latest_count(session)
-    return free, capacity
+    if line is not None:
+        return (dict(line["categories"]), history.counted_time(line),
+                "counted" in line or counted is not None)
+    if counted is not None:
+        return dict(counted.categories), counted.at, True
+    return {}, None, False
 
 
 def read(session, ask_device: bool = True) -> Facts:
@@ -287,9 +256,9 @@ def read(session, ask_device: bool = True) -> Facts:
     window reads the page only then: its results are in the session before it says it is
     done). In the background: what can be freed (freeing.plan: the memory dumps listed again
     for their times, the update server asked for the updates the device did not install),
-    nothing else asked of the device. After a removal, the kinds of file and the space counted
-    then (session.recount). `ask_device` False while another task runs: nothing
-    asked, what can be freed left out (device_busy)."""
+    nothing else asked of the device: the space is the session's (the window reads it with
+    the page). `ask_device` False while another task runs: nothing asked, what can be freed
+    left out (device_busy)."""
     from openexpress import freeing, known_devices
 
     device, storage = session.device, session.storage

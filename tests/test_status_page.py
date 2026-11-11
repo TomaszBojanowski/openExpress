@@ -607,10 +607,11 @@ def drive_page(clock, in_the_window, tmp_path):
 
     from conftest import DEVICE_XML
 
-    from openexpress import diagnostics, history, status
+    from openexpress import diagnostics, history
     from openexpress.device.storage import LocalStorage
     from openexpress.device.xmldevice import parse
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.status_page import read_page
 
     class Drive(LocalStorage):
         """1 MB of capacity; its free space what its files and the system (300 kB) leave."""
@@ -640,7 +641,7 @@ def drive_page(clock, in_the_window, tmp_path):
     session = device_session(device=device, storage=storage, diagnostics=at_open,
                              space=None)
     asked = questions(in_the_window)
-    win, section = page(status.read(session))
+    win, section = page(read_page(session))  # as the window reads it, the space too
     win.session = session
     win.toasts = []
     win.toast = win.toasts.append
@@ -1313,6 +1314,7 @@ def test_after_a_removal_the_row_device_storage_tells_the_space_of_now(clock, in
     in_the_window("refresh_space", lambda win, s: read_again.append(s))
     win, _section = page()
     working(win, monkeypatch)
+    drawn.clear()  # the page drew it when it was shown
     s = win.session
     counted = status.Recount({}, 9_000, 10_000, clock.current, dumps=[])
     status_page._freed(win, s, freeing.Freed(removed=[("GARMIN/Debug/dump/a.zip", 1)]), "1 removed",
@@ -1918,9 +1920,10 @@ def row_subtitle_for(session):
 @pytest.mark.needs_display
 def test_the_row_and_the_page_tell_the_same_summary_when_the_free_space_was_not_read(
         tmp_path, clock):
-    """The free space not read at the opening but in this connection's line: the row of the device
-    page and the page's summary say the same."""
+    """The free space not read at the opening: the page reads it, and the row of the device
+    page says the same as the page's summary then."""
     from openexpress.gui import words
+    from openexpress.gui.status_page import read_page
 
     st, dev = make_free_watch(tmp_path, free=100 * MB)  # under 500 MB of 10 GB: little
     found = diagnostics.at_open(dev, st)
@@ -1928,7 +1931,7 @@ def test_the_row_and_the_page_tell_the_same_summary_when_the_free_space_was_not_
     s = device_session(device=dev, storage=st, diagnostics=found,
                        diagnostics_reading=None, space=(None, 10_000_000_000),
                        client=None)
-    made = status.read(s)
+    made = read_page(s)
     page_title = words.status_summary(made.crashes, made.errors_known, made.free,
                                       made.capacity, datetime.now())[1]
     row = row_subtitle_for(s)
@@ -1986,9 +1989,11 @@ def test_the_row_of_a_device_without_diagnostic_data_says_what_its_page_says(tmp
     assert row == "No Diagnostic Data", f"the row says {row!r}"
 
 
-def test_the_page_takes_a_count_newer_than_the_sessions(tmp_path, clock):
-    """The page takes the latest count: this connection's line counted by the command line after
-    the window's own count."""
+@pytest.mark.needs_display
+def test_the_page_reads_the_space_of_now(tmp_path, clock):
+    """The page reads the free space when it is read: after the command line removed a file and
+    put this connection's line right, the page tells the space of now, not the window's own
+    count."""
     st, dev = make_free_watch(tmp_path)
     history.note_connection(dev, st)
     t1 = clock.current
@@ -2000,7 +2005,9 @@ def test_the_page_takes_a_count_newer_than_the_sessions(tmp_path, clock):
     history.note_counted(dev, st, clock.current)  # as the command line puts the line right
     line = history.connection_line(dev, st)
     assert line["free"] == 9_000_000
-    made = status.read(s)
+    from openexpress.gui import status_page
+
+    made = status_page.read_page(s)
     assert made.free == 9_000_000, f"the page shows {made.free}, the device log {line['free']}"
 
 

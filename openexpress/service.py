@@ -54,9 +54,9 @@ class DeviceSession:
     # Set by check_session() for a watch connected as a USB drive: why it is not synced (a
     # reason of drive_sync_refusal and the error of unit-info, drive_refusal()); None: it may be.
     drive_refusal: tuple[str, str] | None = None
-    # (free space, capacity) in bytes as the window read them, in the thread that opened the
-    # device and again in the background after it wrote to it; None: not read yet, and
-    # either one None: not known (it could not be asked).
+    # (free space, capacity) in bytes as the window read them last, off its thread: at the
+    # opening, by the page Device Status and after a write (the one source of the space the
+    # window shows); None: not read yet, and either one None: not known (not asked).
     space: tuple[int | None, int | None] | None = None
     # Its activities not uploaded yet (sync.ActivitiesToSync) as the window counted them in
     # the background, once its tile was drawn; None: not counted (yet) or not known. Whether
@@ -76,8 +76,6 @@ class DeviceSession:
     # removed files from it (status.recount): the page Device Status shows them instead of the
     # count of the connection; None: not counted again yet.
     recount: object | None = None
-    # When `space` was read (status.space_read); None: at the opening.
-    space_at: object | None = None
     # Set once the count after a write is done (window_tasks.count_again); None: no count yet.
     counting: threading.Event | None = field(default=None, repr=False)
     # The page Device Status waits to be read again (status_page): the device page's row

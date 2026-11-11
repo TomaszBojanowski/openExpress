@@ -174,9 +174,10 @@ connection twice. So the page of the device not connected
 A log whose last line is of another connection is left as it is, and so is a line counted again
 after the count began (a count begun before a removal never undoes the removal's): a task of the
 window waits for a count still going, which is in the session before the task goes on. The page,
-its row, the row Device Storage and the report take the latest count: the session's (a reading
-at Refresh, a count after a write) or this connection's line when the command line counted it
-later; never another connection's line. A capacity not told by a count is the
+its row, the row Device Storage and the report take one free space, the one the window read last
+(at the opening, at Refresh, after a write, and each time the page is read), and the kinds of
+file of this connection's line, which every count puts right, the command line's too (the
+window's own count only for a device the log does not keep); never another connection's line. A capacity not told by a count is the
 one known (it does not change); free space and memory dumps not told are not known. A folder
 behind a link is not counted. A write begun before Forget Device (the reading at the opening,
 the line of the connection, a count, a removal put right), in this process or another, writes

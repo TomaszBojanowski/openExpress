@@ -1104,8 +1104,13 @@ class Sized(Device):
         return self.CAP
 
 
-def test_after_the_command_line_counted_later_the_report_tells_the_pages_free_space(
+@pytest.mark.needs_display
+def test_after_the_command_line_removed_files_the_page_and_the_report_tell_the_space_of_now(
         tmp_path, clock):
+    """The page reads the free space when it is read (status_page.read_page): the report,
+    built from the session as the window builds it, tells the same."""
+    from openexpress.gui import status_page
+
     root = make_root(tmp_path, err=[], dumps=[("RAM_bak1.zip", 200_000), ("RAM.zip", 300)])
     st = Sized(root)
     dev = opened(root)[1]
@@ -1116,10 +1121,10 @@ def test_after_the_command_line_counted_later_the_report_tells_the_pages_free_sp
     clock.current += timedelta(minutes=5)
     (root / "GARMIN" / "Debug" / "dump" / "RAM_bak1.zip").unlink()  # the command line removed
     history.after_removal(dev, st, {"logs": [("GARMIN/Debug/dump/RAM_bak1.zip", 200_000)]})
-    page_free = status.told(s).free
-    text = report.build(dev, st, space=status.space_now(s), found=found)  # as the window
+    page_free = status_page.read_page(s).free
+    text = report.build(dev, st, space=s.space, found=found)  # as the window
     line = next(x for x in text.splitlines() if x.startswith("- Storage:"))
-    assert page_free == st.free_space()  # the page tells the count of the command line
+    assert page_free == st.free_space()  # the space of now, after the command line
     assert report._size(page_free) in line, (page_free, line)
 
 
@@ -1508,9 +1513,9 @@ def test_refresh_after_files_removed_outside_the_window_shows_the_free_space_of_
     # reading at the opening the one of this connection (at_open, once per connection).
     clock.current += timedelta(minutes=1)
     s2 = session_of(st, dev, diagnostics.at_open(dev, st))
-    status.space_read(s2, (st.free_space(), st.capacity()))  # as detection.with_space
+    s2.space = (st.free_space(), st.capacity())  # as detection.with_space
     history.note_connection(dev, st, found=s2.diagnostics)
-    shown_row = status.space_now(s2)[0]
+    shown_row = s2.space[0]
     shown_page = status.told(s2).free
     assert shown_row == now_free, (
         f"device page row after Refresh: {shown_row} free; the device has {now_free} "

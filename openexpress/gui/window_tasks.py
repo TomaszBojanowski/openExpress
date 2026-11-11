@@ -262,9 +262,7 @@ def render_space(win) -> None:
     s = win.session
     if row is None or s is None:
         return
-    from openexpress import status
-
-    space = status.space_now(s)  # the latest count, as the page has it
+    space = s.space  # as the page and the report have it
     if space is None:
         row.set_subtitle(space_text(None, reading=True))
         bar.set_visible(False)
@@ -283,16 +281,15 @@ def refresh_space(win, s) -> None:
     dropped."""
     if s is None:
         return
-    known = getattr(s, "space", None)
-    capacity = known[1] if known is not None else None
+    from openexpress import status
+
+    capacity = status.known_capacity(s)
 
     def got(space):
         if win.session is not s:
             log.info("device storage: read after the device was closed, not shown")
             return
-        from openexpress import status
-
-        status.space_read(s, space)
+        s.space = space
         render_space(win)
         # The page Device Status, when shown, with the space and the files of now.
         from openexpress.gui.device_page import status_changed

@@ -42,6 +42,7 @@ from openexpress.gui.window_tasks import (  # noqa: E402
     Answer,
     confirm,
     inform,
+    read_space,
     refresh_space,
     render_space,
     row_title,
@@ -167,6 +168,14 @@ def kind_names() -> dict[str, str]:
     }
 
 
+def read_page(s) -> status.Facts:
+    """The page's reading, off the window's thread: the free space read now (the session's,
+    the one source of the space the window shows: the page, the row Device Storage, the
+    report), then the facts of the device (status.read)."""
+    s.space = read_space(s.storage, status.known_capacity(s))
+    return status.read(s)
+
+
 class StatusPage:
     def load_status(self) -> None:
         """The page read once the window's reading of the device's error logs is done (its
@@ -192,7 +201,7 @@ class StatusPage:
             _read_when_free(self, s)
             return
         # TRANSLATORS: while the page Device Status reads what it shows
-        self._load("status", _("Reading the Device…"), lambda: status.read(s),
+        self._load("status", _("Reading the Device…"), lambda: read_page(s),
                    self.show_status, device=False)
 
     def show_status(self, facts: status.Facts) -> str | None:
@@ -205,6 +214,7 @@ class StatusPage:
         sec.banner.set_title(_("Another task is running\u00a0– free up space or copy diagnostic "
                                "files when it ends"))
         sec.banner.set_revealed(facts.device_busy)
+        render_space(self)  # the space the page read: the row Device Storage tells it too
         return _build(self, sec, facts, self)
 
 
