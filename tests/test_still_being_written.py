@@ -80,7 +80,7 @@ def test_the_words_of_the_line():
                  for n in (1, 3, 5)]
     finally:
         i18n.setup("en")
-    rest = f"przez urządzenie – odłącz je i{NB}podłącz ponownie, potem zsynchronizuj jeszcze raz"
+    rest = f"przez urządzenie{NB}– odłącz je i{NB}podłącz ponownie, potem zsynchronizuj jeszcze raz"
     assert words == [f"1 plik był jeszcze zapisywany {rest}",
                      f"3 pliki były jeszcze zapisywane {rest}",
                      f"5 plików było jeszcze zapisywanych {rest}"]

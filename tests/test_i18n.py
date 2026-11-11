@@ -210,6 +210,19 @@ def _tool(tmp_path, name, text, *args):
     return po.read_text(encoding="utf-8"), done.stdout
 
 
+def test_polish_gets_a_hard_space_before_an_en_dash(tmp_path):
+    """Polish: the space before an en dash is a hard one, so that a text that wraps never begins
+    a line with the dash (a banner at 360 px: "Trwa inne zadanie / – po nim…"); a hyphen is no
+    dash."""
+    po = ('msgid ""\nmsgstr ""\n"Language: pl\\n"\n\n'
+          'msgid "a"\nmsgstr "Trwa inne zadanie – po nim zwolnisz miejsce"\n\n'
+          'msgid "b"\nmsgstr "Wi-Fi - sieć"\n')
+    text, said = _tool(tmp_path, "pl.po", po)
+    assert 'msgstr "Trwa inne zadanie – po nim zwolnisz miejsce"' in text
+    assert 'msgstr "Wi-Fi - sieć"' in text
+    assert said.endswith("1 texts, 1 spaces\n")
+
+
 CZECH_PO = """msgid ""
 msgstr ""
 "Language: cs\\n"

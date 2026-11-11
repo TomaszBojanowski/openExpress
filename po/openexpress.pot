@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 23:24+0100\n"
+"POT-Creation-Date: 2026-11-11 23:51+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1036,7 +1036,7 @@ msgstr ""
 
 #. TRANSLATORS: under "Space to free on the device:" when a dump's time is not known
 #: openexpress/cli.py
-msgid "older memory dumps: not known (the newest cannot be told)"
+msgid "older memory dumps: not known (the newest cannot be determined)"
 msgstr ""
 
 #. TRANSLATORS: under "Space to free on the device:" for a device whose GarminDevice.xml
@@ -7527,9 +7527,10 @@ msgstr ""
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
-msgid "The device did not remove {count} of the files; the others are removed."
+msgid ""
+"The device did not remove {count} of the files; the others were removed."
 msgid_plural ""
-"The device did not remove {count} of the files; the others are removed."
+"The device did not remove {count} of the files; the others were removed."
 msgstr[0] ""
 msgstr[1] ""
 

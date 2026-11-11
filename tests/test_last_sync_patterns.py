@@ -261,7 +261,7 @@ EXPECTED = {
               "then sync again"), True)]),
         "pl": ("2 nowe pliki, 1 wysłany", [
             (f"Pliki z{NB}urządzenia: monitorowanie, plan Garmin Coach", False),
-            ((f"1 plik był jeszcze zapisywany przez urządzenie – odłącz je i{NB}podłącz "
+            ((f"1 plik był jeszcze zapisywany przez urządzenie{NB}– odłącz je i{NB}podłącz "
               "ponownie, potem zsynchronizuj jeszcze raz"), True)])},
 }
 CASES = [(name, language) for name in EXPECTED for language in ("en", "pl")]

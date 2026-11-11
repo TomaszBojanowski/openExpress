@@ -359,7 +359,7 @@ def _print_free_space(plan) -> None:
         print("  " + _("older memory dumps: not known (their folder could not be listed)"))
     elif plan.older is None:
         # TRANSLATORS: under "Space to free on the device:" when a dump's time is not known
-        print("  " + _("older memory dumps: not known (the newest cannot be told)"))
+        print("  " + _("older memory dumps: not known (the newest cannot be determined)"))
     elif plan.older and plan.dumps_plan is None:
         # TRANSLATORS: under "Space to free on the device:" for a device whose GarminDevice.xml
         # gives no Unit ID; {dumps} is a count and a size, e.g. "3 (2.5 MB)"

@@ -869,9 +869,9 @@ def _freed(win, s, freed: freeing.Freed, done_text: str, counted=None) -> None:
     if problems:
         n = len(problems)
         if freed.removed:
-            text = ngettext("The device did not remove {count} of the files; the others are "
+            text = ngettext("The device did not remove {count} of the files; the others were "
                             "removed.",
-                            "The device did not remove {count} of the files; the others are "
+                            "The device did not remove {count} of the files; the others were "
                             "removed.", n).format(count=n)
         else:
             text = ngettext("The device did not remove the file.",

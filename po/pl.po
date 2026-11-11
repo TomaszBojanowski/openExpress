@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 23:24+0100\n"
+"POT-Creation-Date: 2026-11-11 23:51+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -1021,7 +1021,7 @@ msgid "{count} Assert entry, not shown (all with -v)"
 msgid_plural "{count} Assert entries, not shown (all with -v)"
 msgstr[0] "{count} wpis Assert, pomijany (wszystkie z -v)"
 msgstr[1] "{count} wpisy Assert, pomijane (wszystkie z -v)"
-msgstr[2] "{count} wpisów Assert, pomijane (wszystkie z -v)"
+msgstr[2] "{count} wpisów Assert, pomijanych (wszystkie z -v)"
 
 #. TRANSLATORS: under "Error logs on the device:" when one of them could not be read:
 #. as on the page Device Status, the crashes are then those kept on this computer
@@ -1044,7 +1044,7 @@ msgstr "brak wpisów"
 msgid ""
 "Memory dumps on the device: not known (their folder could not be listed)"
 msgstr ""
-"Zrzuty pamięci na urządzeniu: nie wiadomo (nie udało się odczytać listy ich "
+"Zrzuty pamięci na urządzeniu: nie wiadomo (nie udało się odczytać ich "
 "folderu)"
 
 #: openexpress/cli.py
@@ -1161,12 +1161,11 @@ msgstr "Miejsce do zwolnienia na urządzeniu:"
 #: openexpress/cli.py
 msgid "older memory dumps: not known (their folder could not be listed)"
 msgstr ""
-"starsze zrzuty pamięci: nie wiadomo (nie udało się odczytać listy ich "
-"folderu)"
+"starsze zrzuty pamięci: nie wiadomo (nie udało się odczytać ich folderu)"
 
 #. TRANSLATORS: under "Space to free on the device:" when a dump's time is not known
 #: openexpress/cli.py
-msgid "older memory dumps: not known (the newest cannot be told)"
+msgid "older memory dumps: not known (the newest cannot be determined)"
 msgstr "starsze zrzuty pamięci: nie wiadomo (nie da się ustalić najnowszego)"
 
 #. TRANSLATORS: under "Space to free on the device:" for a device whose GarminDevice.xml
@@ -3855,8 +3854,8 @@ msgid ""
 "the sign-in, the devices connected, their last sync and updates, from what "
 "this installation knows"
 msgstr ""
-"logowanie, podłączone urządzenia, ich ostatnia synchronizacja i aktualizacje "
-"– z tego, co wie ta instalacja"
+"logowanie, podłączone urządzenia, ich ostatnia synchronizacja "
+"i aktualizacje – z tego, co wie ta instalacja"
 
 #: openexpress/cli.py
 msgid "also ask Garmin Connect and Garmin's update server now"
@@ -4063,7 +4062,7 @@ msgstr "plik GPX na tym komputerze"
 msgid ""
 "the course's name (default: that of its track or route, else that of FILE)"
 msgstr ""
-"nazwa kursu (domyślnie: nazwa jego śladu lub trasy, a bez niej – nazwa pliku "
+"nazwa kursu (domyślnie: nazwa jego śladu lub trasy, a bez niej – nazwa pliku "
 "FILE)"
 
 #: openexpress/cli.py
@@ -8018,7 +8017,7 @@ msgstr "Awaria"
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "boot log error {number}"
-msgstr "błąd w dzienniku startów {number}"
+msgstr "błąd {number} w dzienniku startów"
 
 #. TRANSLATORS: title of the row with what the device wrote in its error log about a
 #. crash
@@ -8034,7 +8033,7 @@ msgstr "Zaktualizowano oprogramowanie"
 #. TRANSLATORS: a row of "Crashes and Updates": the first connection to this computer
 #: openexpress/gui/status_page.py
 msgid "First Connected Here"
-msgstr "Pierwsze podłączenie"
+msgstr "Pierwsze podłączenie tutaj"
 
 #. TRANSLATORS: a row of "Crashes and Updates" when the device's error logs could not be
 #. read
@@ -8062,7 +8061,7 @@ msgstr "Pokaż wszystko"
 #. with a button that removes it
 #: openexpress/gui/status_page.py
 msgid "Free Up Space"
-msgstr "Zwolnij miejsce"
+msgstr "Zwalnianie miejsca"
 
 #. TRANSLATORS: description of "Free Up Space"
 #: openexpress/gui/status_page.py
@@ -8269,12 +8268,13 @@ msgstr "{done}. Potem {why}."
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
-msgid "The device did not remove {count} of the files; the others are removed."
+msgid ""
+"The device did not remove {count} of the files; the others were removed."
 msgid_plural ""
-"The device did not remove {count} of the files; the others are removed."
-msgstr[0] "Urządzenie nie usunęło {count} z plików; pozostałe są usunięte."
-msgstr[1] "Urządzenie nie usunęło {count} z plików; pozostałe są usunięte."
-msgstr[2] "Urządzenie nie usunęło {count} z plików; pozostałe są usunięte."
+"The device did not remove {count} of the files; the others were removed."
+msgstr[0] "Urządzenie nie usunęło {count} z plików; pozostałe usunięto."
+msgstr[1] "Urządzenie nie usunęło {count} z plików; pozostałe usunięto."
+msgstr[2] "Urządzenie nie usunęło {count} z plików; pozostałe usunięto."
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
@@ -10588,13 +10588,13 @@ msgid_plural ""
 "{count} files were still being written by the device – unplug it and plug it "
 "in again, then sync again"
 msgstr[0] ""
-"{count} plik był jeszcze zapisywany przez urządzenie – odłącz je i podłącz "
+"{count} plik był jeszcze zapisywany przez urządzenie – odłącz je i podłącz "
 "ponownie, potem zsynchronizuj jeszcze raz"
 msgstr[1] ""
-"{count} pliki były jeszcze zapisywane przez urządzenie – odłącz je i podłącz "
+"{count} pliki były jeszcze zapisywane przez urządzenie – odłącz je i podłącz "
 "ponownie, potem zsynchronizuj jeszcze raz"
 msgstr[2] ""
-"{count} plików było jeszcze zapisywanych przez urządzenie – odłącz je "
+"{count} plików było jeszcze zapisywanych przez urządzenie – odłącz je "
 "i podłącz ponownie, potem zsynchronizuj jeszcze raz"
 
 #: openexpress/service.py

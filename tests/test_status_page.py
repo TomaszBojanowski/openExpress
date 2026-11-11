@@ -587,7 +587,7 @@ def test_what_the_device_did_not_remove_is_told(clock, in_the_window, monkeypatc
     button_of(titled(section, "Older Memory Dumps")).emit("clicked")
     asked[0].answers[0].run()
     assert told == [("Not All Files Removed",
-                     ("The device did not remove 1 of the files; the others are removed.\n\n"
+                     ("The device did not remove 1 of the files; the others were removed.\n\n"
                       "RAM_bak1.zip: Cannot delete RAM_bak1.zip: the device said no"))]
     assert win.reloads == ["status"]  # the page shows what is left
 

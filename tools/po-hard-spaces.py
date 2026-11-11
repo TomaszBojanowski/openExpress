@@ -3,6 +3,7 @@
 wraps never leaves a short word or a mark alone at the end or the start of a line:
 - Polish, Czech and Slovak: a hard space (U+00A0) instead of a plain one after a one-letter
   word (Polish w, z, i, o, u, a; Czech and Slovak k, s, v, z, o, u, a, i; and their capitals);
+- Polish also: a hard space before an en dash (–), which would otherwise begin a line;
 - French: a narrow hard space (U+202F) instead of a plain one before ; : ! ? and inside « ».
 The language is the file's name (pl.po), or --lang. A language without rules is left as it
 is. In the repository only Polish is changed: every other language is its translators', in
@@ -43,8 +44,18 @@ def french(text: str) -> list[tuple[int, str]]:
         (i + 1 < len(text) and text[i + 1] in ";:!?»") or (i > 0 and text[i - 1] == "«"))]
 
 
+def before_a_dash(text: str) -> list[tuple[int, str]]:
+    """The plain spaces before an en dash (a hyphen is no dash)."""
+    return [(i, NBSP) for i, ch in enumerate(text) if ch == " " and text[i + 1:i + 2] == "–"]
+
+
+def both(*rules):
+    return lambda text: [place for rule in rules for place in rule(text)]
+
+
 RULES = {**{lang: one_letter_words(letters) for lang, letters in ONE_LETTER_WORDS.items()},
          "fr": french}
+RULES["pl"] = both(RULES["pl"], before_a_dash)
 ESCAPES = {"n": "\n", "t": "\t", '"': '"', "\\": "\\"}
 
 
