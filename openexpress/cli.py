@@ -571,17 +571,18 @@ def _history_line(line: dict) -> str:
     else:
         # TRANSLATORS: in a line of the device log (`diagnostics`)
         parts.append(_("no memory dumps"))
-    if "crash" not in line:
+    found = history.crash_entries(line)
+    if "errors" not in line:
         # TRANSLATORS: in a line of the device log (`diagnostics`): its error logs could not
         # be read
         parts.append(_("crashes not known"))
-    elif line["crash"] is None:
+    elif not found:
         # TRANSLATORS: in a line of the device log (`diagnostics`)
         parts.append(_("no crash in the error logs"))
     else:
         # TRANSLATORS: in a line of the device log (`diagnostics`); {crash} is in English, as
         # the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
-        parts.append(_("last crash: {crash}").format(crash=history.crash_entry(line).words()))
+        parts.append(_("last crash: {crash}").format(crash=found[0].words()))
     via = _("USB drive") if line["via"] == "drive" else "MTP"
     when = history.local_time(line).strftime("%Y-%m-%d %H:%M")
     return f"{when} {via}: " + ", ".join(parts)

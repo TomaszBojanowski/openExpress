@@ -2,10 +2,10 @@
 (devices/<unit ID>/history.jsonl, readable by its owner alone).
 
 A line says when and how the device was connected, its software version, its capacity and free
-space, the space each kind of file takes, its memory dumps and every crash its error logs hold
-(the newest apart): counts and short fields only, never a file name of the user's, the unit ID
-or a serial number. It is written at most once a connection, whoever opened the device (the
-window, the command line, the background sync: note_connection), and kept whatever the copy of
+space, the space each kind of file takes, its memory dumps and every crash its error logs hold:
+counts and short fields only, never a file name of the user's, the unit ID or a serial number.
+It is written at most once a connection, whoever opened the device (the window, the command
+line, the background sync: note_connection), and kept whatever the copy of
 the diagnostic files says; Forget Device deletes it with the rest of the device's folder. Read
 back line by line, a damaged or foreign line skipped (and kept as it is when the log is written
 again); lines more than two years older than the newest and the oldest beyond MAX_LINES are
@@ -298,11 +298,6 @@ def _crash_fields(crash) -> dict:
     return fields
 
 
-def _crash(entries) -> dict | None:
-    crash = next((e for e in entries if e.is_crash), None)
-    return None if crash is None else _crash_fields(crash)
-
-
 def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str,
           via: str) -> dict:
     from openexpress import diagnostics
@@ -327,7 +322,6 @@ def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str
     if dumps is not None:
         line["dumps"] = {"count": len(dumps), "bytes": sum(size for _p, size in dumps)}
     if entries is not None:
-        line["crash"] = _crash(entries)  # None: the error logs hold no crash
         # Every crash they hold, so that the device's page from its records tells as many as
         # the page of the device connected did.
         line["crashes"] = [_crash_fields(e) for e in entries if e.is_crash]
@@ -717,7 +711,8 @@ def _text(value, empty_ok: bool = True) -> bool:
 def valid(raw: str) -> dict | None:
     """The line as the program wrote it, with only what it knows of it; None for anything
     else (not JSON, another version, a field of the wrong kind). A field left out is not
-    known (capacity, free, dumps, crash); "crash": None is known: no crash."""
+    known (capacity, free, dumps; "errors" and "crashes": the error logs not read). A field
+    "crash" (the newest crash alone), which a line may hold, is left out."""
     try:
         item = json.loads(raw)
     except ValueError:
@@ -747,11 +742,6 @@ def valid(raw: str) -> dict | None:
                 and _count(dumps.get("bytes"))):
             return None
         line["dumps"] = {"count": dumps["count"], "bytes": dumps["bytes"]}
-    if "crash" in item:
-        crash = item["crash"]
-        if crash is not None and not _crash_ok(crash):
-            return None
-        line["crash"] = None if crash is None else _crash_kept(crash)
     if "crashes" in item:
         found = item["crashes"]
         if not (isinstance(found, list) and all(_crash_ok(c) for c in found)):
@@ -818,16 +808,7 @@ def _entry(crash: dict):
                       crash.get("screen"), software=crash.get("software"))
 
 
-def crash_entry(line: dict):
-    """The newest crash of the line as an error entry (diagnostics.ErrorEntry), for its words."""
-    crash = line.get("crash")
-    return _entry(crash) if crash else None
-
-
 def crash_entries(line: dict) -> list:
-    """Every crash the error logs held at the line's connection (error entries); a line written
-    before they were kept: its newest."""
-    if "crashes" in line:
-        return [_entry(c) for c in line["crashes"]]
-    newest = crash_entry(line)
-    return [newest] if newest is not None else []
+    """Every crash the error logs held at the line's connection, the newest first, as error
+    entries (diagnostics.ErrorEntry); none when they were not read ("errors" left out)."""
+    return [_entry(c) for c in line.get("crashes", ())]

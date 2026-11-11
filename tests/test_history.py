@@ -149,7 +149,7 @@ def written(**changes) -> dict:
     line = {"v": 1, "time": "2026-10-20T12:00:00+02:00", "conn": "made-up-a", "via": "mtp",
             "software": "23.39", "capacity": CAPACITY, "free": FREE,
             "categories": {"maps": 1, "system": 2}, "dumps": {"count": 0, "bytes": 0},
-            "crash": None}
+            "crashes": [], "errors": 0}
     return {**line, **changes}
 
 
@@ -171,8 +171,8 @@ def test_a_connection_writes_one_line_of_counts(made_up, clock):
     system = CAPACITY - FREE - sum(KINDS.values())
     assert line["categories"] == {**KINDS, "system": system}
     assert line["dumps"] == {"count": 2, "bytes": 500}
-    assert line["crash"] == {"kind": "RTL Trap", "at": "2026-10-20 22:24:06", "error": "0x003",
-                             "pc": "0x10000abc", "screen": "2301"}
+    assert line["crashes"][0] == {"kind": "RTL Trap", "at": "2026-10-20 22:24:06",
+                                  "error": "0x003", "pc": "0x10000abc", "screen": "2301"}
     assert datetime.fromisoformat(line["time"]).astimezone().replace(tzinfo=None) == clock.current
 
 
@@ -204,7 +204,7 @@ def test_a_drive_gets_what_it_shows(root, clock):
     st = Device(root, drive=True)
     assert history.note_connection(device_of(st), st)
     (line,) = history.read(UNIT).lines
-    assert line["via"] == "drive" and line["crash"] is None
+    assert line["via"] == "drive" and line["crashes"] == []
     assert line["dumps"] == {"count": 0, "bytes": 0}
     assert line["categories"]["activities"] == 3000
 
@@ -258,7 +258,7 @@ def test_the_window_writes_it_with_what_it_read_of_the_errors(made_up, clock, in
     (work, done), = background
     done(work())
     (line,) = history.read(UNIT).lines
-    assert line["crash"]["error"] == "0x003"
+    assert line["crashes"][0]["error"] == "0x003"
     read_logs = [p for p in st.reads if p.endswith("err_log.bak")]
     assert len(read_logs) == 1  # read once, for the page and the line
 
@@ -454,7 +454,7 @@ def test_what_could_not_be_read_is_left_out_not_zero(made_up, clock, monkeypatch
     monkeypatch.setattr(st, "capacity", lambda: None)
     assert history.note_connection(dev, st)
     (line,) = history.read(UNIT).lines
-    assert not {"crash", "dumps", "capacity"} & line.keys()
+    assert not {"crashes", "errors", "dumps", "capacity"} & line.keys()
     assert line["free"] == FREE
 
 
@@ -481,11 +481,12 @@ def test_the_window_passes_on_what_it_could_not_read(made_up, clock, in_the_wind
     (work, done), = background
     done(work())
     (line,) = history.read(UNIT).lines
-    assert "crash" not in line and line["dumps"] == {"count": 2, "bytes": 500}
+    assert "crashes" not in line and line["dumps"] == {"count": 2, "bytes": 500}
 
 
 def test_a_line_without_what_was_not_known_is_read_back(clock):
-    known = {k: v for k, v in written().items() if k not in ("crash", "dumps", "free")}
+    known = {k: v for k, v in written().items()
+             if k not in ("crashes", "errors", "dumps", "free")}
     write_lines(known, written(dumps={"count": "two", "bytes": 1}))
     kept = history.read(UNIT)
     assert kept.lines == [known] and kept.skipped == 1
@@ -496,7 +497,7 @@ def test_diagnostics_tells_not_known_from_none(clock):
     from openexpress.i18n import plain_spaces
 
     write_lines({k: v for k, v in written(conn="made-up-a").items()
-                 if k not in ("crash", "dumps", "free")},
+                 if k not in ("crashes", "errors", "dumps", "free")},
                 written(conn="made-up-b", time="2026-10-20T13:00:00+02:00"))
     out = [plain_spaces(line) for line in cli.history_lines(UNIT)]
     newest, oldest = out[1], out[2]

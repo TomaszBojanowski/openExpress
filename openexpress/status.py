@@ -294,7 +294,7 @@ def read(session, ask_device: bool = True) -> Facts:
 def read_kept(unit_id: int) -> Facts | None:
     """The facts of a remembered device that is not connected, from the records of this
     computer only: the last line of its device log (its storage, its memory dumps, whether its
-    error logs were read: "crash" left out of the line when not), its crashes (the copies and
+    error logs were read: "errors" left out of the line when not), its crashes (the copies and
     the device log), its software updates and first connection, its copies. None when there is
     no record of it. What the records do not tell is None, never none or 0."""
     from openexpress import known_devices
@@ -306,7 +306,7 @@ def read_kept(unit_id: int) -> Facts | None:
     newest = lines[-1] if lines else None
     found_crashes = crashes.history(unit_id)
     known = known_devices.load().get(unit_id)
-    errors_known = newest is not None and "crash" in newest
+    errors_known = newest is not None and "errors" in newest
     dumps = newest.get("dumps") if newest is not None else None
     dumps_at_last = (dumps["count"], dumps["bytes"]) if dumps is not None else None
     # A line written before it told its error logs: the device had one if it had entries.

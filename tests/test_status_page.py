@@ -33,7 +33,7 @@ def line(days: float, software: str, **extra) -> dict:
     when = (NOW - timedelta(days=days)).astimezone().isoformat(timespec="seconds")
     return {"v": 1, "time": when, "conn": f"made-up-{days}", "via": "mtp", "software": software,
             "categories": dict(CATEGORIES), "capacity": 31_100 * MB, "free": 12_400 * MB,
-            "dumps": {"count": 2, "bytes": 18_300_000}, "crash": None, **extra}
+            "dumps": {"count": 2, "bytes": 18_300_000}, "crashes": [], "errors": 0, **extra}
 
 
 # When the made-up watch was first seen here: a moment before its device log's first line.
@@ -133,9 +133,9 @@ def test_the_facts_of_a_device_not_connected_come_from_its_records(clock):
     known_devices.remember(KEPT_UNIT, "Made-up watch", "006-B0000-00", "21.05", "mtp",
                            now=FIRST_SEEN)
     crash_at = (NOW - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
-    write_log(KEPT_UNIT, [line(150, "21.05"), line(1, "21.18", crash={
+    write_log(KEPT_UNIT, [line(150, "21.05"), line(1, "21.18", errors=1, crashes=[{
         "kind": "RTL Trap", "at": crash_at, "error": "0x003", "pc": "0x10000abc",
-        "screen": "2301"})])
+        "screen": "2301"}])])
     made = status.read_kept(KEPT_UNIT)
     assert (made.connected, made.free, made.capacity, made.errors_known) == (
         False, 12_400 * MB, 31_100 * MB, True)
@@ -908,8 +908,9 @@ def test_the_device_page_leads_to_the_page_with_its_summary(clock):
 def crash_line(days_ago_crash: float, days: float = 1) -> dict:
     """A line of the device log whose error logs held a crash `days_ago_crash` days back."""
     at = (NOW - timedelta(days=days_ago_crash)).strftime("%Y-%m-%d %H:%M:%S")
-    return line(days, "21.18", crash={"kind": "RTL Trap", "at": at, "error": "0x003",
-                                      "pc": "0x10000abc", "screen": "2301"})
+    return line(days, "21.18", errors=1, crashes=[{"kind": "RTL Trap", "at": at,
+                                                   "error": "0x003", "pc": "0x10000abc",
+                                                   "screen": "2301"}])
 
 
 @pytest.mark.needs_display
@@ -1188,8 +1189,8 @@ def _write_kept_log(unit, now, versions=("21.18",)):
               "conn": f"made-up-{n}", "via": "mtp", "software": version,
               "categories": {"maps": 1000}, "capacity": 10_000, "free": 5_000,
               "dumps": {"count": 1, "bytes": 10},
-              "crash": {"kind": "RTL Trap", "at": at, "error": "0x003", "pc": "0x1",
-                        "screen": "1"}} for n, version in enumerate(versions)]
+              "crashes": [{"kind": "RTL Trap", "at": at, "error": "0x003", "pc": "0x1",
+                           "screen": "1"}], "errors": 1} for n, version in enumerate(versions)]
     paths.write_private(history.path(unit), "".join(json.dumps(x) + "\n" for x in lines))
 
 
@@ -1952,7 +1953,7 @@ def test_after_a_failed_reading_the_row_tells_what_the_page_tells(tmp_path, cloc
         "categories": {}, "crash": {"kind": "RTL Trap", "at": at, "error": "0x003",
                                     "pc": "0x1", "screen": None},
         "crashes": [{"kind": "RTL Trap", "at": at, "error": "0x003", "pc": "0x1",
-                     "screen": None}]}) + "\n")
+                     "screen": None}], "errors": 1}) + "\n")
     done = threading.Event()
     done.set()
     s = device_session(device=dev, storage=st, diagnostics=None,
