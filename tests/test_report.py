@@ -43,6 +43,25 @@ def test_the_list_says_what_the_device_exchanges_with_a_computer(device_root):
                            "Requests to Garmin's servers through a computer (ExpressRequest)"]
 
 
+def test_the_box_of_maps_follows_the_rule_of_the_maps_page(device_root):
+    """Maps are ticked as the Maps page finds them: a data type known to be no maps is none,
+    any other may be maps, also one named otherwise than the usual ones."""
+    st = FakeMtpStorage(device_root)
+
+    def box() -> str:
+        text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st, logged_in=True)
+        return next(line for line in text.splitlines() if line.endswith("] Maps"))
+
+    assert box() == "- [ ] Maps"
+    xml = device_root / "GARMIN" / "GarminDevice.xml"
+    maps = """<DataType><Name>TopoMapsOfSomeKind</Name>
+   <File><Location><Path>Garmin/Maps</Path><FileExtension>IMG</FileExtension></Location>
+    <TransferDirection>InputToUnit</TransferDirection></File></DataType>
+  <UpdateFile>"""
+    xml.write_text(xml.read_text().replace("<UpdateFile>", maps, 1))
+    assert box() == "- [x] Maps"
+
+
 def test_report_has_no_user_name_and_no_home_folder(device_root):
     from pathlib import Path
 

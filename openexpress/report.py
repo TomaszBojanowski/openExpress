@@ -13,7 +13,7 @@ import sys
 from pathlib import Path
 from urllib.parse import quote, urlencode
 
-from openexpress import __version__, paths
+from openexpress import __version__, maps, paths
 from openexpress.device.storage import Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import human_size
@@ -34,7 +34,7 @@ FEATURES = [
     ("Courses / workouts to the device", lambda d: bool({"FIT_TYPE_5", "FIT_TYPE_6"} & d)),
     ("Connect IQ", lambda d: "IQAppsConfiguration" in d),
     ("Music", lambda d: "MEDIA_TRACK" in d),
-    ("Maps", lambda d: bool({"PreProgrammedNamedMaps", "BaseMaps", "NMaps"} & d)),
+    ("Maps", lambda d: any(maps.may_be_maps(x) for x in d)),  # as the Maps page finds them
     ("Satellite data (EPO/CPE) from a computer",
      lambda d: any(x.startswith("Ephemeris") for x in d)),
     ("Wi-Fi networks set from a computer", lambda d: "WiFiConfiguration" in d),
