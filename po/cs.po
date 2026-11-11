@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-10 19:56+0100\n"
-"PO-Revision-Date: 2026-11-11 07:27+0000\n"
+"PO-Revision-Date: 2026-11-11 16:05+0000\n"
 "Last-Translator: prajzner <prajzner@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/openexpress/"
 "openexpress/cs/>\n"
@@ -192,7 +192,7 @@ msgstr "3. Vložte adresu URL: "
 
 #: openexpress/auth/sso.py
 msgid "The given URL has no ticket=ST-... parameter"
-msgstr "Zadaná adresa URL neobsahuje parametr ticket=ST-..."
+msgstr "Zadaná URL neobsahuje parametr ticket=ST-..."
 
 #. TRANSLATORS: shown in place of the signed-in Garmin account's name when it has no user
 #. name and no e-mail address
@@ -1000,19 +1000,21 @@ msgstr "Protokoly chyb v zařízení:"
 #, python-brace-format
 msgid "{count} Assert entry, not shown (all with -v)"
 msgid_plural "{count} Assert entries, not shown (all with -v)"
-msgstr[0] ""
+msgstr[0] "{count} záznam typu Assert není zobrazen (všechny zobrazíte pomocí -v)"
 msgstr[1] ""
+"{count} záznamy typu Assert nejsou zobrazeny (všechny zobrazíte pomocí -v)"
 msgstr[2] ""
+"{count} záznamů typu Assert není zobrazeno (všechny zobrazíte pomocí -v)"
 
 #. TRANSLATORS: under "Error logs on the device:" when one of them could not be read:
 #. as on the page Device Status, the crashes are then those kept on this computer
 #: openexpress/cli.py
-#, fuzzy
-#| msgid "the device's error logs and their copy on this computer"
 msgid ""
 "not every error log could be read: the crashes below are those kept on this "
 "computer"
-msgstr "chybové protokoly zařízení a jejich kopie v tomto počítači"
+msgstr ""
+"nepodařilo se načíst všechny chybové protokoly. Níže jsou uvedeny pády "
+"zaznamenané v tomto počítači"
 
 #. TRANSLATORS: under "Error logs on the device:" when the device has none
 #: openexpress/cli.py
@@ -1042,12 +1044,12 @@ msgstr ""
 "dumps)"
 
 #: openexpress/cli.py
-#, fuzzy
-#| msgid "the device's error logs and their copy on this computer"
 msgid ""
 "Crashes that restarted the device (error logs, boot log, copies and device "
 "log on this computer):"
-msgstr "chybové protokoly zařízení a jejich kopie v tomto počítači"
+msgstr ""
+"Pády, které způsobily restart zařízení (chybové protokoly, protokol "
+"spuštění, kopie a protokol zařízení uložené v tomto počítači):"
 
 #. TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
 #: openexpress/cli.py
@@ -1139,7 +1141,7 @@ msgstr ""
 #: openexpress/cli.py
 #, python-brace-format
 msgid "update files: not checked ({why})"
-msgstr ""
+msgstr "aktualizační soubory: nezkontrolováno ({why})"
 
 #. TRANSLATORS: `openexpress diagnostics --free-space`: heading above what it removes
 #: openexpress/cli.py
@@ -1153,12 +1155,12 @@ msgstr "{count} trasa v zařízení:"
 #. dumps could not be listed
 #: openexpress/cli.py
 msgid "older memory dumps: not known (their folder could not be listed)"
-msgstr ""
+msgstr "starší výpisy paměti: nelze zjistit (nepodařilo se načíst obsah složky)"
 
 #. TRANSLATORS: under "Space to free on the device:" when a dump's time is not known
 #: openexpress/cli.py
 msgid "older memory dumps: not known (the newest cannot be told)"
-msgstr ""
+msgstr "starší výpisy paměti: nelze určit (není známo, který je nejnovější)"
 
 #. TRANSLATORS: under "Space to free on the device:" for a device whose GarminDevice.xml
 #. gives no unit ID; {dumps} is a count and a size, e.g. "3 (2.5 MB)"
@@ -1168,21 +1170,22 @@ msgid ""
 "older memory dumps: {dumps}; not removed: the device gives no unit ID, so "
 "their copies would have no folder of the device"
 msgstr ""
+"starší výpisy paměti: {dumps}; neodstraněny: zařízení neposkytuje "
+"identifikátor, takže pro jejich kopie neexistuje odpovídající složka zařízení"
 
 #. TRANSLATORS: under "Space to free on the device:"; {dumps} is a count and a size,
 #. e.g. "3 (2.5 MB)"
 #: openexpress/cli.py
 #, python-brace-format
 msgid "older memory dumps: {dumps}; the newest stays"
-msgstr ""
+msgstr "starší výpisy paměti: {dumps}; nejnovější zůstane zachován"
 
 #. TRANSLATORS: under "older memory dumps: …" in a dry run: what --apply would copy
 #. to this computer before it removes them
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "also copy the memory dumps"
+#, python-brace-format
 msgid "to copy before the removal: {dumps}"
-msgstr "zkopírovat také výpisy paměti"
+msgstr "Před odstraněním zkopírovat: {dumps}"
 
 #. TRANSLATORS: under "older memory dumps: …" in a dry run: what --apply would
 #. remove without a copy; {limit} is the most the copies may take, "100 MB"
@@ -1191,24 +1194,22 @@ msgstr "zkopírovat také výpisy paměti"
 msgid ""
 "to remove without a copy, as the copies would not fit in {limit}: {dumps}"
 msgstr ""
+"k odstranění bez záložní kopie, protože by se kopie nevešly do limitu {limit}"
+": {dumps}"
 
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "update copied, not installed by the device"
+#, python-brace-format
 msgid "update file not installed by the device: {name} {version} ({size})"
-msgstr "aktualizace zkopírována, ale zařízení ji nenainstalovalo"
+msgstr "zařízení nenainstalovalo aktualizační soubor: {name} {version} ({size})"
 
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "Install {name} {version} ({size})"
+#, python-brace-format
 msgid "waiting to be installed, not removed: {name} {version} ({file})"
-msgstr "Nainstalovat {name} {version} ({size})"
+msgstr "čeká na instalaci, nebude odstraněno: {name} {version} ({file})"
 
 #: openexpress/cli.py
-#, fuzzy
-#| msgid "Nothing to remove."
 msgid "nothing to remove"
-msgstr "Není co odstranit."
+msgstr "není co odstranit"
 
 #: openexpress/cli.py
 #, fuzzy, python-brace-format
@@ -1219,15 +1220,15 @@ msgstr "Celkem: {size}"
 #. TRANSLATORS: why an update file stays on the device after --free-space
 #: openexpress/cli.py
 msgid "it changed since it was listed"
-msgstr ""
+msgstr "soubor byl od vytvoření seznamu změněn"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Removed: {count} memory dump, {size} freed"
 msgid_plural "Removed: {count} memory dumps, {size} freed"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Odstraněn {count} výpis paměti, uvolněno {size}"
+msgstr[1] "Odstraněny {count} výpisy paměti, uvolněno {size}"
+msgstr[2] "Odstraněno {count} výpisů paměti, uvolněno {size}"
 
 #: openexpress/cli.py
 #, fuzzy, python-brace-format
@@ -1244,31 +1245,29 @@ msgid "its copy on this computer failed"
 msgstr "Kopie v tomto počítači: {copies}"
 
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "Update {name} {version} ({size})"
+#, python-brace-format
 msgid "Removed: the file of {name} {version}, {size} freed."
-msgstr "Aktualizovat {name} {version} ({size})"
+msgstr "Odstraněno: soubor {name} {version} byl smazán, uvolněno {size}."
 
 #. TRANSLATORS: `diagnostics --free-space --apply`: a file that stayed on the device
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "removed: {name} ({type})"
+#, python-brace-format
 msgid "not removed: {name}: {why}"
-msgstr "odebráno: {name} ({type})"
+msgstr "neodstraněno: {name}: {why}"
 
 #. TRANSLATORS: `diagnostics --free-space --apply` when the files were removed by
 #. something else meanwhile
 #: openexpress/cli.py
-#, fuzzy
-#| msgid "{name} is no longer on the device."
 msgid "Nothing removed: the files were no longer on the device."
-msgstr "{name} již v zařízení není."
+msgstr "Nic nebylo odstraněno: soubory se již v zařízení nenacházely."
 
 #: openexpress/cli.py openexpress/history.py
 msgid ""
 "The device could not be counted again after the removal; its records keep "
 "what was removed."
 msgstr ""
+"Po odstranění se nepodařilo znovu zjistit počet výpisů v zařízení. Informace "
+"o odstraněných výpisech zůstávají zachovány v záznamech."
 
 #: openexpress/cli.py
 #, fuzzy
@@ -1279,7 +1278,7 @@ msgstr "Na tomto počítači dosud nezjištěno"
 #. TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
 #: openexpress/cli.py
 msgid "boot log"
-msgstr ""
+msgstr "protokol spouštění"
 
 #. TRANSLATORS: where a crash was found: the log of the device's connections that
 #. openExpress keeps (the line "Device log on this computer: …")
@@ -1294,7 +1293,7 @@ msgstr "Na tomto počítači dosud nezjištěno"
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "maps"
-msgstr ""
+msgstr "mapy"
 
 #: openexpress/cli.py
 #, fuzzy
@@ -1313,7 +1312,7 @@ msgstr "Hudba, podcasty a audioknihy"
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "apps"
-msgstr ""
+msgstr "aplikace"
 
 #: openexpress/cli.py
 #, fuzzy
@@ -1341,7 +1340,7 @@ msgstr "Kopírování výpisů paměti"
 #: openexpress/cli.py
 msgctxt "storage"
 msgid "system"
-msgstr ""
+msgstr "systém"
 
 #: openexpress/cli.py
 #, fuzzy
@@ -1354,38 +1353,38 @@ msgstr "Kopie v tomto počítači: {copies}"
 msgid "Device log on this computer: {count} connection, the first on {day}"
 msgid_plural ""
 "Device log on this computer: {count} connections, the first on {day}"
-msgstr[0] ""
+msgstr[0] "Historie zařízení v tomto počítači: {count} připojení, poprvé dne {day}"
 msgstr[1] ""
+"Historie zařízení v tomto počítači: počet připojení {count}, první dne {day}"
 msgstr[2] ""
+"Historie zařízení v tomto počítači: celkem {count} připojení, první dne {day}"
 
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "no connection"
+#, python-brace-format
 msgid "and {count} earlier connection"
 msgid_plural "and {count} earlier connections"
-msgstr[0] "bez připojení"
-msgstr[1] "bez připojení"
-msgstr[2] "bez připojení"
+msgstr[0] "a {count} předchozí připojení"
+msgstr[1] "a {count} předchozí připojení"
+msgstr[2] "a {count} předchozích připojení"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Storage at the last connection: {sizes}"
-msgstr ""
+msgstr "Stav úložiště při posledním připojení: {sizes}"
 
 #: openexpress/cli.py
 #, python-brace-format
 msgid "{count} damaged line skipped"
 msgid_plural "{count} damaged lines skipped"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Přeskočen {count} poškozený řádek"
+msgstr[1] "Přeskočeny {count} poškozené řádky"
+msgstr[2] "Přeskočeno {count} poškozeno řádků"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): the device's software version
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "Software {version}"
+#, python-brace-format
 msgid "software {version}"
-msgstr "Software {version}"
+msgstr "Verze softwaru {version}"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): its free space then
 #: openexpress/cli.py
@@ -1435,18 +1434,15 @@ msgstr "neznámý účet"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`)
 #: openexpress/cli.py
-#, fuzzy
-#| msgid "Crashes in the copied boot log:"
 msgid "no crash in the error logs"
-msgstr "Pády zaznamenané ve zkopírovaném protokolu spouštění:"
+msgstr "V chybových protokolech nebyl zaznamenán žádný pád"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`); {crash} is in English, as
 #. the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "last answer {at}"
+#, python-brace-format
 msgid "last crash: {crash}"
-msgstr "poslední odpověď {at}"
+msgstr "poslední pád: {crash}"
 
 #: openexpress/cli.py
 msgid "USB drive"
@@ -1668,9 +1664,15 @@ msgstr[2] "Zapsal by se {path} ({count} bodů)"
 #: openexpress/cli.py
 msgid "Dry run: nothing was written. Add --apply to write it."
 msgid_plural "Dry run: nothing was written. Add --apply to write them."
-msgstr[0] "Zkušební režim: nic nebylo zapsáno. Pro zápis přidejte --apply."
-msgstr[1] "Zkušební režim: nic nebylo zapsáno. Pro zápis přidejte --apply."
-msgstr[2] "Zkušební režim: nic nebylo zapsáno. Pro zápis přidejte --apply."
+msgstr[0] ""
+"Zkušební spuštění: nebyly provedeny žádné změny. Pro jejich provedení "
+"přidejte --apply."
+msgstr[1] ""
+"Zkušební spuštění: nebyly provedeny žádné změny. Pro jejich provedení "
+"přidejte --apply."
+msgstr[2] ""
+"Zkušební spuštění: nebyly provedeny žádné změny. Pro jejich provedení "
+"přidejte --apply."
 
 #: openexpress/cli.py openexpress/device/gio_storage.py
 #: openexpress/device/storage.py
@@ -1708,7 +1710,7 @@ msgstr "%Y-%m-%d"
 #. be read
 #: openexpress/cli.py
 msgid "unreadable file"
-msgstr "Nečitelný soubor"
+msgstr "nečitelný soubor"
 
 #: openexpress/cli.py
 msgid "still being written: unplug the device and plug it in again"
@@ -3802,6 +3804,9 @@ msgid ""
 "this computer first where they fit) and the files of updates it did not "
 "install"
 msgstr ""
+"uvolnit také místo v úložišti zařízení: odstranit starší výpisy paměti "
+"(pokud je dostatek místa, nejprve je zkopírovat do tohoto počítače) a "
+"soubory aktualizací, které nebyly nainstalovány"
 
 #: openexpress/cli.py
 msgid "sign in to Garmin Connect"
@@ -4296,7 +4301,7 @@ msgstr "Parametry --key a --secret musí být zadány společně"
 #. TRANSLATORS: --free-space is an action of its own; the options are not translated
 #: openexpress/cli.py
 msgid "--free-space cannot be given with --dumps or --crash-logs"
-msgstr ""
+msgstr "--free-space nelze použít společně s --dumps ani --crash-logs"
 
 #: openexpress/cli.py
 msgid ""
@@ -5285,6 +5290,8 @@ msgid ""
 "The files on the device changed since the question; nothing was removed. "
 "Look at the list again."
 msgstr ""
+"Soubory v zařízení se od potvrzení změnily, proto nebylo nic odstraněno. "
+"Zkontrolujte seznam znovu."
 
 #. TRANSLATORS: a step of removing the memory dumps ("… · 1 of 3")
 #: openexpress/freeing.py
@@ -5358,9 +5365,9 @@ msgstr "Načítání aktivit…"
 #, python-brace-format
 msgid "Show {count} More"
 msgid_plural "Show {count} More"
-msgstr[0] "Zobrazit ještě {count}"
-msgstr[1] "Zobrazit ještě {count}"
-msgstr[2] "Zobrazit ještě {count}"
+msgstr[0] "Zobrazit ještě {count} aktivitu"
+msgstr[1] "Zobrazit ještě {count} aktivity"
+msgstr[2] "Zobrazit ještě {count} aktivit"
 
 #. TRANSLATORS: attribution of the map data on the activity map; keep © and the name
 #. OpenStreetMap
@@ -5601,11 +5608,9 @@ msgstr "Aktivity"
 #. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
 #: openexpress/gui/app.py openexpress/gui/device_page.py
 #: openexpress/gui/start.py openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Device Storage"
 msgctxt "tab"
 msgid "Device Status"
-msgstr "Úložiště zařízení"
+msgstr "Stav zařízení"
 
 #. TRANSLATORS: while the page Device Status reads what it shows
 #: openexpress/gui/app.py openexpress/gui/status_page.py
@@ -6540,7 +6545,7 @@ msgstr "Kopírování výpisů paměti…"
 #. TRANSLATORS: subtitle of "Primary Training Device" while not logged in
 #: openexpress/gui/device_page.py
 msgid "Sign in to see"
-msgstr "Pro zobrazení se přihlaste"
+msgstr "Pro zobrazení údajů se přihlaste"
 
 #. TRANSLATORS: subtitle of "Primary Training Device" of a device off the account
 #: openexpress/gui/device_page.py
@@ -7758,7 +7763,7 @@ msgstr "Připojeno"
 #. TRANSLATORS: heading above the tiles of the devices seen before, not connected now
 #: openexpress/gui/start.py
 msgid "Remembered"
-msgstr "Zapamatováno"
+msgstr "Uložená zařízení"
 
 #. TRANSLATORS: heading above the tiles of the devices of the Garmin account that
 #. were never connected to this computer
@@ -7828,8 +7833,8 @@ msgid ""
 "Not signed in to Garmin Connect: the tiles do not show what is on your "
 "account or what there is to sync"
 msgstr ""
-"Nejste přihlášeni ke Garmin Connect: dlaždice nezobrazují obsah vašeho účtu "
-"ani položky dostupné k synchronizaci"
+"Nejste přihlášeni ke Garmin Connect. Dlaždice proto nezobrazují data z "
+"vašeho účtu ani položky dostupné k synchronizaci"
 
 #. TRANSLATORS: under the tiles of the start page
 #: openexpress/gui/start_window.py
@@ -7913,11 +7918,9 @@ msgid "Updates and Satellite Data"
 msgstr "Aktualizace a mapy"
 
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Copy Memory Dumps"
 msgctxt "storage kind"
 msgid "Logs and Memory Dumps"
-msgstr "Kopírovat výpisy paměti"
+msgstr "Protokoly a výpisy paměti"
 
 #. TRANSLATORS: the rest of the used space: the device's own files and what its file
 #. system keeps
@@ -7932,24 +7935,23 @@ msgstr "Výchozí jazyk systému"
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
 msgid "Used"
-msgstr ""
+msgstr "Využito"
 
 #. TRANSLATORS: the free space in the storage of the page Device Status
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
 msgid "Free"
-msgstr ""
+msgstr "Volné"
 
 #. TRANSLATORS: group of the page Device Status
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Clear the Downloaded Updates?"
 msgid "Crashes and Updates"
-msgstr "Vymazat stažené aktualizace?"
+msgstr "Pády a aktualizace"
 
 #: openexpress/gui/status_page.py
 msgid "Crashes that restarted the device, and its software updates"
 msgstr ""
+"Pády systému, které způsobily restart zařízení, a aktualizace jeho softwaru"
 
 #. TRANSLATORS: beside "… free of …" on the page Device Status
 #: openexpress/gui/status_page.py
@@ -7961,26 +7963,23 @@ msgstr "Volné místo: {size}"
 #. TRANSLATORS: subtitle of "Category Details" of a device not connected, from the
 #. records: when its last connection counted them, e.g. "… connection, 2 days ago"
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "{count} copy, {size}, the last on {when}"
-#| msgid_plural "{count} copies, {size}, the last on {when}"
+#, python-brace-format
 msgid "Counted at the last connection, {when}"
-msgstr "{count} kopie, {size}, poslední z {when}"
+msgstr "Spočítáno při posledním připojení, {when}"
 
 #. TRANSLATORS: subtitle of "Category Details" after files were written to the device or
 #. removed from it (Free Up Space), e.g. "… change, just now"
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "Counted again after a change, {when}"
-msgstr ""
+msgstr "Znovu přepočítáno po změně, {when}"
 
 #. TRANSLATORS: subtitle of "Category Details": when the kinds of file were counted,
 #. e.g. "… connected, 10 min ago"
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "background service: sync when the device is connected"
+#, python-brace-format
 msgid "Counted when the device was connected, {when}"
-msgstr "služba na pozadí: synchronizace po připojení zařízení"
+msgstr "Spočítáno při připojení zařízení, {when}"
 
 #. TRANSLATORS: row of the page Device Status that opens to each kind of file
 #: openexpress/gui/status_page.py
@@ -7991,20 +7990,19 @@ msgstr "Podrobnosti chyby"
 
 #. TRANSLATORS: in the subtitle of a crash on the page Device Status
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "Software {version}"
+#, python-brace-format
 msgctxt "crash"
 msgid "software {version}"
-msgstr "Software {version}"
+msgstr "Software verze {version}"
 
 #. TRANSLATORS: in the subtitle of a crash on the page Device Status
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "the same error as the one before"
 msgid_plural "the same error as the {count} before"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Stejná chyba jako předchozí"
+msgstr[1] "Stejná chyba jako předchozí {count} chyby"
+msgstr[2] "Stejná chyba jako předchozích {count} chyb"
 
 #. TRANSLATORS: a row of "Crashes and Updates" on the page Device Status
 #: openexpress/gui/status_page.py
@@ -8044,10 +8042,8 @@ msgstr "Připojeno"
 #. TRANSLATORS: title of the summary of the page Device Status: the device's error logs
 #. could not be read, so whether it crashed is not known
 #: openexpress/gui/status_page.py openexpress/gui/words.py
-#, fuzzy
-#| msgid "Error logs on the device:"
 msgid "Error Logs Not Read"
-msgstr "Protokoly chyb v zařízení:"
+msgstr "Chybové protokoly nebyly načteny"
 
 #: openexpress/gui/status_page.py
 #, fuzzy
@@ -8065,20 +8061,18 @@ msgstr "V zařízení nejsou žádné trasy"
 #. TRANSLATORS: shows every crash and update on the page Device Status
 #: openexpress/gui/status_page.py
 msgid "Show All"
-msgstr ""
+msgstr "Zobrazit vše"
 
 #. TRANSLATORS: group of the page Device Status: files the device no longer needs, each
 #. with a button that removes it
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Free space:"
 msgid "Free Up Space"
-msgstr "Volné místo:"
+msgstr "Uvolnit místo"
 
 #. TRANSLATORS: description of "Free Up Space"
 #: openexpress/gui/status_page.py
 msgid "Activities, maps, music, courses and settings are never removed"
-msgstr ""
+msgstr "Aktivity, mapy, hudba, trasy a nastavení se nikdy neodstraňují"
 
 #. TRANSLATORS: a row of "Free Up Space": the memory dumps but the newest
 #: openexpress/gui/status_page.py
@@ -8099,27 +8093,26 @@ msgstr "neznámé"
 #, python-brace-format
 msgid "{count} file; the newest dump is not counted"
 msgid_plural "{count} files; the newest dump is not counted"
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "{count} soubor; nejnovější výpis paměti se nezapočítává"
+msgstr[1] "{count} soubory; nejnovější výpis paměti se nezapočítává"
+msgstr[2] "{count} souborů; nejnovější výpis paměti se nezapočítává"
 
 #. TRANSLATORS: the title of the row of an update file in "Free Up Space": the update's
 #. name and version, e.g. "GPS software 6.20"; what became of it is the subtitle
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "{name}: {error}"
+#, python-brace-format
 msgid "{name} {version}"
-msgstr "{name}: {error}"
+msgstr "{name} {version}"
 
 #: openexpress/gui/status_page.py
 msgid "Waits to be installed; removing the file would cancel the update"
-msgstr ""
+msgstr "Čeká na instalaci; odstraněním souboru by se aktualizace zrušila"
 
 #. TRANSLATORS: subtitle of a row of "Free Up Space": an update openExpress copied
 #. that the device did not install, followed by the size of its file
 #: openexpress/gui/status_page.py
 msgid "The device took the file in but did not install it"
-msgstr ""
+msgstr "Zařízení přijalo soubor, ale nenainstalovalo jej"
 
 #. TRANSLATORS: button and answer that copy the older memory dumps to this computer, then
 #. remove them from the device
@@ -8130,17 +8123,22 @@ msgid "Copy and Remove"
 msgstr "Trasa nebyla odebrána"
 
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "{path} ({size}) will be removed from the device."
+#, python-brace-format
 msgid ""
 "{count} memory dump ({size}) will be copied to this computer and then "
 "removed from the device."
 msgid_plural ""
 "{count} memory dumps ({size}) will be copied to this computer and then "
 "removed from the device."
-msgstr[0] "Soubor {path} ({size}) bude ze zařízení odebrán."
-msgstr[1] "Soubor {path} ({size}) bude ze zařízení odebrán."
-msgstr[2] "Soubor {path} ({size}) bude ze zařízení odebrán."
+msgstr[0] ""
+"{count} výpis paměti ({size}) bude zkopírován do tohoto počítače a poté "
+"odstraněn ze zařízení."
+msgstr[1] ""
+"{count} výpisy paměti ({size}) budou zkopírovány do tohoto počítače a poté "
+"odstraněny ze zařízení."
+msgstr[2] ""
+"{count} výpisů paměti ({size}) bude zkopírováno do tohoto počítače a poté "
+"odstraněno ze zařízení."
 
 #. TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
 #: openexpress/gui/status_page.py
@@ -8152,31 +8150,34 @@ msgid_plural ""
 "{count} memory dumps ({size}) will be removed from the device without a "
 "copy, as the copies would not fit in {limit}."
 msgstr[0] ""
+"{count} výpis paměti ({size}) bude ze zařízení odstraněn bez vytvoření "
+"kopie, protože by se nevešla do limitu {limit}."
 msgstr[1] ""
+"{count} výpisy paměti ({size}) budou ze zařízení odstraněny bez vytvoření "
+"kopií, protože by se nevešly do limitu {limit}."
 msgstr[2] ""
+"{count} výpisů paměti ({size}) bude ze zařízení odstraněno bez vytvoření "
+"kopií, protože by se nevešly do limitu {limit}."
 
 #. TRANSLATORS: the first part of the question when some dumps are copied first and
 #. some are too large; "{copied part}, {not copied part}." follows
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "{path} ({size}) will be removed from the device."
+#, python-brace-format
 msgid "{count} memory dump ({size}) will be removed from the device:"
 msgid_plural "{count} memory dumps ({size}) will be removed from the device:"
-msgstr[0] "Soubor {path} ({size}) bude ze zařízení odebrán."
-msgstr[1] "Soubor {path} ({size}) bude ze zařízení odebrán."
-msgstr[2] "Soubor {path} ({size}) bude ze zařízení odebrán."
+msgstr[0] "{count} výpis paměti ({size}) bude odstraněn ze zařízení:"
+msgstr[1] "{count} výpisy paměti ({size}) budou odstraněny ze zařízení:"
+msgstr[2] "{count} výpisů paměti ({size}) bude odstraněno ze zařízení:"
 
 #. TRANSLATORS: a part of the question: how many dumps are copied first, e.g.
 #. "2 (75.3 MB) after a copy on this computer"
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "{count} memory dump copied to this computer"
-#| msgid_plural "{count} memory dumps copied to this computer"
+#, python-brace-format
 msgid "{count} ({size}) after a copy on this computer"
 msgid_plural "{count} ({size}) after a copy on this computer"
-msgstr[0] "Do počítače zkopírován {count} výpis paměti"
-msgstr[1] "Do počítače zkopírovány {count} výpisy paměti"
-msgstr[2] "Do počítače zkopírováno {count} výpisů paměti"
+msgstr[0] "{count} výpis paměti ({size}) po zkopírování do tohoto počítače"
+msgstr[1] "{count} výpisy paměti ({size}) po zkopírování do tohoto počítače"
+msgstr[2] "{count} výpisů paměti ({size}) po zkopírování do tohoto počítače"
 
 #. TRANSLATORS: a part of the question: how many dumps are removed without a copy
 #. TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
@@ -8186,23 +8187,20 @@ msgid "{count} ({size}) without a copy, as the copies would not fit in {limit}"
 msgid_plural ""
 "{count} ({size}) without a copy, as the copies would not fit in {limit}"
 msgstr[0] ""
+"{count} ({size}) bez vytvoření kopie, protože by se nevešla do limitu {limit}"
 msgstr[1] ""
+"{count} ({size}) bez vytvoření kopií, protože by se nevešly do limitu {limit}"
 msgstr[2] ""
+"{count} ({size}) bez vytvoření kopií, protože by se nevešly do limitu {limit}"
 
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "no free app slots on the device"
 msgid "The newest dump stays on the device."
-msgstr "v zařízení nejsou volné pozice pro aplikace"
+msgstr "Nejnovější výpis paměti zůstane v zařízení."
 
 #. TRANSLATORS: why a removal from the device did not go to its end
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "The device stopped responding. Unplug it and plug it in again."
-#| msgid_plural ""
-#| "The devices stopped responding. Unplug them and plug them in again."
 msgid "the device stopped responding"
-msgstr "Zařízení přestalo odpovídat. Odpojte ho a znovu připojte."
+msgstr "zařízení přestalo odpovídat"
 
 #. TRANSLATORS: why a removal from the device did not go to its end, or was not counted
 #. after it
@@ -8215,26 +8213,24 @@ msgstr "Nepodařilo se načíst ze zařízení"
 #. TRANSLATORS: heading of the message when the device was unplugged or opened again
 #. while a question of the page Device Status was open
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Nothing to remove."
 msgid "Nothing Removed"
-msgstr "Není co odstranit."
+msgstr "Není co odstranit"
 
 #: openexpress/gui/status_page.py
 msgid ""
 "The device was unplugged or connected again since the question. Look at the "
 "list again."
 msgstr ""
+"Zařízení bylo od zobrazení dotazu odpojeno nebo znovu připojeno. "
+"Zkontrolujte seznam znovu."
 
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "{count} memory dump copied to this computer"
-#| msgid_plural "{count} memory dumps copied to this computer"
+#, python-brace-format
 msgid "{count} memory dump removed, {size} freed"
 msgid_plural "{count} memory dumps removed, {size} freed"
-msgstr[0] "Do počítače zkopírován {count} výpis paměti"
-msgstr[1] "Do počítače zkopírovány {count} výpisy paměti"
-msgstr[2] "Do počítače zkopírováno {count} výpisů paměti"
+msgstr[0] "Odstraněn {count} výpis paměti, uvolněno {size}"
+msgstr[1] "Odstraněny {count} výpisy paměti, uvolněno {size}"
+msgstr[2] "Odstraněno {count} výpisů paměti, uvolněno {size}"
 
 #. TRANSLATORS: while the older memory dumps are copied and removed
 #: openexpress/gui/status_page.py
@@ -8245,16 +8241,14 @@ msgstr "Kopírování výpisů paměti…"
 
 #. TRANSLATORS: heading of the question before the older memory dumps are removed
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Copy Memory Dumps"
 msgid "Remove Older Memory Dumps?"
-msgstr "Kopírovat výpisy paměti"
+msgstr "Odstranit starší výpisy paměti?"
 
 #. TRANSLATORS: after the file of an update the device did not install was removed
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "Update file removed, {size} freed"
-msgstr ""
+msgstr "Soubor aktualizace odstraněn, uvolněno {size}"
 
 #. TRANSLATORS: while the file of an update the device did not install is removed
 #: openexpress/gui/status_page.py
@@ -8266,10 +8260,8 @@ msgstr "Kontrola souboru…"
 #. TRANSLATORS: heading of the question before the file of an update the device did
 #. not install is removed
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "remove the map from the device"
 msgid "Remove the Update File?"
-msgstr "odebrat mapu ze zařízení"
+msgstr "Odstranit soubor aktualizace?"
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
@@ -8278,6 +8270,9 @@ msgid ""
 "file will be removed from the device; the Updates page will offer the update "
 "again."
 msgstr ""
+"Zařízení přijalo aktualizaci {name} {version} ({size}), ale nenainstalovalo "
+"ji. Soubor bude ze zařízení odstraněn; aktualizace bude znovu nabídnuta na "
+"stránce Aktualizace."
 
 #. TRANSLATORS: why a removal from the device did not go to its end
 #: openexpress/gui/status_page.py
@@ -8291,46 +8286,49 @@ msgstr "načte se po odpojení zařízení"
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "{done}. Then {why}."
-msgstr ""
+msgstr "{done}. Důvod: {why}."
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "The device did not remove {count} of the files; the others are removed."
 msgid_plural ""
 "The device did not remove {count} of the files; the others are removed."
-msgstr[0] ""
-msgstr[1] ""
-msgstr[2] ""
+msgstr[0] "Zařízení neodstranilo {count} soubor; ostatní byly odstraněny."
+msgstr[1] "Zařízení neodstranilo {count} soubory; ostatní byly odstraněny."
+msgstr[2] "Zařízení neodstranilo {count} souborů; ostatní byly odstraněny."
 
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "The device did not answer in time."
+#, python-brace-format
 msgid "The device did not remove the file."
 msgid_plural "The device did not remove the {count} files."
-msgstr[0] "Zařízení neodpovědělo včas."
-msgstr[1] "Zařízení neodpovědělo včas."
-msgstr[2] "Zařízení neodpovědělo včas."
+msgstr[0] "Zařízení neodstranilo soubor."
+msgstr[1] "Zařízení neodstranilo {count} soubory."
+msgstr[2] "Zařízení neodstranilo {count} souborů."
 
 #. TRANSLATORS: after Copy and Remove, the memory dumps left on the device because
 #. their copy on this computer failed; their names follow
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "{count} memory dump copied to this computer"
-#| msgid_plural "{count} memory dumps copied to this computer"
+#, python-brace-format
 msgid ""
 "{count} memory dump was not removed, as its copy on this computer failed."
 msgid_plural ""
 "{count} memory dumps were not removed, as their copies on this computer "
 "failed."
-msgstr[0] "Do počítače zkopírován {count} výpis paměti"
-msgstr[1] "Do počítače zkopírovány {count} výpisy paměti"
-msgstr[2] "Do počítače zkopírováno {count} výpisů paměti"
+msgstr[0] ""
+"Výpis paměti ({count}) nebyl ze zařízení odstraněn, protože se jej "
+"nepodařilo zkopírovat do tohoto počítače."
+msgstr[1] ""
+"Výpisy paměti ({count}) nebyly ze zařízení odstraněny, protože se je "
+"nepodařilo zkopírovat do tohoto počítače."
+msgstr[2] ""
+"Výpisy paměti ({count}) nebyly ze zařízení odstraněny, protože se je "
+"nepodařilo zkopírovat do tohoto počítače."
 
 #. TRANSLATORS: heading of the message when a removal from the device stopped, or was
 #. not counted again, after files were removed
 #: openexpress/gui/status_page.py
 msgid "Removal Not Finished"
-msgstr ""
+msgstr "Odstraňování nebylo dokončeno"
 
 #. TRANSLATORS: heading of the message when the device did not remove every file
 #: openexpress/gui/status_page.py
@@ -8342,10 +8340,8 @@ msgstr "Mapu se nepodařilo odebrat"
 #. TRANSLATORS: toast after Remove on the page Device Status when the files were removed
 #. by something else meanwhile
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "{name} is no longer on the device."
 msgid "Nothing removed: the files were no longer on the device"
-msgstr "{name} již v zařízení není."
+msgstr "Žádné soubory nebyly odstraněny: v zařízení se již nenacházely"
 
 #. TRANSLATORS: subtitle of "Copies on This Computer" when none was made
 #: openexpress/gui/status_page.py
@@ -8391,7 +8387,7 @@ msgstr "Kopie v tomto počítači: {copies}"
 #: openexpress/gui/status_page.py
 msgctxt "open the folder of the copies"
 msgid "Open"
-msgstr ""
+msgstr "Otevřít"
 
 #. TRANSLATORS: the full name of the button that opens the folder of the copies
 #: openexpress/gui/status_page.py
@@ -8424,7 +8420,7 @@ msgstr "Kopírovat záznamy o pádech"
 #: openexpress/gui/status_page.py
 msgctxt "dumps"
 msgid "None"
-msgstr ""
+msgstr "Žádné"
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
@@ -8478,11 +8474,13 @@ msgid ""
 "The device, the system and the recent crashes; no serial number, Unit ID or "
 "e-mail"
 msgstr ""
+"Informace o zařízení, systému a nedávných pádech; bez sériového čísla, ID "
+"zařízení a e-mailové adresy"
 
 #. TRANSLATORS: button that opens the report of the device (a dialog with more to do)
 #: openexpress/gui/status_page.py
 msgid "Report…"
-msgstr ""
+msgstr "Zpráva…"
 
 #. TRANSLATORS: in the subtitle of the row "Device Status" of a device not connected: when
 #. its records are from (its last connection), e.g. "as of 2026-11-09 21:52"
@@ -8495,13 +8493,13 @@ msgstr "Naposledy {when}"
 #. TRANSLATORS: banner on top of the page Device Status of a device not connected: what
 #. it shows is from its records, as of its last connection
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid "Device not connected – connect it to sync or update"
+#, python-brace-format
 msgid ""
 "Device not connected – as of {when}; connect it to free up space or copy its "
 "logs"
 msgstr ""
-"Zařízení není připojeno – připojte jej pro synchronizaci nebo aktualizaci"
+"Zařízení není připojeno – stav k {when}; připojte jej pro uvolnění místa "
+"nebo zkopírování protokolů"
 
 #. TRANSLATORS: banner on top of the page Device Status of a device not connected whose
 #. last connection is not known
@@ -8523,6 +8521,8 @@ msgstr "Diagnostika"
 msgid ""
 "This device keeps no error logs or memory dumps that openExpress can read"
 msgstr ""
+"Toto zařízení neuchovává žádné záznamy o chybách ani výpisy paměti, které by "
+"openExpress dokázal přečíst"
 
 #: openexpress/gui/updates_page.py
 #, python-brace-format
@@ -9522,13 +9522,12 @@ msgstr "bez údajů"
 
 #. TRANSLATORS: title of the summary of the page Device Status
 #: openexpress/gui/words.py
-#, fuzzy, python-brace-format
-#| msgid "{count} not in the copy"
+#, python-brace-format
 msgid "{count} Crash in the Last 30 Days"
 msgid_plural "{count} Crashes in the Last 30 Days"
-msgstr[0] "{count} není v kopii"
-msgstr[1] "{count} není v kopii"
-msgstr[2] "{count} není v kopii"
+msgstr[0] "{count} pád za posledních 30 dní"
+msgstr[1] "{count} pády za posledních 30 dní"
+msgstr[2] "{count} pádů za posledních 30 dní"
 
 #. TRANSLATORS: in the summary of the page Device Status: the last crash, e.g. "Last one
 #. 2 days ago"
@@ -9541,19 +9540,17 @@ msgstr "Naposledy {when}"
 #. TRANSLATORS: in the summary of the page Device Status, after "Last one …"
 #: openexpress/gui/words.py
 msgid "the same error each time"
-msgstr ""
+msgstr "Pokaždé stejná chyba"
 
 #. TRANSLATORS: title of the summary of the page Device Status
 #: openexpress/gui/words.py
-#, fuzzy
-#| msgid "Free space:"
 msgid "Little Free Space"
-msgstr "Volné místo:"
+msgstr "Nedostatek volného místa"
 
 #. TRANSLATORS: title of the summary of the page Device Status
 #: openexpress/gui/words.py
 msgid "No Problems Found"
-msgstr ""
+msgstr "Nebyly nalezeny žádné problémy"
 
 #. TRANSLATORS: the name of your language in your language ("Polski", "Deutsch",
 #. "Français"), as the list of languages in the Preferences shows it
@@ -11257,6 +11254,8 @@ msgid ""
 "See the device's crashes, software updates and what takes its space, and "
 "free up space taken by old memory dumps"
 msgstr ""
+"Zobrazte záznamy o pádech zařízení, aktualizace softwaru a využití úložiště. "
+"Uvolněte místo odstraněním starých výpisů paměti"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid "Make backups of the device"
@@ -11332,3 +11331,5 @@ msgid ""
 "Device Status: the device's crashes in the last 30 days and its storage by "
 "kind of file"
 msgstr ""
+"Stav zařízení: pády zařízení za posledních 30 dní a využití úložiště podle "
+"typu souborů"
