@@ -117,27 +117,26 @@ def waiting_banner(count: int) -> str:
 
 
 def remove_heading(name: str) -> str:
-    # TRANSLATORS: heading of the question before a course or a GPX file waiting for the device
+    # TRANSLATORS: heading of the confirmation before a course or a GPX file waiting for the device
     # is removed from it
     return _("Remove “{name}” From the Device?").format(name=name)
 
 
 def removed_toast(name: str) -> str:
-    # TRANSLATORS: toast after a course or a waiting GPX file was removed from the device
-    return _("Removed “{name}” from the device.").format(name=name)
+    return _("Removed {name}").format(name=name)
 
 
 def copied_toast(name: str) -> str:
     # TRANSLATORS: toast after a GPX file was copied to the device; {name}: its course's name,
     # else the file's
-    return _("Copied “{name}”. Unplug the device so it can import the file.").format(name=name)
+    return _("Copied {name}; unplug the device so it can import the file").format(name=name)
 
 
 def question_heading(plan) -> str:
     if not plan.gpx.courses:
-        # TRANSLATORS: heading of the question before a GPX file of waypoints only is copied
+        # TRANSLATORS: heading of the confirmation before a GPX file of waypoints only is copied
         return _("Copy the Waypoints to the Device?")
-    # TRANSLATORS: heading of the question before a GPX file is copied to the device
+    # TRANSLATORS: heading of the confirmation before a GPX file is copied to the device
     return ngettext("Copy the Course to the Device?", "Copy the Courses to the Device?",
                     plan.gpx.courses)
 
@@ -198,7 +197,7 @@ def _empty(win, sec) -> None:
                          justify=Gtk.Justification.CENTER, css_classes=["title-2"]))
     box.append(Gtk.Label(
         label=_("Copy a GPX file with a track or a route\u00a0– the device turns it into a "
-                "course."),
+                "course"),
         wrap=True, justify=Gtk.Justification.CENTER, max_width_chars=48))
     add = win._button(_("Add Course…"), win.choose_course)
     add.set_halign(Gtk.Align.CENTER)
@@ -320,7 +319,7 @@ def question_body(plan, entered: dict, width: int = 0) -> Gtk.Widget:
     file_value = _value(file_text(plan.name, plan.size))
     if plan.course is not None:
         names = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"])
-        # TRANSLATORS: the entry of the question before a GPX file is copied: the name the
+        # TRANSLATORS: the entry of the confirmation before a GPX file is copied: the name the
         # device gives the course
         entry = Adw.EntryRow(title=pgettext("course", "Course Name"), text=plan.course)
         entry.connect("changed", lambda e: entered.__setitem__("name", e.get_text()))
@@ -331,12 +330,12 @@ def question_body(plan, entered: dict, width: int = 0) -> Gtk.Widget:
         names.append(entry)
         box.append(names)
     facts = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
-    # TRANSLATORS: a line of the question before a GPX file is copied: what the file holds
+    # TRANSLATORS: a line of the confirmation before a GPX file is copied: what the file holds
     facts.append(_fact(pgettext("course", "Contents"), _value(contents_text(plan.gpx))))
-    # TRANSLATORS: a line of the question before a GPX file is copied: its name and size there
+    # TRANSLATORS: a line of the confirmation before a GPX file is copied: its name and size there
     facts.append(_fact(pgettext("course", "File on the Device"), file_value))
     free = None if plan.free is None else max(0, plan.free - plan.size)
-    # TRANSLATORS: a line of the question before a GPX file is copied: the space left after it
+    # TRANSLATORS: a line of the confirmation before a GPX file is copied: the space left after it
     facts.append(_fact(pgettext("course", "Free After Copying"),
                        _value(human_size(free) if free is not None else space_text(None))))
     box.append(facts)
@@ -440,7 +439,7 @@ class CoursesPage:
             except GLib.Error:
                 return  # cancelled
             if path is None:
-                self.toast(_("Choose files stored on this computer"))
+                self.toast(_("Choose a file stored on this computer"))
                 return
             self.add_course(Path(path))
 
@@ -476,7 +475,7 @@ class CoursesPage:
             self.load_section("courses", force=True)
 
         def remove(plan):
-            self.run_task(_("Removing…"),
+            self.run_task(_("Removing {name}…").format(name=plan.title),
                           writes_to_device(lambda: courses.remove(plan, s.device, s.storage)
                                            or plan),
                           removed, read_again_after_failure(self, "courses", refused))

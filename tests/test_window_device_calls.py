@@ -565,7 +565,7 @@ def test_the_device_page_asks_the_device_nothing(iq_device):
 
 @pytest.mark.needs_display
 def test_the_storage_row_says_dots_until_the_space_is_read(iq_device):
-    """Not read yet: "Reading…" (never "0 B" or "Unknown"), then the space read in the
+    """Not read yet: "Reading…" (never "0 B" or "Not known"), then the space read in the
     background."""
     st, dev = iq_device
     storage = Space(st.root)
@@ -629,14 +629,14 @@ def test_a_space_read_after_the_device_was_unplugged_is_dropped(iq_device):
 
 @pytest.mark.needs_display
 def test_a_device_that_cannot_be_asked_has_an_unknown_space_and_no_error(iq_device):
-    """E.g. during a session of PTP: the space is unknown ("Unknown"), with no error in
+    """E.g. during a session of PTP: the space is not known ("Not known"), with no error in
     the window."""
     st, dev = iq_device
     storage = Space(st.root, fail=True)
     win, section, s = _overview_window(storage, dev)
     win.show_overview()
     _turn_until(lambda: _storage_subtitle(section) != "Reading…")
-    assert _storage_subtitle(section) == "Unknown"
+    assert _storage_subtitle(section) == "Not known"
     assert s.space == (None, None) and win.errors == []
 
 

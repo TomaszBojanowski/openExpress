@@ -94,7 +94,7 @@ def test_cache_command_lists_the_parts_and_the_total(cache, capsys):
         "  Maps: 1.8 kB",
         "  Software updates: 4.0 kB",
         "  Pictures and icons: 30 B",
-        "  Garmin Server Responses: 0 B",
+        "  Garmin server responses: 0 B",
         "  Activity map tiles: 0 B",
         "  Temporary files: 0 B",
         "  Total: 5.8 kB"]
@@ -282,7 +282,7 @@ def test_clear_without_apply_deletes_nothing(cache, tmp_path, capsys):
         "  Maps: 1.8 kB",
         "  Software updates: 4.0 kB",
         "  Pictures and icons: 30 B",
-        "  Garmin Server Responses: 0 B",
+        "  Garmin server responses: 0 B",
         "  Activity map tiles: 100 B",
         "  Temporary files: 119 B",
         "  Total: 6.0 kB",

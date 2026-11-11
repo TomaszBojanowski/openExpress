@@ -12,7 +12,7 @@ from fakes import window as stand_in
 
 FENIX, EDGE = 3000000001, 3000000002
 BODY = ("openExpress forgets what it keeps of this device on this computer: what was "
-        "uploaded from it, its last sync, the log of its connections, the maps of your own "
+        "uploaded from it, its last sync, its connection log, the maps of your own "
         "copied to it and the copies "
         "of its diagnostic files. Nothing "
         "changes on the device or on your Garmin account.\n\n"

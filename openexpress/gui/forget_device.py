@@ -50,7 +50,7 @@ class ForgetDevice:
             return
         kept = forget.kept(unit)
         body = _("openExpress forgets what it keeps of this device on this computer: what was "
-                 "uploaded from it, its last sync, the log of its connections, the maps of your "
+                 "uploaded from it, its last sync, its connection log, the maps of your "
                  "own copied to it and the copies of its diagnostic files. "
                  "Nothing changes on the device or on your Garmin account.\n\n"
                  "Connected again, it is a new device: its first sync asks again whether to "
@@ -77,9 +77,9 @@ class ForgetDevice:
                          lambda button: self._forget_ticked(choice, "backups", button))
             ticks.append(tick)
         confirm(self, "forget-device",
-                # TRANSLATORS: question before forgetting a device; {name} is its model
+                # TRANSLATORS: confirmation before forgetting a device; {name} is its model
                 _("Forget {name}?").format(name=name), body,
-                # TRANSLATORS: button that forgets a device (in the question "Forget …?")
+                # TRANSLATORS: button that forgets a device (in the confirmation "Forget …?")
                 Answer("forget", _("Forget"), lambda: self._forget_answered(choice),
                        look="destructive", enabled=not kept.pending),
                 default="cancel", extra=ticks if ticks.get_first_child() is not None else None,

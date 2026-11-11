@@ -116,7 +116,7 @@ def test_without_a_course_or_a_file_waiting_the_page_says_so(drive):
     win.load_courses()
     assert labels(section.page) == [
         "No Courses on the Device",
-        "Copy a GPX file with a track or a route\u00a0– the device turns it into a course.",
+        "Copy a GPX file with a track or a route\u00a0– the device turns it into a course",
         "Add Course…"]
     assert not section.banner.get_revealed()
 
@@ -140,7 +140,7 @@ def test_the_saved_locations_are_shown_also_without_a_course(drive, count):
     win.load_courses()
     assert labels(section.page)[:3] == [
         "No Courses on the Device",
-        "Copy a GPX file with a track or a route – the device turns it into a course.",
+        "Copy a GPX file with a track or a route – the device turns it into a course",
         "Add Course…"]
     assert saved_locations(section) == [[*SAVED, str(count)]]
 
@@ -216,7 +216,7 @@ def test_adding_a_course_asks_with_its_name_and_copies_it_under_the_name_left(dr
     written = drive / "Garmin/NewFiles/Petla_nad_jeziorem.GPX"
     assert b"<name>P\xc4\x99tla nad jeziorem</name>" in written.read_bytes()
     assert win.toasts == [
-        "Copied “Pętla nad jeziorem”. Unplug the device so it can import the file."]
+        "Copied Pętla nad jeziorem; unplug the device so it can import the file"]
     assert win.loads == ["courses"]  # the page read again: the file waits now
     assert rows(section.groups[1])[0][0] == "Pętla nad jeziorem"
     assert [c["courses"] for c in courses.recorded(COURSE_UNIT)] == [["Pętla nad jeziorem"]]
@@ -374,8 +374,8 @@ def test_removing_a_course_asks_then_removes_it(drive, clock, asked, kind, body)
     assert (remove.label, remove.look) == ("Remove", "destructive")
     remove.run()
     assert not course.exists()
-    assert win.run_task.written == ["Removing…"]
-    assert win.toasts == ["Removed “Along the River” from the device."]
+    assert win.run_task.written == ["Removing Along the River…"]
+    assert win.toasts == ["Removed Along the River"]
     assert win.loads == ["courses"]  # read again: none left
     assert labels(section.page)[0] == "No Courses on the Device"
 
@@ -404,7 +404,7 @@ def test_removing_a_file_waiting(drive, asked):
     assert (q.heading, q.body) == ("Remove “Morning Loop” From the Device?",
                                    "The device has not made a course of it yet.")
     q.answers[0].run()
-    assert not waiting.exists() and win.toasts == ["Removed “Morning Loop” from the device."]
+    assert not waiting.exists() and win.toasts == ["Removed Morning Loop"]
 
 
 def test_cancel_removes_nothing(drive, clock, asked):
@@ -427,7 +427,7 @@ def test_a_file_gone_before_the_question_is_said_and_the_list_read_again(drive, 
     assert asked == []
     assert win.errors == [("Course Not Removed", "Hand.fit is no longer on the device.")]
     assert win.loads == ["courses"]
-    empty = "Copy a GPX file with a track or a route\u00a0– the device turns it into a course."
+    empty = "Copy a GPX file with a track or a route\u00a0– the device turns it into a course"
     assert labels(section.page)[:2] == ["No Courses on the Device", empty]
 
 

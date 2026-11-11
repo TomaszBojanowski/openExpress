@@ -195,7 +195,8 @@ class ReportDialog:
             website="https://openexpress.bojanowski.me",
             issue_url="https://github.com/TomaszBojanowski/openExpress/issues",
             license_type=Gtk.License.GPL_3_0,
-            comments=_("Unofficial Linux app for Garmin watches: sync with Garmin Connect, "
+            comments=_("Unofficial Linux app for Garmin watches and bike computers: sync with "
+                       "Garmin Connect, "
                        "software updates, maps, Connect IQ apps and music.\n\n"
                        "openExpress is not affiliated with, endorsed by or supported by "
                        "Garmin Ltd. Garmin, fēnix, Garmin Connect and Garmin Express are "

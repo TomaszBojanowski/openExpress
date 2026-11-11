@@ -214,8 +214,8 @@ def confirm_install_all(win, items) -> None:
     lines += [f"{u.title}: " + _("Can be installed once the device has installed {name}").format(
         name=other.title) for u, other in put_off]
     body = ("\n".join(lines) + "\n\n"
-            # TRANSLATORS: in the question before installing updates: their size; {size}: e.g. "25.4
-            # MB"
+            # TRANSLATORS: in the confirmation before installing updates: their size; {size}: e.g.
+            # "25.4 MB"
             + _("Size: {size}").format(size=human_size(sum(u.size or 0 for u in kept))))
     def install() -> None:
         work, done, failed = _install_task(win, s, chosen)
@@ -512,8 +512,8 @@ class UpdatesPage:
         body = (f"{u.title} {versions_text(u)}\n"
                 + _("Size: {size}").format(size=human_size(u.size)) + "\n"
                 + _("On the device: {path}").format(path=u.device_path)
-                # TRANSLATORS: in the question before installing an update: above the list of what
-                # the update changes
+                # TRANSLATORS: in the confirmation before installing an update: above the list of
+                # what the update changes
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
                 + ("\n\n" + _("This is a beta version.") if u.is_beta else ""))

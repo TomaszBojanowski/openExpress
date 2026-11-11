@@ -1155,12 +1155,12 @@ def test_cli_diagnostics_lists_the_crashes_of_every_source(device, clock, monkey
     monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
     assert cli.main(["diagnostics"]) == 0
     out = capsys.readouterr().out.splitlines()
-    start = out.index("Crashes that restarted the device (error logs, boot log, copies and "
-                      "device log on this computer):")
-    # The command notes the connection with what it read: the device log holds the crash too.
+    start = out.index("Crashes that restarted the device:")
+    # The command notes the connection with what it read: the connection log holds the crash
+    # too.
     assert out[start + 1] == ("  2026-10-20 22:24: RTL Trap, software 23.39, error 0x003, PC "
                               "0x10000abc, screen 2301, boot log error 0x1a2b (err_log.bak, "
-                              "boot log, device log on this computer)")
+                              "boot log, connection log on this computer)")
     assert out[start + 5] == "  2026-09-01 10:00: RTL Trap, boot log error 0x1a2b (boot log)"
     assert not any("copied boot log" in line for line in out)
 

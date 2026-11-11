@@ -685,7 +685,8 @@ def test_the_command_line_says_the_dumps_changed_and_removes_nothing(tmp_path, c
     monkeypatch.setattr(freeing, "remove_dumps", changing)
     code, out = run_cli(st, "--free-space", "--apply", capsys=capsys)
     assert code == 1
-    assert "The files on the device changed since the question; nothing was removed." in out
+    assert ("The files on the device changed while the confirmation was open; nothing was "
+            "removed.") in out
     assert "Removed:" not in out
     assert len(on_device(st)) == 3
 

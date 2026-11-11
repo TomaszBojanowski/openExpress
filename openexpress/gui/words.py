@@ -262,7 +262,7 @@ def space_text(free: int | None, total: int | None = None, reading: bool = False
         return _("Reading…")
     if free is None:
         # TRANSLATORS: the free space of the device when it does not say
-        return pgettext("space", "Unknown")
+        return _("Not known")
     if total:
         return _("{free} free of {total}").format(free=human_size(free), total=human_size(total))
     # TRANSLATORS: free space on the device when its capacity is not known; {size}: e.g. "3.2 GB"
@@ -274,22 +274,22 @@ def free_after_text(free: int | None, needed: int, change: int, doing: str) -> s
     "update", "copy") about the free space: what is left once it is done (`change`: how much
     less), or what is missing for the `needed`, or that the device does not say."""
     if free is None:
-        # TRANSLATORS: line of the question before a map is installed or copied, when the device
+        # TRANSLATORS: line of the confirmation before a map is installed or copied, when the device
         # does not say how much space is free
         return _("Free space on the device: unknown")
     if needed > free:
-        # TRANSLATORS: line of the question before a map is installed or copied: {size} more
+        # TRANSLATORS: line of the confirmation before a map is installed or copied: {size} more
         # would have to be free
         return _("Not enough space on the device: {size} missing").format(
             size=human_size(needed - free))
     after = {
-        # TRANSLATORS: line of the question before a map is installed: the space free once it
+        # TRANSLATORS: line of the confirmation before a map is installed: the space free once it
         # is installed
         "install": _("Free space after installing: {free}"),
-        # TRANSLATORS: line of the question before a map is updated: the space free once the
+        # TRANSLATORS: line of the confirmation before a map is updated: the space free once the
         # new files are written and the old ones removed
         "update": _("Free space after updating: {free}"),
-        # TRANSLATORS: line of the question before a map of your own is copied to the device:
+        # TRANSLATORS: line of the confirmation before a map of your own is copied to the device:
         # the space free once it is copied
         "copy": _("Free space after copying: {free}"),
     }[doing]

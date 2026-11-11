@@ -421,8 +421,8 @@ choose under Free Up Space.
   after anything was written to it or removed from it), the largest first (a kind the device holds
   none of is left out) and the free space last; the kinds with a page of their own lead to it.
 - **Crashes and Updates:** each crash once, from the device's error logs, its boot log, the
-  copies on this computer and the log of its connections, with its details inside; the software updates, from the log of the
-  device's connections (see [Diagnostics](privacy.md#diagnostics)); and when openExpress first
+  copies on this computer and its connection log, with its details inside; the software updates,
+  from its connection log (see [Diagnostics](privacy.md#diagnostics)); and when openExpress first
   saw the device.
 - **Free Up Space:** the files the device no longer needs, with their size, each removed with
   **Remove** only after a question: the memory dumps but the newest (copied to this computer

@@ -449,6 +449,8 @@ def test_a_map_whose_unlock_file_was_refused_still_waits(server, device_root, xd
 NO_MAPS = {"maps": [], "filesToRemove": [], "details": {}, "bundledMaps": [],
            "directoriesToRemove": [], "subregions": []}
 NO_MAPS_TEXT = "No maps are available for this device."
+# The window: the title of the Maps page and the subtitle of the row "Maps", without a full stop.
+NO_MAPS_TITLE, NO_MAPS_ROW = "No Maps Available", "No maps are available for this device"
 
 
 def answer_with(monkeypatch, status=200, body=b"", error=None):
@@ -632,7 +634,7 @@ def test_maps_page_without_maps(device_root):
     assert group.title == ""
     (box,) = group.rows
     labels = [c.get_label() for c in _children(box) if isinstance(c, Gtk.Label)]
-    assert labels == [NO_MAPS_TEXT]
+    assert labels == [NO_MAPS_TITLE]
     (button,) = [c for c in _children(box) if isinstance(c, Gtk.Button)]
     assert button.get_label() == "Check Again"
     button.emit("clicked")
@@ -830,7 +832,7 @@ def test_maps_row_says_a_device_that_declares_no_maps_has_none(datatypes):
 def test_maps_row_for_a_device_without_maps():
     win, _asked, _later = _overview_window([lower_keys(NO_MAPS)])
     win._check_maps_quietly()
-    assert (win.map_state, win.map_row.subtitle) == ("none", NO_MAPS_TEXT)
+    assert (win.map_state, win.map_row.subtitle) == ("none", NO_MAPS_ROW)
 
 
 @pytest.mark.parametrize("answer", [ApiError("Map check: HTTP 500", 500),
@@ -885,7 +887,7 @@ def test_maps_page_answer_wins_over_a_quiet_check_that_ends_later(server, device
     win._check_maps_quietly()  # still running …
     win._set_map_state(maps.read_maps(lower_keys(NO_MAPS)))  # … when the Maps page answers
     later.pop()()
-    assert (win.map_state, win.map_row.subtitle) == ("none", NO_MAPS_TEXT)
+    assert (win.map_state, win.map_row.subtitle) == ("none", NO_MAPS_ROW)
 
 
 def test_a_failed_quiet_check_does_not_hide_what_the_maps_page_found(server):
@@ -1193,7 +1195,7 @@ def test_maps_page_says_map_updates_are_not_supported_for_a_device_served_anothe
                                           unit_info={"mapupdatetype": "LegacyRmu"})
     win.load_section("maps")
     texts = [t for g in section.groups for t in _texts(g)]
-    assert "Map updates for this device are not supported yet" in texts
+    assert "Map Updates Not Supported Yet" in texts
     assert "Check Again" in texts and asked == []
     assert (win.map_state, win.map_row.subtitle) == (
         "unsupported", "Map updates for this device are not supported yet")

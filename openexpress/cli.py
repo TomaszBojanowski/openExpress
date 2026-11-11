@@ -268,12 +268,13 @@ def cmd_diagnostics(args) -> int:
 
     found = crashes.history(dev.unit_id, None if missed else entries,
                             test_drive=bool(getattr(st, "test_drive", False)))
-    print(_("Crashes that restarted the device (error logs, boot log, copies and device log "
-            "on this computer):"))
+    # TRANSLATORS: `diagnostics`: heading of the crashes; each line under it says where its
+    # crash was found
+    print(_("Crashes that restarted the device:"))
     for crash in found:
         print(f"  {full_time(crash.at)}: {crash.words()} ({crash_sources(crash)})")
     if not found:
-        # TRANSLATORS: under "Crashes that restarted the device (…):" when there is none
+        # TRANSLATORS: under "Crashes that restarted the device:" when there is none
         print("  " + _("none found"))
     print(_("Copies on this computer: {copies}").format(
         copies=diagnostics.copies_text(dev.unit_id, bool(getattr(st, "test_drive", False)))))
@@ -361,9 +362,9 @@ def _print_free_space(plan) -> None:
         print("  " + _("older memory dumps: not known (the newest cannot be told)"))
     elif plan.older and plan.dumps_plan is None:
         # TRANSLATORS: under "Space to free on the device:" for a device whose GarminDevice.xml
-        # gives no unit ID; {dumps} is a count and a size, e.g. "3 (2.5 MB)"
-        print("  " + _("older memory dumps: {dumps}; not removed: the device gives no unit ID, "
-                       "so their copies would have no folder of the device").format(
+        # gives no Unit ID; {dumps} is a count and a size, e.g. "3 (2.5 MB)"
+        print("  " + _("older memory dumps: {dumps}; not removed: the device has no Unit ID to "
+                       "name the folder of their copies").format(
             dumps=_count_size(plan.older)))
     elif plan.older:
         # TRANSLATORS: under "Space to free on the device:"; {dumps} is a count and a size,
@@ -438,18 +439,25 @@ def _free_space(st, dev, plan, client) -> int:
 def _tell_freed(dev, st, dumps, files, problems: list[tuple[str, str]]) -> None:
     """What a --free-space --apply removed and the files that stayed, with why (`problems`,
     those of the device's refusals added), told also after it stopped half-way; then the device
-    counted again and its device log put right (history.after_removal: by what was removed when
+    counted again and its connection log put right (history.after_removal: by what was removed when
     the count fails), for the page of a device not connected."""
     from openexpress import history
 
     if dumps.removed or dumps.kept or dumps.copy_failed:
-        text = ngettext("Removed: {count} memory dump, {size} freed",
-                        "Removed: {count} memory dumps, {size} freed", len(dumps.removed)).format(
-            count=len(dumps.removed), size=human_size(dumps.freed))
+        count, size = len(dumps.removed), human_size(dumps.freed)
         if dumps.copied:
-            text += "; " + _("{count} copied to this computer first").format(
-                count=len(dumps.copied))
-        print(text + ".")
+            print(ngettext(
+                # TRANSLATORS: `diagnostics --free-space --apply`; {copied}: how many of the
+                # memory dumps removed were copied to this computer before
+                "Removed: {count} memory dump, {size} freed; {copied} copied to this computer "
+                "first.",
+                "Removed: {count} memory dumps, {size} freed; {copied} copied to this computer "
+                "first.", count).format(count=count, size=size, copied=len(dumps.copied)))
+        else:
+            # TRANSLATORS: `diagnostics --free-space --apply`
+            print(ngettext("Removed: {count} memory dump, {size} freed.",
+                           "Removed: {count} memory dumps, {size} freed.", count).format(
+                count=count, size=size))
         problems += [(path, why) for path, why in dumps.kept]
         # TRANSLATORS: why a memory dump stays on the device after --free-space
         problems += [(path, _("its copy on this computer failed")) for path in dumps.copy_failed]
@@ -471,16 +479,16 @@ def _tell_freed(dev, st, dumps, files, problems: list[tuple[str, str]]) -> None:
         ("logs", dumps.removed), ("updates", [f for _u, freed in files for f in freed.removed]))
         if found}
     if removed:
-        try:  # the device log tells the state after it (the page of a device not connected)
+        try:  # the connection log tells the state after it (the page of a device not connected)
             history.after_removal(dev, st, removed)
         except DeviceNotResponding:
             raise
         except (DeviceError, OSError) as e:
             log.info("free space: not counted again after the removal (%s)", type(e).__name__)
             # TRANSLATORS: after --free-space --apply removed files, when the device could not
-            # be counted again
-            print(_("The device could not be counted again after the removal; its records keep "
-                    "what was removed."))
+            # be read again
+            print(_("The device could not be read again after the removal; openExpress has "
+                    "noted what was removed."))
 
 
 def crash_sources(crash) -> str:
@@ -492,8 +500,8 @@ def crash_sources(crash) -> str:
              # TRANSLATORS: the log a fēnix 8 writes at each start (recovery_mode_log.txt)
              crashes.BOOT_LOG: _("boot log"),
              # TRANSLATORS: where a crash was found: the log of the device's connections that
-             # openExpress keeps (the line "Device log on this computer: …")
-             crashes.DEVICE_LOG: _("device log on this computer")}
+             # openExpress keeps (the line "Connection log on this computer: …")
+             crashes.DEVICE_LOG: _("connection log on this computer")}
     names = sorted(s for s in crash.sources if s not in words)
     return ", ".join([*names, *(words[s] for s in (crashes.COPY, crashes.BOOT_LOG,
                                                    crashes.DEVICE_LOG)
@@ -531,11 +539,11 @@ def history_lines(unit_id: int, test_drive: bool = False) -> list[str]:
     kept = history.read(unit_id, test_drive)
     lines = kept.lines
     if not lines:
-        out = [_("Device log on this computer: no connection yet")]
+        out = [_("Connection log on this computer: no connection yet")]
     else:
         first = history.local_time(lines[0]).strftime("%Y-%m-%d")
-        out = [ngettext("Device log on this computer: {count} connection, the first on {day}",
-                        "Device log on this computer: {count} connections, the first on {day}",
+        out = [ngettext("Connection log on this computer: {count} connection, the first on {day}",
+                        "Connection log on this computer: {count} connections, the first on {day}",
                         len(lines)).format(count=len(lines), day=first)]
         out += ["  " + _history_line(line) for line in reversed(lines[-CONNECTIONS_SHOWN:])]
         earlier = len(lines) - CONNECTIONS_SHOWN
@@ -558,37 +566,39 @@ def history_lines(unit_id: int, test_drive: bool = False) -> list[str]:
 def _history_line(line: dict) -> str:
     from openexpress import history
 
-    # TRANSLATORS: in a line of the device log (`diagnostics`): the device's software version
+    # TRANSLATORS: the device's software version: in a line of the connection log
+    # (`diagnostics`), and on the page Device Status in the subtitle of a crash or of the first
+    # connection
     parts = [_("software {version}").format(version=line["software"])]
     # What was not known at that connection is said so, apart from none (no dumps, no crash).
     if "free" in line and "capacity" in line:
-        # TRANSLATORS: in a line of the device log (`diagnostics`): its free space then
+        # TRANSLATORS: in a line of the connection log (`diagnostics`): its free space then
         parts.append(_("{free} of {total} free").format(free=human_size(line["free"]),
                                                        total=human_size(line["capacity"])))
     else:
-        # TRANSLATORS: in a line of the device log (`diagnostics`): it could not be read
+        # TRANSLATORS: in a line of the connection log (`diagnostics`): it could not be read
         parts.append(_("free space not known"))
     dumps = line.get("dumps")
     if dumps is None:
-        # TRANSLATORS: in a line of the device log (`diagnostics`): they could not be listed
+        # TRANSLATORS: in a line of the connection log (`diagnostics`): they could not be listed
         parts.append(_("memory dumps not known"))
     elif dumps["count"]:
         parts.append(ngettext("{count} memory dump ({size})", "{count} memory dumps ({size})",
                               dumps["count"]).format(count=dumps["count"],
                                                      size=human_size(dumps["bytes"])))
     else:
-        # TRANSLATORS: in a line of the device log (`diagnostics`)
+        # TRANSLATORS: in a line of the connection log (`diagnostics`)
         parts.append(_("no memory dumps"))
     found = history.crash_entries(line)
     if "errors" not in line:
-        # TRANSLATORS: in a line of the device log (`diagnostics`): its error logs could not
+        # TRANSLATORS: in a line of the connection log (`diagnostics`): its error logs could not
         # be read
         parts.append(_("crashes not known"))
     elif not found:
-        # TRANSLATORS: in a line of the device log (`diagnostics`)
+        # TRANSLATORS: in a line of the connection log (`diagnostics`)
         parts.append(_("no crash in the error logs"))
     else:
-        # TRANSLATORS: in a line of the device log (`diagnostics`); {crash} is in English, as
+        # TRANSLATORS: in a line of the connection log (`diagnostics`); {crash} is in English, as
         # the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
         parts.append(_("last crash: {crash}").format(crash=found[0].words()))
     via = _("USB drive") if line["via"] == "drive" else "MTP"
@@ -1316,7 +1326,7 @@ def cmd_devices(args) -> int:
     if not args.apply:
         print(_("Device to forget: {device}").format(device=name))
         print(_("What this installation keeps of it goes too: what was uploaded from it, its "
-                "last sync, the log of its connections, the maps of your own copied to it and "
+                "last sync, its connection log, the maps of your own copied to it and "
                 "the copies of its diagnostic files. Its next sync with this program will be a "
                 "first sync again."))
         if kept.pending:
@@ -3358,15 +3368,17 @@ def build_parser() -> argparse.ArgumentParser:
     s = sub.add_parser("diagnostics",
                        help=_("the device's error logs and their copy on this computer"))
     s.add_argument("--apply", action="store_true",
-                   help=_("copy the diagnostic files the device shows now"))
+                   help=_("copy the diagnostic files the device shows now; with --free-space, "
+                          "remove the files it lists"))
     s.add_argument("--crash-logs", action="store_true",
                    help=_("also read the hidden crash logs (the device leaves the file "
                           "manager for a moment)"))
     s.add_argument("--dumps", action="store_true", help=_("also copy the memory dumps"))
     s.add_argument("--free-space", action="store_true",
-                   help=_("also free up space on the device: remove the older memory dumps "
+                   help=_("only what can be freed on the device: the older memory dumps "
                           "(copied to this computer first where they fit) and the files of "
-                          "updates it did not install"))
+                          "updates it did not install; with --apply they are removed (not with "
+                          "--dumps or --crash-logs)"))
     s.set_defaults(func=cmd_diagnostics, _parser=s)
 
     s = sub.add_parser("login", help=_("sign in to Garmin Connect"))

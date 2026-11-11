@@ -98,8 +98,8 @@ def test_the_free_space_in_one_caption():
 
     assert words.space_text(2_100_000_000, 32_000_000_000) == f"2.1{NB}GB free of 32.0{NB}GB"
     assert words.space_text(2_100_000_000) == f"2.1{NB}GB free"
-    assert words.space_text(None) == "Unknown"
-    assert words.space_text(None, 32_000_000_000) == "Unknown"
+    assert words.space_text(None) == "Not known"
+    assert words.space_text(None, 32_000_000_000) == "Not known"
     assert words.space_text(None, reading=True) == "Reading…"
 
 
@@ -117,12 +117,12 @@ def _storage_row(space):
 @pytest.mark.needs_display
 def test_the_device_page_says_reading_then_unknown():
     assert _storage_row(None) == "Reading…"
-    assert _storage_row((None, None)) == "Unknown"
+    assert _storage_row((None, None)) == "Not known"
     assert _storage_row((2_100_000_000, None)) == f"2.1{NB}GB free"
 
 
 @pytest.mark.needs_display
-@pytest.mark.parametrize("free, said", [(None, "Unknown"), (5_000_000_000, f"5.0{NB}GB free")])
+@pytest.mark.parametrize("free, said", [(None, "Not known"), (5_000_000_000, f"5.0{NB}GB free")])
 def test_the_music_page_says_the_space_in_the_same_words(free, said):
     from fakes import page_window
 
@@ -140,7 +140,7 @@ def test_the_music_page_says_the_space_in_the_same_words(free, said):
 @pytest.mark.parametrize("slots, space, said", [
     (3, 1_200_000, f"3 free slots{NB}· 1.2{NB}MB free"),
     (None, 1_200_000, f"1.2{NB}MB free"),
-    (2, None, f"2 free slots{NB}· Unknown"),
+    (2, None, f"2 free slots{NB}· Not known"),
 ])
 def test_the_apps_page_says_the_space_in_the_same_words(slots, space, said):
     from openexpress.gui.app import MainWindow

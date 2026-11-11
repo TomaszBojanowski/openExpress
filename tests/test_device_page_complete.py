@@ -317,7 +317,7 @@ def _labels(widget):
 def test_the_maps_page_names_the_map_update_type():
     section = _maps_page("Gemini")
     labels = [t for g in section.groups for t in _labels(g)]
-    assert "Map updates for this device are not supported yet" in labels
+    assert "Map Updates Not Supported Yet" in labels
     assert "Garmin's map update type for this device: Gemini" in labels
     section = _maps_page(None)
     assert not any("map update type" in t for g in section.groups for t in _labels(g))

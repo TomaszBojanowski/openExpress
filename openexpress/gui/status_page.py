@@ -511,8 +511,7 @@ def _event_row(event: status.Event, now: datetime) -> Adw.PreferencesRow:
         crash = event.crash
         parts = [when]
         if crash.software:
-            # TRANSLATORS: in the subtitle of a crash on the page Device Status
-            parts.append(pgettext("crash", "software {version}").format(version=crash.software))
+            parts.append(_("software {version}").format(version=crash.software))
         if event.same_before:
             # TRANSLATORS: in the subtitle of a crash on the page Device Status
             parts.append(ngettext("the same error as the one before",
@@ -538,7 +537,7 @@ def _event_row(event: status.Event, now: datetime) -> Adw.PreferencesRow:
         row.add_prefix(Gtk.Image(icon_name="software-update-available-symbolic"))
         return row
     # The version only when the device log began with that connection (status.events).
-    version = (pgettext("crash", "software {version}").format(version=event.software)
+    version = (_("software {version}").format(version=event.software)
                if event.software else "")
     # TRANSLATORS: a row of "Crashes and Updates": the first connection to this computer
     row = Adw.ActionRow(title=_("First Connected Here"), subtitle=caption(when, version))
@@ -633,8 +632,8 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
         # The size at the end of the subtitle: the end of the row is the button's.
         row = Adw.ActionRow(title=title, subtitle=caption(ngettext(
             # TRANSLATORS: subtitle of "Older Memory Dumps", followed by their size
-            "{count} file; the newest dump is not counted",
-            "{count} files; the newest dump is not counted", len(older)).format(count=len(older)),
+            "{count} dump; the newest stays",
+            "{count} dumps; the newest stays", len(older)).format(count=len(older)),
             human_size(sum(size for _p, size, _t in older))))
         # Remove on the row (its question names the copy first): Copy and Remove would leave
         # its subtitle no room in a narrow window. The full name in its tooltip and for screen
@@ -657,9 +656,9 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
                 # row has no button
                 "Waits to be installed; removing the file would cancel the update")))
             continue
-        # TRANSLATORS: subtitle of a row of "Free Up Space": an update openExpress copied
-        # that the device did not install, followed by the size of its file
-        subtitle = _("The device took the file in but did not install it")
+        # TRANSLATORS: subtitle of a row of "Free Up Space" whose title is an update: openExpress
+        # copied it, the device did not install it; followed by the size of its file
+        subtitle = _("Copied, not installed by the device")
         row = Adw.ActionRow(title=title, subtitle=caption(
             subtitle, human_size(u.size) if u.size else ""))
         # TRANSLATORS: button of the row of an update file the device did not install:
@@ -696,19 +695,19 @@ def _dumps_question(plan: freeing.DumpPlan) -> str:
                         "copy, as the copies would not fit in {limit}.", count).format(
             count=count, size=size, limit=limit)
     else:
-        # TRANSLATORS: the first part of the question when some dumps are copied first and
+        # TRANSLATORS: the first part of the confirmation when some dumps are copied first and
         # some are too large; "{copied part}, {not copied part}." follows
         head = ngettext("{count} memory dump ({size}) will be removed from the device:",
                         "{count} memory dumps ({size}) will be removed from the device:",
                         count).format(count=count, size=size)
         n, room = len(copied), human_size(sum(s for _p, s, _t in copied))
-        # TRANSLATORS: a part of the question: how many dumps are copied first, e.g.
+        # TRANSLATORS: a part of the confirmation: how many dumps are copied first, e.g.
         # "2 (75.3 MB) after a copy on this computer"
         first = ngettext("{count} ({size}) after a copy on this computer",
                          "{count} ({size}) after a copy on this computer", n).format(
             count=n, size=room)
         n, room = len(without_copy), human_size(sum(s for _p, s, _t in without_copy))
-        # TRANSLATORS: a part of the question: how many dumps are removed without a copy
+        # TRANSLATORS: a part of the confirmation: how many dumps are removed without a copy
         # TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
         second = ngettext("{count} ({size}) without a copy, as the copies would not fit in "
                           "{limit}",
@@ -724,7 +723,7 @@ def _stopped_words(e: BaseException) -> str:
         return _("the device stopped responding")
     # TRANSLATORS: why a removal from the device did not go to its end, or was not counted
     # after it
-    return _("the device could not be read after the removal")
+    return _("the device could not be read again after the removal")
 
 
 def _then_counted(s, remove, kind: str = "logs"):
@@ -770,10 +769,10 @@ def _for_the_question(win, s, remove):
             return
         log.info("freeing: the device changed since the question, nothing removed")
         # TRANSLATORS: heading of the message when the device was unplugged or opened again
-        # while a question of the page Device Status was open
+        # while a confirmation of the page Device Status was open
         inform(win, "free-device-changed", _("Nothing Removed"),
-               _("The device was unplugged or connected again since the question. Look at the "
-                 "list again."))
+               _("The device was unplugged or plugged in again while the confirmation was open. "
+                 "Check the list again."))
         status_changed(win)
 
     return answered
@@ -800,7 +799,7 @@ def confirm_dumps(win, plan: freeing.DumpPlan, button=None) -> None:
                 s.storage, s.device.unit_id, plan, progress=win.progress, freed=freed))),
             done, read_again_after_failure(win, "status"), button=button)
 
-    # TRANSLATORS: heading of the question before the older memory dumps are removed
+    # TRANSLATORS: heading of the confirmation before the older memory dumps are removed
     confirm(win, "free-dumps", _("Remove Older Memory Dumps?"), _dumps_question(plan),
             Answer("ok", _dumps_answer(plan), _for_the_question(win, s, remove),
                    look="destructive"))
@@ -831,13 +830,13 @@ def confirm_update(win, u, button=None) -> None:
                      done, read_again_after_failure(win, "status"), button=button)
 
     confirm(win, "free-update",
-            # TRANSLATORS: heading of the question before the file of an update the device did
-            # not install is removed
+            # TRANSLATORS: heading of the confirmation before the file of an update the device
+            # did not install is removed
             _("Remove the Update File?"),
-            _("The device took in {name} {version} ({size}) but did not install it. The file "
-              "will be removed from the device; the Updates page will offer the update "
-              "again.").format(name=u.name, version=u.version, size=human_size(
-                  u.listed_file[0] if u.listed_file else u.size or 0)),
+            _("The file of {name} {version} ({size}) will be removed from the device; the "
+              "Updates page will offer the update again.").format(
+                name=u.name, version=u.version,
+                size=human_size(u.listed_file[0] if u.listed_file else u.size or 0)),
             Answer("ok", _("Remove"), _for_the_question(win, s, remove), look="destructive"))
 
 
@@ -1018,8 +1017,7 @@ def _dumps_at_last(facts: status.Facts) -> str:
 def _report(win, sec) -> None:
     # TRANSLATORS: group of the page Device Status
     g = sec.group(_("Report a Problem"))
-    # TRANSLATORS: row of the page Device Status: the report for openExpress's issues
-    row = Adw.ActionRow(title=_("Report to openExpress"), subtitle=_(
+    row = Adw.ActionRow(title=_("Report a Device or Problem"), subtitle=_(
         "The device, the system and the recent crashes; no serial number, Unit ID or e-mail"))
     # TRANSLATORS: button that opens the report of the device (a dialog with more to do)
     row.add_suffix(win._button(_("Report…"), lambda: win.show_report()))
@@ -1102,12 +1100,12 @@ def show_kept_status(win) -> None:
     if facts.counted_at is not None:
         # TRANSLATORS: banner on top of the page Device Status of a device not connected: what
         # it shows is from its records, as of its last connection
-        title = _("Device not connected\u00a0– as of {when}; connect it to free up space or "
-                  "copy its logs").format(when=full_time(facts.counted_at))
+        title = _("Not connected\u00a0– as of {when}; connect it to free up space or copy "
+                  "diagnostic files").format(when=full_time(facts.counted_at))
     else:
         # TRANSLATORS: banner on top of the page Device Status of a device not connected whose
         # last connection is not known
-        title = _("Device not connected\u00a0– connect it to free up space or copy its logs")
+        title = _("Not connected\u00a0– connect it to free up space or copy diagnostic files")
     sec.banner.set_title(title)
     sec.banner.set_revealed(True)
     view = Adw.ToolbarView(content=sec.stack)

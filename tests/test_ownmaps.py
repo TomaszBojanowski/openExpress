@@ -1035,14 +1035,14 @@ def test_window_adds_a_map_after_a_confirmation(window_device, my_map, monkeypat
     my_map.rename(target)
     win.add_own_map(target)
     assert win.shown == [
-        ("task", "Checking Maps…"),
+        ("task", "Checking the File…"),
         ("ask", "Copy This Map to the Device?",
          ("Sometown cyclemap/latin1 Example.org\n\n"  # the name of the map on its own
           "new-map.img\n"
           "Map file on the device: 2.0\u00a0kB\n"
           "Free space after copying: 12.4\u00a0GB"), "Copy", False),
         ("task", "Copying the Map…"),
-        ("toast", "Wrote Garmin/new-map.img (2.0\u00a0kB)"),
+        ("toast", "Copied Sometown cyclemap/latin1 Example.org"),
     ]
     assert win.reloads == [("maps", True)]
     assert (root / "Garmin" / "new-map.img").read_bytes() == target.read_bytes()
@@ -1120,7 +1120,7 @@ def test_window_shows_a_refusal_with_its_own_hint(window_device, my_map, name, m
     win, dev, root = window_device
     before = tree(root / "Garmin")
     win.add_own_map(my_map.rename(my_map.with_name(name)))
-    assert win.shown == [("task", "Checking Maps…"), ("error", "Map Not Added", message)]
+    assert win.shown == [("task", "Checking the File…"), ("error", "Map Not Added", message)]
     assert "--" not in message
     assert tree(root / "Garmin") == before and ownmaps.recorded(dev) == [] and win.reloads == []
 
@@ -1146,7 +1146,7 @@ def test_window_removes_a_map_it_copied(window_device, my_map, monkeypatch):
         ("ask", "Remove Sometown cyclemap/latin1 Example.org?",
          "Garmin/ours.img (2.0\u00a0kB) will be removed from the device.", "Remove", True),
         ("task", "Removing Sometown cyclemap/latin1 Example.org…"),
-        ("toast", "Removed Garmin/ours.img (2.0\u00a0kB)"),
+        ("toast", "Removed Sometown cyclemap/latin1 Example.org"),
     ]
     assert not (root / "Garmin" / "ours.img").exists() and ownmaps.recorded(dev) == []
     assert win.reloads == [("maps", True)]
@@ -1282,7 +1282,7 @@ def test_own_maps_show_under_the_message_that_map_updates_are_not_supported():
     win._set_map_state = lambda result, no_maps=False: None
     MainWindow.show_maps(win, None, view_of(("mine.img", 2000, "Mine")))
     assert [g.get_title() for g in section.groups] == ["", "Own Maps"]
-    assert "Map updates for this device are not supported yet" in _texts(section.groups[0])
+    assert "Map Updates Not Supported Yet" in _texts(section.groups[0])
 
 
 @pytest.mark.needs_display
@@ -1468,7 +1468,7 @@ def test_window_asks_more_strongly_before_removing_a_foreign_map(window_device):
          f"{ANYWAY}\n\nGarmin/osm-test.img (1.5\u00a0kB) will be removed from the device.",
          "Remove Anyway", True),
         ("task", "Removing Sometown cyclemap…"),
-        ("toast", "Removed Garmin/osm-test.img (1.5\u00a0kB)"),
+        ("toast", "Removed Sometown cyclemap"),
     ]
     assert not (root / "Garmin" / "osm-test.img").exists()
     assert ownmaps.recorded(dev) == [] and win.reloads == [("maps", True)]

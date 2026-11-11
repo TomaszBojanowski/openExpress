@@ -119,7 +119,7 @@ class CourseMap(MapView):
     def __init__(self, gpx):
         super().__init__(MAP_HEIGHT)
         self.map.set_can_target(False)  # a look at the file: neither dragged nor zoomed
-        # TRANSLATORS: for a screen reader: the map in the question before a GPX file is copied
+        # TRANSLATORS: for a screen reader: the map in the confirmation before a GPX file is copied
         self.map.update_property([Gtk.AccessibleProperty.LABEL], [_("Map of the GPX file")])
         viewport = self.map.get_viewport()
         self.path = CourseLayer(viewport, gpx)

@@ -397,7 +397,7 @@ def test_diagnostics_shows_the_device_log(made_up, clock, monkeypatch, capsys):
     monkeypatch.setattr(service, "open_device_or_drive", lambda **_kw: st)
     assert cli.main(["diagnostics"]) == 0
     out = capsys.readouterr().out.splitlines()
-    assert "Device log on this computer: 1 connection, the first on 2026-10-21" in out
+    assert "Connection log on this computer: 1 connection, the first on 2026-10-21" in out
     line = (f"  2026-10-21 12:00 MTP: software 23.39, {size(FREE)} of "
             f"{size(CAPACITY)} free, 2 memory dumps ({size(500)}), last crash: "
             "RTL Trap at 2026-10-20 22:24:06, error 0x003, PC 0x10000abc, screen 2301")

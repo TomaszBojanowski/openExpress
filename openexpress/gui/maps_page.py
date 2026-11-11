@@ -121,7 +121,9 @@ class MapsPage:
                 # TRANSLATORS: title of the Maps page of a device without maps
                 _no_maps(self, sec, _("No Maps on This Device"), check_again=False)
             else:
-                _no_maps(self, sec, mp.not_supported_text(),
+                # TRANSLATORS: title of the Maps page when map updates of the device are not
+                # supported
+                _no_maps(self, sec, _("Map Updates Not Supported Yet"),
                          map_update_type_text(map_update_type) if map_update_type else None)
             if own is not None:  # the maps of your own, whatever serves Garmin's
                 self.show_own_maps(own)
@@ -130,7 +132,8 @@ class MapsPage:
         self.maps_cache = all_maps
         self._set_map_state(result)  # the "Maps" row of the device page
         if not listed:
-            _no_maps(self, sec, mp.no_maps_message())
+            # TRANSLATORS: title of the Maps page when Garmin offers no map for the device
+            _no_maps(self, sec, _("No Maps Available"))
             if own is not None:
                 self.show_own_maps(own)
             return
@@ -276,7 +279,7 @@ class MapsPage:
             except GLib.Error:
                 return  # cancelled
             if path is None:
-                self.toast(_("Choose files stored on this computer"))
+                self.toast(_("Choose a file stored on this computer"))
                 return
             self.add_own_map(Path(path))
 
@@ -288,7 +291,7 @@ class MapsPage:
         file and the space. Hyphens in the name do not break ("13-Oct-2026" stays together);
         only what is shown changes, not the name."""
         lines = [(plan.title or plan.name).replace("-", "\u2011"), "", plan.name,
-                 # TRANSLATORS: line of the question before a map of your own is copied: the
+                 # TRANSLATORS: line of the confirmation before a map of your own is copied: the
                  # size of its file on the device
                  _("Map file on the device: {size}").format(size=human_size(plan.size)),
                  free_after_text(plan.free, plan.size, plan.size, "copy")]
@@ -304,8 +307,9 @@ class MapsPage:
             return self._own_map_refused(e, _("Map Not Added"))
 
         def written(real, plan):
-            # TRANSLATORS: toast after a map of the user's own was copied to the device
-            self.toast(_("Wrote {path} ({size})").format(path=real, size=human_size(plan.size)))
+            # TRANSLATORS: toast after a map of the user's own was copied to the device; {name}:
+            # its title, else its file's name
+            self.toast(_("Copied {name}").format(name=plan.title or plan.name))
             self.load_section("maps", force=True)
 
         def copy(plan):
@@ -322,7 +326,7 @@ class MapsPage:
                     Answer("ok", _("Copy"), lambda: copy(plan), look="suggested"), wide=True,
                     private=True)
 
-        self.run_task(_("Checking Maps…"),
+        self.run_task(_("Checking the File…"),
                       lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
                       ask_copy, refused)
 
@@ -347,9 +351,7 @@ class MapsPage:
 
         def removed(plan):
             if plan.on_device:
-                # TRANSLATORS: toast after a map of the user's own was removed
-                self.toast(_("Removed {path} ({size})").format(
-                    path=plan.path, size=human_size(plan.size)))
+                self.toast(_("Removed {name}").format(name=plan.title or plan.name))
             else:
                 self.toast(_("Took {name} off the list of own maps; the file was not on the "
                              "device").format(name=plan.name))
@@ -431,22 +433,23 @@ class MapsPage:
         from openexpress import maps as mp
 
         s = self.session
-        # TRANSLATORS: line of the question before a map is installed or updated: the size of
+        # TRANSLATORS: line of the confirmation before a map is installed or updated: the size of
         # its files on the device, which is also what is downloaded
         body = (_("Map files on the device: {size}").format(size=human_size(m.size)) + "\n"
                 + free_after_text(free, need, change, "update" if m.installed else "install")
                 + "\n"
-                # TRANSLATORS: line of the question before a map is installed: how many files the
-                # map has
+                # TRANSLATORS: line of the confirmation before a map is installed: how many files
+                # the map has
                 + _("Files: {count}").format(count=len(m.files))
                 + ("\n" + _("Old files to remove: {count}").format(count=len(removing))
                    if removing else "")
                 + "".join("\n\n" + _("License: {url}").format(url=e) for e in m.eula_urls)
                 + "\n\n" + _("Copying large maps over USB can take tens of minutes.")
                 + _cleanup_paragraph(self))
-        # TRANSLATORS: heading of the question before an installed map is updated ({name}: the map)
+        # TRANSLATORS: heading of the confirmation before an installed map is updated ({name}: the
+        # map)
         heading = (_("Update {name}?") if m.installed
-                   # TRANSLATORS: heading of the question before a map is installed ({name}: the
+                   # TRANSLATORS: heading of the confirmation before a map is installed ({name}: the
                    # map)
                    else _("Install {name}?")).format(name=m.name)
         def unlock_not_written(e) -> bool:
@@ -466,7 +469,8 @@ class MapsPage:
                     activate=lambda ident: s.client.activate_maps(s.device.raw, [ident]),
                     session=s.client.http, progress=self.progress,
                     url_salt=s.client.consumer.url_salt)),
-                lambda rep: (self.toast(_("{name} copied; unplug the device to load it")
+                # TRANSLATORS: toast after a map of Garmin was installed; {name}: the map's name
+                lambda rep: (self.toast(_("Copied {name}; unplug the device to load it")
                                         .format(name=m.name)),
                              self.load_section("maps", force=True)),
                 read_again_after_failure(self, "maps", unlock_not_written),

@@ -1,6 +1,6 @@
 """The cache of openExpress, paths.cache_dir(): downloaded maps and software updates,
 pictures, and files staged for copying to the device, all of which can be downloaded again.
-It is counted and cleared in four parts (CATEGORIES), all or some.
+It is counted and cleared in parts (CATEGORIES), all or some.
 
 Each installation has its own: ~/.cache/openexpress for the version from source, a folder
 below ~/.var/app/<app ID>/cache (its XDG_CACHE_HOME) in the Flatpak."""
@@ -32,20 +32,20 @@ CATEGORIES = {"maps": ("maps",), "updates": ("software",), "pictures": ("images"
               # Files on their way to the device (the Flatpak), and what older versions left.
               "temp": ("transfer", "tmp")}
 CATEGORY_NAMES = {
-    # TRANSLATORS: the parts of the cache, as `openexpress cache` and the preferences list them
+    # TRANSLATORS: the parts of the cache, as `openexpress cache` lists them
     "maps": N_("Maps"),
-    # TRANSLATORS: a part of the cache in `openexpress cache` and the preferences: downloaded
-    # device software
+    # TRANSLATORS: a part of the cache in `openexpress cache`: downloaded device software
     "updates": N_("Software updates"),
-    # TRANSLATORS: a part of the cache in `openexpress cache` and the preferences: downloaded
-    # pictures of devices and icons of apps
+    # TRANSLATORS: a part of the cache in `openexpress cache`: downloaded pictures of devices
+    # and icons of apps
     "pictures": N_("Pictures and icons"),
-    "answers": N_("Garmin Server Responses"),
-    # TRANSLATORS: a part of the cache in `openexpress cache` and the preferences:
-    # OpenStreetMap tiles under the maps of activities
+    # TRANSLATORS: a part of the cache in `openexpress cache`: answers of Garmin's servers kept
+    # for a while
+    "answers": N_("Garmin server responses"),
+    # TRANSLATORS: a part of the cache in `openexpress cache`: OpenStreetMap tiles under the
+    # maps of activities
     "tiles": N_("Activity map tiles"),
-    # TRANSLATORS: a part of the cache in `openexpress cache` and the preferences: files on
-    # their way to the device
+    # TRANSLATORS: a part of the cache in `openexpress cache`: files on their way to the device
     "temp": N_("Temporary files"),
 }
 

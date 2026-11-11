@@ -34,7 +34,6 @@ from openexpress.device.storage import (
     named_in_any_case,
 )
 from openexpress.device.xmldevice import GarminDevice
-from openexpress.i18n import _
 
 log = logging.getLogger(__name__)
 
@@ -543,8 +542,7 @@ def note_counted(device: GarminDevice, storage: Storage,
     dumps = diagnostics.dumps_or_none(storage)
     if after_removal_of and free is None and dumps is None:
         log.info("history: the device could not be counted after the removal")
-        raise NotCounted(_("The device could not be counted again after the removal; its "
-                           "records keep what was removed."))
+        raise NotCounted  # what the user is told is the caller's (command line or window)
     if not getattr(device, "unit_id", None):
         return kinds, capacity, free, dumps
     via = _via(storage)

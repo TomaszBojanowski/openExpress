@@ -1337,7 +1337,8 @@ class DevicePage:
         elif self.map_state == "empty":
             text = _("No maps are installed")
         elif self.map_state == "none":
-            text = mp.no_maps_message()
+            # TRANSLATORS: subtitle of the row "Maps" of the device page, without a full stop
+            text = _("No maps are available for this device")
         elif self.map_state == "unsupported":
             text = mp.not_supported_text()
         elif self.map_state == "nomaps":
@@ -1530,17 +1531,17 @@ class DevicePage:
         self.run_task(_("Syncing…"), writes_to_device(work), done, failed)
 
     def ask_first_sync(self) -> None:
-        # TRANSLATORS: heading of the question before the first sync of a device
+        # TRANSLATORS: heading of the confirmation before the first sync of a device
         confirm(self, "first-sync", _("First Sync"),
                 _("If the device also syncs via your phone, most data is already "
                   "in Garmin Connect. You can mark the current files as uploaded "
                   "and upload only new ones, or upload everything (Garmin Connect skips "
                   "duplicates)."),
-                # TRANSLATORS: button of the question "First Sync": uploads every activity file on
-                # the device
+                # TRANSLATORS: button of the confirmation "First Sync": uploads every activity file
+                # on the device
                 Answer("all", _("Upload Everything"), lambda: self.start_sync("all")),
-                # TRANSLATORS: button of the question "First Sync": marks the files on the device as
-                # uploaded and uploads only new ones
+                # TRANSLATORS: button of the confirmation "First Sync": marks the files on the
+                # device as uploaded and uploads only new ones
                 Answer("baseline", _("Upload New Data Only"), lambda: self.start_sync("baseline"),
                        look="suggested"),
                 default="baseline")

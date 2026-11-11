@@ -404,7 +404,7 @@ class AppsPage:
         the copies it read: the question asks the device nothing."""
         from openexpress import ciq
 
-        # TRANSLATORS: heading of the question before the order of the apps on the device is
+        # TRANSLATORS: heading of the confirmation before the order of the apps on the device is
         # restored from a copy
         confirm(self, "order-restore", _("Restore This Order?"),
                 ciq.copy_title(copy) + "\n\n" + self._order_summary(plan, note),
@@ -453,15 +453,15 @@ class AppsPage:
             "openExpress installs them only if you allow them.", count)])
         # The choice is data of these closures, not of the dialog (confirm says why).
         answers = [Answer(
-            # TRANSLATORS: answer to the question about new permissions: skip the apps that
+            # TRANSLATORS: button of the confirmation about new permissions: skip the apps that
             # ask for them and install or update only the others
             "others", _("Skip These Apps"), lambda: self._install_apps(others))] if others else []
-        # TRANSLATORS: answer to the question about new permissions: install the apps and allow what
-        # they ask for
+        # TRANSLATORS: button of the confirmation about new permissions: install the apps and allow
+        # what they ask for
         answers.append(Answer("allow", _("Allow"), lambda: self._install_apps(apps, allowed),
                               look="suggested"))
         confirm(self, "app-permissions", ngettext(
-            # TRANSLATORS: heading of the question before installing apps that ask for new
+            # TRANSLATORS: heading of the confirmation before installing apps that ask for new
             # permissions ({count}: how many apps, more than one)
             "Allow New Permissions?", "Allow New Permissions for {count} Apps?",
             count).format(count=count), body, *answers)
@@ -567,7 +567,8 @@ class AppsPage:
                             self.load_section("apps", force=True)),
                 read_again_after_failure(self, "apps"), device=False)
 
-        # TRANSLATORS: heading of the question before an app or a map is removed ({name}: its name)
+        # TRANSLATORS: heading of the confirmation before an app or a map is removed ({name}: its
+        # name)
         confirm(self, "app-forget", _("Remove {name}?").format(name=app.name),
                 # TRANSLATORS: answer: removes the app only from the account's list of apps, not
                 # from the device

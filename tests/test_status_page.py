@@ -455,7 +455,7 @@ def test_free_up_space_offers_a_button_for_each_file_it_may_remove(clock):
         "Free Up Space", "Activities, maps, music, courses and settings are never removed")
     older = titled(section, "Older Memory Dumps")
     # The size in the subtitle: the end of the row is the button's, as the mockup has it.
-    assert older.get_subtitle() == ("2 files; the newest dump is not counted\u00a0· "
+    assert older.get_subtitle() == ("2 dumps; the newest stays\u00a0· "
                                     "18.0\u00a0MB")
     # Short, so that a narrow window leaves the subtitle room; its question says Copy and
     # Remove, and so do its tooltip and its name for screen readers.
@@ -465,8 +465,7 @@ def test_free_up_space_offers_a_button_for_each_file_it_may_remove(clock):
     assert "18.0\u00a0MB" not in labels(older)
     # An update file: its name and version the title, what became of it the subtitle.
     update = titled(section, "GPS software 6.20")
-    assert update.get_subtitle() == ("The device took the file in but did not install "
-                                     "it\u00a0· 4.1\u00a0MB")
+    assert update.get_subtitle() == "Copied, not installed by the device\u00a0· 4.1\u00a0MB"
     assert button_of(update).get_label() == "Remove"
     assert button_of(update).has_css_class("destructive-action")
     waiting = titled(section, "Edge Software Bundle 33.20")
@@ -771,8 +770,8 @@ def test_removing_an_update_file_offers_the_update_again(clock, in_the_window, m
     (q,) = asked
     assert (q.heading, q.body) == (
         "Remove the Update File?",
-        ("The device took in GPS software 6.20 (4.1\u00a0MB) but did not install it. The file "
-         "will be removed from the device; the Updates page will offer the update again."))
+        ("The file of GPS software 6.20 (4.1\u00a0MB) will be removed from the device; the "
+         "Updates page will offer the update again."))
     q.answers[0].run()
     assert win.toasts == ["Update file removed, 4.1\u00a0MB freed"]
     assert not gps.on_device  # the Updates page offers it again
@@ -790,7 +789,7 @@ def test_the_diagnostic_files_and_the_report(clock):
     assert titled(section, "Keep Diagnostic Files").get_active()
     assert titled(section, "Memory Dumps").get_subtitle() == "3 dumps\u00a0· 27.0\u00a0MB\u00a0· encrypted"
     assert titled(section, "Crash Logs")  # the device hides them
-    titled(section, "Report to openExpress")
+    titled(section, "Report a Device or Problem")
     drive = page(facts(hidden_logs=False))[1]
     assert "Crash Logs" not in [r.get_title() for r in rows(drive)]
 
@@ -931,8 +930,8 @@ def test_the_view_of_a_device_not_connected_leads_to_its_status_from_the_records
     shown = win.pushed[-1]
     assert shown.get_tag() == "kept-status" and win.kept_status.page is shown
     (banner,) = [w for w in descendants(shown) if isinstance(w, Adw.Banner)]
-    assert banner.get_title() == ("Device not connected\u00a0– as of 2026-10-20 12:00; connect "
-                                  "it to free up space or copy its logs")
+    assert banner.get_title() == ("Not connected\u00a0– as of 2026-10-20 12:00; connect it to "
+                                  "free up space or copy diagnostic files")
 
 
 @pytest.mark.needs_display
@@ -1135,7 +1134,7 @@ def test_a_removal_cut_short_is_told_with_what_it_did(monkeypatch):
     freed, counted = status_page._then_counted(s, lambda freed: freeing.Freed(
         removed=[("GARMIN/Debug/dump/a.zip", 1)], copy_failed=["GARMIN/Debug/dump/b.zip"]))()
     assert freed.removed and freed.copy_failed and counted is None
-    assert freed.stopped == "the device could not be read after the removal"
+    assert freed.stopped == "the device could not be read again after the removal"
 
     def stops(freed):
         freed.removed.append(("GARMIN/Debug/dump/a.zip", 1))
@@ -1167,8 +1166,8 @@ def test_a_removal_of_a_list_that_changed_says_why_and_reads_the_page(clock, in_
     win.run_task = RunNow(error="record")
 
     def changed(storage, unit_id, plan, progress=None, freed=None):
-        raise freeing.ListChanged("The files on the device changed since the question; nothing "
-                                  "was removed. Look at the list again.")
+        raise freeing.ListChanged("The files on the device changed while the confirmation was "
+                                  "open; nothing was removed. Check the list again.")
 
     monkeypatch.setattr(freeing, "remove_dumps", changed)
     button_of(titled(section, "Older Memory Dumps")).emit("clicked")
@@ -2291,7 +2290,7 @@ def test_older_dumps_that_may_not_be_removed_have_no_button(clock):
     folder of the device): the row tells them, with no button that removes them."""
     _win, section = page(facts(dumps_plan=None))
     older = titled(section, "Older Memory Dumps")
-    assert older.get_subtitle() == ("2 files; the newest dump is not counted · "
+    assert older.get_subtitle() == ("2 dumps; the newest stays · "
                                     "18.0 MB")
     assert button_of(older) is None
 

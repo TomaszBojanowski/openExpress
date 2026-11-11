@@ -181,9 +181,10 @@ def _kept_by_device() -> str:
 
 
 def _changed() -> ListChanged:
-    # TRANSLATORS: why nothing was removed from the device after the question was answered
-    return ListChanged(_("The files on the device changed since the question; nothing was "
-                         "removed. Look at the list again."))
+    # TRANSLATORS: why nothing was removed from the device after the confirmation was
+    # answered
+    return ListChanged(_("The files on the device changed while the confirmation was open; "
+                         "nothing was removed. Check the list again."))
 
 
 def _copy(storage: Storage, dumps: list[Dump], where: Path, freed: Freed, progress,

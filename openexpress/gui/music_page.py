@@ -193,8 +193,8 @@ class MusicPage:
     def _playlist_summary(plan, in_flatpak: bool = False) -> str:
         """Text of the confirmation: what is copied, what is already there, what is left out."""
         tracks = len(plan.device_paths)
-        # TRANSLATORS: first line of the question before a playlist is added: how many songs it has
-        # (music tracks, not GPS tracks)
+        # TRANSLATORS: first line of the confirmation before a playlist is added: how many songs it
+        # has (music tracks, not GPS tracks)
         lines = [ngettext("{count} track", "{count} tracks", tracks).format(count=tracks)]
         n = len(plan.copy.to_copy)
         lines.append(ngettext("{count} file to copy ({size}), {already} already on the device",
@@ -234,7 +234,8 @@ class MusicPage:
                 _("Copying Music…"),
                 writes_to_device(lambda: music.add_playlist(
                     plan, s.device, s.storage, progress=self.progress)),
-                lambda _path: (self.toast(_("Playlist “{name}” added").format(name=plan.name)),
+                # TRANSLATORS: toast after a playlist was added to the device
+                lambda _path: (self.toast(_("Added the playlist {name}").format(name=plan.name)),
                                self.load_section("music", force=True)),
                 read_again_after_failure(self, "music"))
 
