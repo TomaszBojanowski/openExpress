@@ -249,7 +249,7 @@ def test_an_error_log_not_read_means_the_same_in_the_window_and_on_the_command_l
     st, dev = opened(root)
     found = diagnostics.at_open(dev, st)
     assert found.errors_known is False
-    assert status.session_crashes(session_of(st, dev, found)) == []
+    assert status.crashes_known(dev, st, found) == []
     assert cli.main(["diagnostics", "--path", str(root)]) == 0
     out = capsys.readouterr().out
     assert "not every error log could be read" in out

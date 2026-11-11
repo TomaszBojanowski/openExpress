@@ -173,17 +173,30 @@ def counted_again(session, counted: Recount) -> bool:
     return True
 
 
-def session_crashes(session) -> list[crashes.Crash]:
+def crashes_known(device, storage, found) -> list[crashes.Crash]:
     """The crashes of the open device from every source (crashes.history): those of its error
-    logs as the window read them at the opening (none when they could not all be read), the
-    copies on this computer and its device log. Counted anew each time (after Copy Crash Logs
-    the copies hold its boot log): the page, its row and the report alike."""
-    found = getattr(session, "diagnostics", None)
+    logs as the window read them at the opening (`found`, diagnostics.AtOpen; none when they
+    could not all be read), the copies on this computer and its device log. Counted anew each
+    time (after Copy Crash Logs the copies hold its boot log): the page, its row and the report
+    alike."""
     errors_known = found is not None and found.errors_known
-    unit = getattr(getattr(session, "device", None), "unit_id", None)
-    return crashes.history(unit, found.entries if errors_known else None,
-                           test_drive=bool(getattr(getattr(session, "storage", None),
-                                                   "test_drive", False)))
+    return crashes.history(getattr(device, "unit_id", None),
+                           found.entries if errors_known else None,
+                           test_drive=bool(getattr(storage, "test_drive", False)))
+
+
+def dumps_now(device, storage, found) -> tuple[int, int] | None:
+    """The memory dumps of the open device now, (count, bytes): those of this connection's line
+    in the device log (every count puts it right, the command line's too), else as the window
+    listed them at the opening (`found`); None: not known. Nothing is asked of the device: the
+    summary of the page, its row and the report alike."""
+    line = (history.connection_line(device, storage)
+            if getattr(device, "unit_id", None) and storage is not None else None)
+    if line is not None and "dumps" in line:
+        return line["dumps"]["count"], line["dumps"]["bytes"]
+    if found is not None and found.dumps_known:
+        return len(found.dumps), sum(size for _p, size in found.dumps)
+    return None
 
 
 @dataclass
@@ -204,10 +217,10 @@ class Told:
 
 
 def told(session) -> Told:
-    """The crashes of every source (session_crashes), whether the error logs were read, the
+    """The crashes of every source (crashes_known), whether the error logs were read, the
     space the window read last (session.space: the one source of it), the kinds of file
     counted last (kinds_counted), and whether the device has diagnostic data (has_diagnostics,
-    by what the window read at the opening, the copies and the crash logs to copy). Nothing is
+    by its error logs, its memory dumps now, the copies and the crash logs to copy). Nothing is
     asked of the device: the page, the row of the device page and the report alike."""
     found = getattr(session, "diagnostics", None)
     device, storage = getattr(session, "device", None), getattr(session, "storage", None)
@@ -216,13 +229,13 @@ def told(session) -> Told:
     free, capacity = getattr(session, "space", None) or (None, None)
     categories, counted_at, recounted = kinds_counted(session)
     errors_known = found is not None and found.errors_known
-    found_crashes = session_crashes(session)
-    dumps = found.dumps if found is not None and found.dumps_known else None
+    found_crashes = crashes_known(device, storage, found)
+    dumps = dumps_now(device, storage, found)
     copies = diagnostics.copies_facts(unit, test_drive) if unit else (0, 0, None)
     hidden = diagnostics.hidden_logs_to_copy(found is not None and found.hidden_logs, unit,
                                              test_drive)
     has = has_diagnostics(errors_known, found.error_logs if errors_known else None,
-                          found_crashes, len(dumps) if dumps is not None else None,
+                          found_crashes, dumps[0] if dumps is not None else None,
                           copies[0], hidden)
     return Told(found_crashes, errors_known, free, capacity, categories, counted_at, recounted,
                 hidden, copies, has)

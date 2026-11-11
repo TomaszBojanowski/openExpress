@@ -143,38 +143,31 @@ def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> li
     """The section of the device's diagnostics: its crashes from every source (crashes.history)
     with the date, the software version and the error, its memory dumps and whether their copy
     is on. Never the program counter or the screen of a crash. `ask`: the error logs and the
-    dumps read now (the command line); else those the window read at the opening (`found`,
-    diagnostics.AtOpen; None: not read yet)."""
-    from openexpress import crashes, diagnostics
+    dumps read now (the command line); else what the page tells (status.crashes_known and
+    status.dumps_now, from what the window read at the opening, `found`, diagnostics.AtOpen;
+    None: not read yet)."""
+    from openexpress import crashes, diagnostics, status
 
     if ask:
         missed: list[str] = []
         entries = diagnostics.read_errors(storage, missed=missed)
-        entries = None if missed else entries
+        errors_known = not missed
+        found_crashes = crashes.history(device.unit_id, entries if errors_known else None,
+                                        test_drive=bool(getattr(storage, "test_drive", False)))
         try:
-            dumps = diagnostics.dumps_on_device(storage)
+            listed = diagnostics.dumps_on_device(storage)
         except DeviceNotResponding:
             raise
         except DeviceError:
-            dumps = None
-    elif found is not None:
-        entries = found.entries if found.errors_known else None
-        dumps = found.dumps if found.dumps_known else None
+            listed = None
+        dumps = (len(listed), sum(size for _p, size in listed)) if listed is not None else None
     else:
-        entries = dumps = None
-    counted = None
-    if not ask:
-        # The window: the device log's line of this connection, put right after any removal
-        # (from the window or the command line), tells the dumps of now.
-        from openexpress import history
-
-        line = history.connection_line(device, storage)
-        counted = line.get("dumps") if line is not None else None
-    found_crashes = crashes.history(device.unit_id, entries,
-                                    test_drive=bool(getattr(storage, "test_drive", False)))
+        errors_known = found is not None and found.errors_known
+        found_crashes = status.crashes_known(device, storage, found)
+        dumps = status.dumps_now(device, storage, found)
     lines = ["### Diagnostics",
              f"- Crashes that restarted the device: {len(found_crashes)}"
-             + ("" if entries is not None else " (the error logs on the device not read)")]
+             + ("" if errors_known else " (the error logs on the device not read)")]
     for crash in found_crashes[:CRASHES_SHOWN]:
         # Both codes where both logs hold the crash: the boot log's tells the same error as
         # the crashes only it holds.
@@ -184,12 +177,9 @@ def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> li
                      + (", ".join(codes) or "error unknown"))
     if len(found_crashes) > CRASHES_SHOWN:
         lines.append(f"  - and {len(found_crashes) - CRASHES_SHOWN} earlier")
-    if counted is not None:
-        total = counted["bytes"]
-        lines.append(f"- Memory dumps: {counted['count']}, {_size(total) if total else '0 B'}")
-    elif dumps is not None:
-        total = sum(size for _path, size in dumps)
-        lines.append(f"- Memory dumps: {len(dumps)}, {_size(total) if total else '0 B'}")
+    if dumps is not None:
+        count, total = dumps
+        lines.append(f"- Memory dumps: {count}, {_size(total) if total else '0 B'}")
     else:
         lines.append("- Memory dumps: " + ("not known" if ask or found is not None
                                            else "not read yet"))
