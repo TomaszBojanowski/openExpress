@@ -47,6 +47,9 @@ def _entries(po: Path):
         fields: dict[str, str] = {}
         key = None
         for line in block.splitlines():
+            if line.startswith("#,"):
+                fields["flags"] = line
+                continue
             m = re.match(r'^(msgctxt|msgid|msgid_plural|msgstr(?:\[\d\])?) "(.*)"$', line)
             if m:
                 key = m.group(1)
@@ -60,6 +63,8 @@ def _entries(po: Path):
 @pytest.mark.parametrize("po", PO_FILES, ids=lambda p: p.stem)
 def test_placeholders_match(po):
     for e in _entries(po):
+        if "fuzzy" in e.get("flags", ""):  # not in the catalog the program reads
+            continue
         source = set(PLACEHOLDER.findall(e["msgid"] + e.get("msgid_plural", "")))
         for key, value in e.items():
             if key.startswith("msgstr") and value:
@@ -71,6 +76,32 @@ def test_placeholders_match(po):
 # A one-letter word: a letter that follows no letter or digit, and is no format code (%i),
 # tag (<a …>), option (-a), placeholder ({a}), path (/a) or escape (\\a).
 ONE_LETTER_WORD = re.compile(r"(?<![\w%<\-/{\\])[wziouaWZIOUA] ")
+
+
+PLACEHOLDER_PO = """msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\\n"
+
+{flags}msgid "Made-up text without a number"
+msgstr "Made-up translation: {{count}}"
+"""
+
+
+def test_a_fuzzy_entry_is_not_checked_for_placeholders(tmp_path):
+    """Weblate's msgmerge marks a new text fuzzy with the translation of a similar old one,
+    whose placeholders may differ; msgfmt leaves fuzzy entries out of the catalog, so the
+    program never shows them."""
+    po = tmp_path / "xx.po"
+    po.write_text(PLACEHOLDER_PO.format(flags="#, fuzzy, python-brace-format\n"),
+                  encoding="utf-8")
+    test_placeholders_match(po)
+
+
+def test_a_translated_entry_with_a_placeholder_of_its_own_is_refused(tmp_path):
+    po = tmp_path / "xx.po"
+    po.write_text(PLACEHOLDER_PO.format(flags="#, python-brace-format\n"), encoding="utf-8")
+    with pytest.raises(AssertionError):
+        test_placeholders_match(po)
 
 
 def _unescaped(raw: str) -> str:
