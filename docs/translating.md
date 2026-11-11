@@ -24,6 +24,8 @@ GitHub account:
 - **Sending**: Weblate sends the translations to this repository in a pull request, merged
   before each release: the hard spaces and the tests are run then, and your name goes to
   `TRANSLATORS`.
+- **In a release**: a language goes into the program once at least 90% of its texts are
+  translated; the project then adds it to `po/LINGUAS` (Weblate does not).
 
 ## What not to translate
 

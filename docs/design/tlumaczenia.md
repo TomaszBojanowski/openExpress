@@ -24,7 +24,7 @@ translated on Hosted Weblate.
 | | Hosted Weblate (Libre plan) | Pull requests with `.po` files |
 |---|---|---|
 | Work at each release | merge one pull request of Weblate; compile and test | `msgmerge` and `msgfmt --check` for each pull request; review of languages one cannot read; conflicts in `.po` and in the compiled `.mo` |
-| Setting up | the GitHub App, a gettext component, the `msgmerge` add-on (and `LINGUAS`), an application for the Libre plan (a trial meanwhile; approval takes days to weeks) | a section in CONTRIBUTING |
+| Setting up | the GitHub App, a gettext component, the `msgmerge` add-on, an application for the Libre plan (a trial meanwhile; approval takes days to weeks) | a section in CONTRIBUTING |
 | For translators | a web editor, the glossary, suggestions and votes, no git | git, GitHub, Poedit |
 | Risks | the approval queue; Weblate writes to the repository (a fork and pull requests only, D2) | stale pull requests; every pull request waits for its review in the project |
 
@@ -43,8 +43,11 @@ Less work at each release: Hosted Weblate (D1).
    of the languages runs in the repository (`tools/update-translations.sh`); Weblate's msgmerge
    add-on is not used, as both doing it makes conflicts. Polish keeps its rule (a new text and its Polish in one commit): Polish
    is edited in the repository, and Weblate's pending changes of Polish are merged first (D5).
-2. **`po/LINGUAS`**, kept by Weblate's add-on; the languages read from it, not from
-   `LANGUAGE_NAMES`.
+2. **`po/LINGUAS`**, kept by the project, not by Weblate's add-on: a language is added by hand
+   once it translates at least 90% of the template of a release, together with its
+   `po/<language>.po` (a test holds that the two agree and that Polish is listed). The add-on
+   would list every language Weblate has, also one just started, and none that Weblate leaves
+   out, such as Polish (D5). The languages are read from it, not from `LANGUAGE_NAMES`.
 3. **The name of a language in that language**: a text `pgettext("language name", "English")`
    each language translates into its own name ("Polski", "Deutsch"), instead of a line of code
    per language.
@@ -159,7 +162,7 @@ Short terms only, never sentences, and nothing of Garmin's code.
    once on its own.
 2. The glossary (6a): the English terms with explanations, a CSV for Weblate.
 3. Hosted Weblate: an account, the GitHub App (fork mode), the project and its gettext component
-   (`po/*.po`, the template), the add-on `LINGUAS`, the glossary, the application for
+   (`po/*.po`, the template), the glossary, the application for
    the Libre plan.
 4. README, CONTRIBUTING, the website (section 6), published with a release.
 5. Each release: Weblate's pull request fetched, merged locally (signed merge commit), the

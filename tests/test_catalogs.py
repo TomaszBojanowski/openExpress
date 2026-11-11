@@ -23,6 +23,8 @@ needs_gettext = pytest.mark.skipif(not shutil.which("xgettext"), reason="gettext
 
 
 def test_the_languages_are_those_of_linguas_each_with_its_po():
+    """po/LINGUAS is the project's, not written by Weblate: Polish (which Weblate leaves out)
+    and exactly the languages with a po/<language>.po, each once."""
     languages = catalogs.languages()
     assert "pl" in languages
     assert sorted(p.stem for p in (ROOT / "po").glob("*.po")) == sorted(languages)
