@@ -122,6 +122,8 @@
           is on.</li>
           <li>The window finds an error log or a memory dump written after the device was first
           opened; before, it read only those it had found the first time.</li>
+          <li>Czech translation, by prajzner, through Hosted Weblate (the texts new in this
+          version are still in English).</li>
         </ul>
       </description>
     </release>

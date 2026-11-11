@@ -529,7 +529,7 @@ name; an answer that took more than 5 s is noted too.
 
 ### Languages
 
-The interface is available in English, Polish and German. The language follows the system
+The interface is available in English, Polish, German and Czech. The language follows the system
 locale; you can override it:
 
 - in the window: main menu (☰) → Preferences → **Language**,

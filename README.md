@@ -58,7 +58,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 - Makes backups of the device and keeps copies of its diagnostic files on this computer.
 - Shows and sets the primary training device and the primary wearable.
 - Works in a GTK 4 / libadwaita window, on the command line and in the background.
-- Sends no telemetry. Speaks English, Polish and German.
+- Sends no telemetry. Speaks English, Polish, German and Czech.
 
 <p align="center">
   <picture>
@@ -225,7 +225,7 @@ also when everything works.
 
 <a href="https://hosted.weblate.org/projects/openexpress/"><img alt="Translation status on Hosted Weblate" src="https://hosted.weblate.org/widget/openexpress/openexpress/svg-badge.svg"></a>
 
-openExpress speaks English, Polish and German. To add your language or correct one, translate it
+openExpress speaks English, Polish, German and Czech. To add your language or correct one, translate it
 in your browser on [Hosted Weblate](https://hosted.weblate.org/projects/openexpress/), or send a
 `.po` file in a pull request: [Translating openExpress](docs/translating.md).
 
