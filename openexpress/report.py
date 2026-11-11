@@ -24,7 +24,9 @@ ISSUE_URL = f"{ISSUE_FORM}?template={ISSUE_TEMPLATE}"
 # Longer addresses are refused by web servers (GitHub answers 414 somewhere above 8 kB).
 MAX_URL = 6000
 
-# (label, test on the set of data type names)
+# What the device lists for exchange with a computer: (label, test on the set of data type
+# names). An empty box is no feature the device lacks: a watch may take its satellite data
+# through its own requests (ExpressRequest), or its Wi-Fi networks from the phone.
 FEATURES = [
     ("Activities", lambda d: "FIT_TYPE_4" in d),
     ("Monitoring / sleep", lambda d: bool({"FIT_TYPE_32", "FIT_TYPE_49"} & d)),
@@ -33,9 +35,11 @@ FEATURES = [
     ("Connect IQ", lambda d: "IQAppsConfiguration" in d),
     ("Music", lambda d: "MEDIA_TRACK" in d),
     ("Maps", lambda d: bool({"PreProgrammedNamedMaps", "BaseMaps", "NMaps"} & d)),
-    ("Ephemeris (GPS data)", lambda d: any(x.startswith("Ephemeris") for x in d)),
-    ("Wi-Fi configuration", lambda d: "WiFiConfiguration" in d),
-    ("Device HTTP proxy (ExpressRequest)", lambda d: "ExpressRequest" in d),
+    ("Satellite data (EPO/CPE) from a computer",
+     lambda d: any(x.startswith("Ephemeris") for x in d)),
+    ("Wi-Fi networks set from a computer", lambda d: "WiFiConfiguration" in d),
+    ("Requests to Garmin's servers through a computer (ExpressRequest)",
+     lambda d: "ExpressRequest" in d),
 ]
 
 
@@ -215,7 +219,9 @@ def build(device: GarminDevice, storage: Storage, logged_in: bool | None = None,
         f"- Storage: {_size(capacity)} total, {_size(free)} free",
         f"- Data types: {len(datatypes)}, components: {len(device.update_files)}",
         "",
-        "### Features declared by the device",
+        "### What the device exchanges with a computer",
+        ("From its GarminDevice.xml. An empty box only means the device does not list this for "
+         "exchange with a computer; the device itself may still have the feature."),
         features,
         "",
         *_diagnostics(device, storage, ask, found),

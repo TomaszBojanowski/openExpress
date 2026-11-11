@@ -25,6 +25,24 @@ def test_report_has_no_identifiers(device_root):
     assert "- [x] Activities" in text and "- [ ] Music" in text
 
 
+def test_the_list_says_what_the_device_exchanges_with_a_computer(device_root):
+    """The list of the report tells what the device lists for exchange with a computer, and
+    says that an empty box is no feature the device lacks (a watch may take its satellite data
+    through its own requests)."""
+    st = FakeMtpStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    lines = report.build(dev, st, logged_in=True).splitlines()
+    at = lines.index("### What the device exchanges with a computer")
+    assert lines[at + 1] == ("From its GarminDevice.xml. An empty box only means the device does "
+                             "not list this for exchange with a computer; the device itself may "
+                             "still have the feature.")
+    end = lines.index("", at)
+    listed = [line[len("- [x] "):] for line in lines[at + 2:end]]
+    assert listed[-3:] == ["Satellite data (EPO/CPE) from a computer",
+                           "Wi-Fi networks set from a computer",
+                           "Requests to Garmin's servers through a computer (ExpressRequest)"]
+
+
 def test_report_has_no_user_name_and_no_home_folder(device_root):
     from pathlib import Path
 
