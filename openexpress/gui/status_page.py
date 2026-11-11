@@ -134,9 +134,9 @@ def copy_dumps(win, button=None) -> None:
                         "{count} memory dumps copied to this computer",
                         copied_count).format(count=copied_count)
         if copied.not_copied:
-            # TRANSLATORS: after the files copied to this computer: those left out as they did
-            # not fit in the room the copies may take ({size}: "50 MB")
             text = caption(text, ngettext(
+                # TRANSLATORS: after the files copied to this computer: those left out as they
+                # did not fit in the room the copies may take ({size}: "50 MB")
                 "{count} file skipped: did not fit in {size}",
                 "{count} files skipped: did not fit in {size}",
                 len(copied.not_copied)).format(count=len(copied.not_copied),
@@ -526,6 +526,8 @@ def _event_row(event: status.Event, now: datetime) -> Adw.PreferencesRow:
             # TRANSLATORS: the error number of a crash in the boot log, e.g. "boot log error
             # 0x6e5d8003"
             details.append(_("boot log error {number}").format(number=crash.errnum))
+        # TRANSLATORS: title of the row with what the device wrote in its error log about a
+        # crash
         row.add_row(Adw.ActionRow(title=_("Error Details"),
                                   subtitle=GLib.markup_escape_text(caption(*details))))
         return row
@@ -649,10 +651,10 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
         # name and version, e.g. "GPS software 6.20"; what became of it is the subtitle
         title = _("{name} {version}").format(name=u.name, version=u.version)
         if freeing.waits_to_install(u):
-            # TRANSLATORS: subtitle of a row of "Free Up Space": a file of the device's own
-            # software it has not installed yet; removing it would cancel the update, so the
-            # row has no button
             g.add(Adw.ActionRow(title=title, subtitle=_(
+                # TRANSLATORS: subtitle of a row of "Free Up Space": a file of the device's own
+                # software it has not installed yet; removing it would cancel the update, so the
+                # row has no button
                 "Waits to be installed; removing the file would cancel the update")))
             continue
         # TRANSLATORS: subtitle of a row of "Free Up Space": an update openExpress copied
@@ -975,8 +977,12 @@ def _diagnostic_files(win, sec, facts: status.Facts, now: datetime,
         subtitle = pgettext("dumps", "None")
     else:
         subtitle = caption(
+            # TRANSLATORS: subtitle of "Memory Dumps": how many memory dump files the device holds
             ngettext("{count} dump", "{count} dumps", len(dumps)).format(count=len(dumps)),
-            human_size(sum(size for _p, size, _t in dumps)), _("encrypted"))
+            human_size(sum(size for _p, size, _t in dumps)),
+            # TRANSLATORS: of the memory dumps of the device: only Garmin can read them; plural,
+            # as "dumps"
+            _("encrypted"))
     row = Adw.ActionRow(title=_("Memory Dumps"), subtitle=subtitle)
     if dumps:
         row.add_suffix(_copy_button(win, _("Copy Memory Dumps"),

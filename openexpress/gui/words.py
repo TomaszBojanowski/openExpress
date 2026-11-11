@@ -447,9 +447,9 @@ def stalled_text(names: list[str | None]) -> str:
     (in the order they stopped), named when every name is known."""
     count = len(names)
     if names and all(names):
-        # TRANSLATORS: a banner of the window; {names}: the names of the devices, e.g.
-        # "fēnix 8" or "fēnix 8, Edge 1050"
         return ngettext(
+            # TRANSLATORS: a banner of the window; {names}: the names of the devices, e.g.
+            # "fēnix 8" or "fēnix 8, Edge 1050"
             "The device {names} stopped responding. Unplug it and plug it in again.",
             "The devices {names} stopped responding. Unplug them and plug them in again.",
             count).format(names=", ".join(names))

@@ -104,6 +104,87 @@ def test_the_template_holds_every_text_of_the_code_and_the_metainfo(tmp_path):
     assert not any(t.startswith("Clearer icons.") for t in texts)
 
 
+def _unescaped(text: str) -> str:
+    return re.sub(r"\\(.)", lambda m: {"n": "\n", "t": "\t"}.get(m.group(1), m.group(1)), text)
+
+
+def _comments(pot: Path) -> dict[tuple[str, str], str]:
+    """(context, text) of every entry of a template: its comments for translators, as one
+    line."""
+    found = {}
+    for block in pot.read_text(encoding="utf-8").split("\n\n")[1:]:
+        fields, key, notes = {}, None, []
+        for line in block.splitlines():
+            m = re.match(r'^(msgctxt|msgid) "(.*)"$', line)
+            if line.startswith("#. "):
+                notes.append(line[3:])
+            elif m:
+                key = m.group(1)
+                fields[key] = m.group(2)
+            elif line.startswith('"') and key in ("msgctxt", "msgid"):
+                fields[key] += line[1:-1]
+            elif not line.startswith('"'):
+                key = None
+        if "msgid" in fields:
+            found[(_unescaped(fields.get("msgctxt", "")), _unescaped(fields["msgid"]))] = \
+                " ".join(" ".join(notes).split())
+    return found
+
+
+def _marked(source: str) -> list[tuple[int, int, str, str]]:
+    """The texts a file marks to translate (the keywords of catalogs.KEYWORDS): where each
+    string begins (line, column), its context and its text."""
+    import ast
+
+    places = {}
+    for keyword in catalogs.KEYWORDS:
+        name, _, spec = keyword.removeprefix("--keyword=").partition(":")
+        parts = spec.split(",") if spec else ["1"]
+        ctx = next((int(p[:-1]) - 1 for p in parts if p.endswith("c")), None)
+        places[name] = (int(next(p for p in parts if not p.endswith("c"))) - 1, ctx)
+    found = []
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        name = getattr(node.func, "id", None) or getattr(node.func, "attr", None)
+        if name not in places:
+            continue
+        at, ctx = places[name]
+        args = node.args
+        if len(args) > at and isinstance(args[at], ast.Constant) and isinstance(args[at].value, str):
+            context = args[ctx].value if ctx is not None and isinstance(
+                args[ctx], ast.Constant) else ""
+            found.append((args[at].lineno, args[at].col_offset, context, args[at].value))
+    return sorted(found)
+
+
+def test_every_comment_for_translators_reaches_the_text_under_it():
+    """xgettext keeps a "# TRANSLATORS:" comment only for a text whose string begins on the line
+    right under it: a string on the line after `_(` or `ngettext(`, or another line between the
+    comment and the text, loses it. Each one of the code is in the template, at the text marked
+    next."""
+    comments = _comments(ROOT / "po" / "openexpress.pot")
+    lost = []
+    for path in sorted((ROOT / "openexpress").rglob("*.py")):
+        source = path.read_text(encoding="utf-8")
+        marked, lines = _marked(source), source.splitlines()
+        n = 0
+        while n < len(lines):
+            found = re.match(r"\s*# (TRANSLATORS:.*)", lines[n])
+            if not found:
+                n += 1
+                continue
+            words, n = [found.group(1)], n + 1
+            while n < len(lines) and re.match(r"\s*#(?! TRANSLATORS:)\s*\S", lines[n]):
+                words.append(re.sub(r"^\s*#\s?", "", lines[n]))
+                n += 1
+            comment = " ".join(" ".join(words).split())
+            text = next(((ctx, msgid) for line, _col, ctx, msgid in marked if line > n), None)
+            if text is None or comment not in comments.get(text, ""):
+                lost.append(f"{path.relative_to(ROOT)}:{n - len(words) + 1}")
+    assert lost == []
+
+
 POT_DATE = re.compile(r'^"POT-Creation-Date: (.*)\\n"$', re.MULTILINE)
 
 

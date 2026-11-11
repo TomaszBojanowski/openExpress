@@ -115,8 +115,8 @@ def _out_path(target: Path, datatype: str, rel: str) -> Path:
 def incomplete_text(count: int) -> str:
     """After a backup, in the window and on the command line: FIT files left out of it, cut
     short as the device was still writing them."""
-    # TRANSLATORS: after a backup (a message of the window and a line of the command line)
     return ngettext(
+        # TRANSLATORS: after a backup (a message of the window and a line of the command line)
         "{count} file was still being written by the device and is not in the backup. "
         "Unplug the device and plug it in again, then make the backup again.",
         "{count} files were still being written by the device and are not in the backup. "

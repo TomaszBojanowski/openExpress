@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 22:02+0100\n"
+"POT-Creation-Date: 2026-11-11 23:04+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -230,6 +230,7 @@ msgid ""
 "cannot be used as a path on this computer."
 msgstr ""
 
+#. TRANSLATORS: after a backup (a message of the window and a line of the command line)
 #: openexpress/backup.py
 #, python-brace-format
 msgid ""
@@ -992,6 +993,8 @@ msgstr[1] ""
 msgid "Memory dumps copied: {count} new ({size})."
 msgstr ""
 
+#. TRANSLATORS: `diagnostics --dumps --apply`: the memory dumps left out; {size}: the
+#. room the copies may take ("100 MB"), {names}: the files' names, separated by commas
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Not copied, as they did not fit in {size}: {names}"
@@ -1015,6 +1018,8 @@ msgid ""
 "files listed; that cannot be undone."
 msgstr ""
 
+#. TRANSLATORS: `diagnostics --free-space`: the files of updates the device did not
+#. install could not be looked for; {why}: the error, as the command line tells it
 #: openexpress/cli.py
 #, python-brace-format
 msgid "update files: not checked ({why})"
@@ -1072,6 +1077,8 @@ msgstr ""
 msgid "update file not installed by the device: {name} {version} ({size})"
 msgstr ""
 
+#. TRANSLATORS: `diagnostics --free-space`: an update the device will install, its file
+#. kept; {file}: the name of the file on the device
 #: openexpress/cli.py
 #, python-brace-format
 msgid "waiting to be installed, not removed: {name} {version} ({file})"
@@ -1125,6 +1132,8 @@ msgstr ""
 msgid "Nothing removed: the files were no longer on the device."
 msgstr ""
 
+#. TRANSLATORS: after --free-space --apply removed files, when the device could not
+#. be counted again
 #: openexpress/cli.py openexpress/history.py
 msgid ""
 "The device could not be counted again after the removal; its records keep "
@@ -4943,6 +4952,7 @@ msgstr ""
 msgid "Adding to the Account {account}…"
 msgstr ""
 
+#. TRANSLATORS: tab title
 #: openexpress/gui/app.py
 msgctxt "tab"
 msgid "Device"
@@ -5581,6 +5591,29 @@ msgstr ""
 msgid "Add Course…"
 msgstr ""
 
+#. TRANSLATORS: group of the Courses page: the device's saved locations
+#: openexpress/gui/courses_page.py
+msgctxt "courses"
+msgid "Saved Locations"
+msgstr ""
+
+#. TRANSLATORS: the row of the saved locations kept on the device
+#: openexpress/gui/courses_page.py
+msgctxt "saved locations"
+msgid "On the Device"
+msgstr ""
+
+#: openexpress/gui/courses_page.py
+msgid "Waypoints from GPX files and locations saved on the device"
+msgstr ""
+
+#. TRANSLATORS: in place of how many saved locations the device keeps, when its
+#. locations file does not read whole
+#: openexpress/gui/courses_page.py
+msgctxt "saved locations"
+msgid "Could not be counted"
+msgstr ""
+
 #. TRANSLATORS: tooltip of Add Course… on the Courses page
 #: openexpress/gui/courses_page.py
 msgid "Copy a GPX file to the device (experimental)"
@@ -5641,29 +5674,6 @@ msgstr ""
 #. device could not be read
 #: openexpress/gui/courses_page.py
 msgid "Files Waiting"
-msgstr ""
-
-#. TRANSLATORS: group of the Courses page: the device's saved locations
-#: openexpress/gui/courses_page.py
-msgctxt "courses"
-msgid "Saved Locations"
-msgstr ""
-
-#. TRANSLATORS: the row of the saved locations kept on the device
-#: openexpress/gui/courses_page.py
-msgctxt "saved locations"
-msgid "On the Device"
-msgstr ""
-
-#: openexpress/gui/courses_page.py
-msgid "Waypoints from GPX files and locations saved on the device"
-msgstr ""
-
-#. TRANSLATORS: in place of how many saved locations the device keeps,
-#. when its locations file does not read whole
-#: openexpress/gui/courses_page.py
-msgctxt "saved locations"
-msgid "Could not be counted"
 msgstr ""
 
 #: openexpress/gui/courses_page.py
@@ -7126,6 +7136,8 @@ msgid_plural "{count} memory dumps copied to this computer"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: after the files copied to this computer: those left out as they
+#. did not fit in the room the copies may take ({size}: "50 MB")
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "{count} file skipped: did not fit in {size}"
@@ -7267,6 +7279,8 @@ msgstr ""
 msgid "boot log error {number}"
 msgstr ""
 
+#. TRANSLATORS: title of the row with what the device wrote in its error log about a
+#. crash
 #: openexpress/gui/status_page.py
 msgid "Error Details"
 msgstr ""
@@ -7338,6 +7352,9 @@ msgstr[1] ""
 msgid "{name} {version}"
 msgstr ""
 
+#. TRANSLATORS: subtitle of a row of "Free Up Space": a file of the device's own
+#. software it has not installed yet; removing it would cancel the update, so the
+#. row has no button
 #: openexpress/gui/status_page.py
 msgid "Waits to be installed; removing the file would cancel the update"
 msgstr ""
@@ -7595,6 +7612,7 @@ msgctxt "dumps"
 msgid "None"
 msgstr ""
 
+#. TRANSLATORS: subtitle of "Memory Dumps": how many memory dump files the device holds
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "{count} dump"
@@ -7602,6 +7620,8 @@ msgid_plural "{count} dumps"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: of the memory dumps of the device: only Garmin can read them; plural,
+#. as "dumps"
 #: openexpress/gui/status_page.py
 msgid "encrypted"
 msgstr ""
@@ -8173,6 +8193,8 @@ msgstr[1] ""
 msgid "{count} only in backups"
 msgstr ""
 
+#. TRANSLATORS: a banner of the window; {names}: the names of the devices, e.g.
+#. "fēnix 8" or "fēnix 8, Edge 1050"
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "The device {names} stopped responding. Unplug it and plug it in again."
@@ -8848,7 +8870,7 @@ msgstr ""
 msgid "This device has no maps."
 msgstr ""
 
-#. TRANSLATORS: subtitle of the row "Maps" and title of the Maps page, without a full stop
+#. TRANSLATORS: subtitle of the row "Maps" of the device page, without a full stop
 #: openexpress/maps.py
 msgid "This device has no maps"
 msgstr ""
@@ -9672,6 +9694,8 @@ msgid_plural "Marked {count} existing files as already uploaded"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: a line of the details of "Last Sync" (and of the command line): FIT
+#. files the device was still writing when they were read, cut short; not uploaded
 #: openexpress/service.py
 #, python-brace-format
 msgid ""
@@ -9731,6 +9755,8 @@ msgstr ""
 msgid "TrueUp: waiting stopped; it comes with the next sync"
 msgstr ""
 
+#. TRANSLATORS: a line of the details of "Last Sync" and of the end of
+#. `openexpress sync --apply`
 #: openexpress/service.py
 #, python-brace-format
 msgid ""

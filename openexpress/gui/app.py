@@ -83,9 +83,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         if maximized:
             self.maximize()
 
-        # TRANSLATORS: tab title
+        # The icon of Device follows the kind of the device open (device_page.device_view_icon).
         self.sections = {s.key: s for s in (
-            # Its icon follows the kind of the device open (device_page.device_view_icon).
+            # TRANSLATORS: tab title
             Section("watch", pgettext("tab", "Device"), SMALL_DEVICE_ICON,
                     _("Detecting the Device…")),
             # TRANSLATORS: tab title

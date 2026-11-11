@@ -259,7 +259,7 @@ def declares_maps(device) -> bool:
 
 
 def no_maps_on_device_text() -> str:
-    # TRANSLATORS: subtitle of the row "Maps" and title of the Maps page, without a full stop
+    # TRANSLATORS: subtitle of the row "Maps" of the device page, without a full stop
     return _("This device has no maps")
 
 

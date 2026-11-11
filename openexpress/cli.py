@@ -301,6 +301,8 @@ def cmd_diagnostics(args) -> int:
         print(_("Memory dumps copied: {count} new ({size}).").format(
             count=dumped.new, size=human_size(dumped.new_bytes)))
         if dumped.not_copied:
+            # TRANSLATORS: `diagnostics --dumps --apply`: the memory dumps left out; {size}: the
+            # room the copies may take ("100 MB"), {names}: the files' names, separated by commas
             print(_("Not copied, as they did not fit in {size}: {names}").format(
                 size=human_size(diagnostics.LIMIT), names=", ".join(dumped.not_copied)))
     if args.crash_logs:
@@ -332,6 +334,8 @@ def _free_space_command(st, dev, apply: bool) -> int:
         _print_free_space(plan)  # nothing it may remove, and why
         return 0
     if plan.why is not None:
+        # TRANSLATORS: `diagnostics --free-space`: the files of updates the device did not
+        # install could not be looked for; {why}: the error, as the command line tells it
         print(_("update files: not checked ({why})").format(why=plan.why))
     return _free_space(st, dev, plan, client)
 
@@ -381,9 +385,13 @@ def _print_free_space(plan) -> None:
         print("  " + _("update file not installed by the device: {name} {version} ({size})")
               .format(name=u.name, version=u.version, size=human_size(u.size)))
     for u in plan.waiting:
+        # TRANSLATORS: `diagnostics --free-space`: an update the device will install, its file
+        # kept; {file}: the name of the file on the device
         print("  " + _("waiting to be installed, not removed: {name} {version} ({file})").format(
             name=u.name, version=u.version, file=u.filename))
     if plan.why is not None:
+        # TRANSLATORS: `diagnostics --free-space`: the files of updates the device did not
+        # install could not be looked for; {why}: the error, as the command line tells it
         print("  " + _("update files: not checked ({why})").format(why=plan.why))
     if not plan.size and not plan.updates:
         print("  " + _("nothing to remove"))
@@ -468,9 +476,9 @@ def _tell_freed(dev, st, dumps, files, problems: list[tuple[str, str]]) -> None:
         except DeviceNotResponding:
             raise
         except (DeviceError, OSError) as e:
+            log.info("free space: not counted again after the removal (%s)", type(e).__name__)
             # TRANSLATORS: after --free-space --apply removed files, when the device could not
             # be counted again
-            log.info("free space: not counted again after the removal (%s)", type(e).__name__)
             print(_("The device could not be counted again after the removal; its records keep "
                     "what was removed."))
 

@@ -1083,9 +1083,9 @@ def _describe_step(line) -> list[tuple[str, bool]]:
                           "Marked {count} existing files as already uploaded",
                           n).format(count=n), False)]
     if kind == "still_written" and (n := _count(line)) is not None:
-        # TRANSLATORS: a line of the details of "Last Sync" (and of the command line): FIT
-        # files the device was still writing when they were read, cut short; not uploaded
         return [(ngettext(
+            # TRANSLATORS: a line of the details of "Last Sync" (and of the command line): FIT
+            # files the device was still writing when they were read, cut short; not uploaded
             "{count} file was still being written by the device – unplug it and plug it in "
             "again, then sync again",
             "{count} files were still being written by the device – unplug it and plug it in "
@@ -1119,9 +1119,9 @@ def _describe_step(line) -> list[tuple[str, bool]]:
         # `openexpress sync --apply`
         return [(_("TrueUp: waiting stopped; it comes with the next sync"), False)]
     if kind == "ecg_not_uploaded" and (n := _count(line)):
-        # TRANSLATORS: a line of the details of "Last Sync" and of the end of
-        # `openexpress sync --apply`
         return [(ngettext(
+            # TRANSLATORS: a line of the details of "Last Sync" and of the end of
+            # `openexpress sync --apply`
             "{count} ECG recording was not uploaded: ECG recordings need a Garmin Health "
             "account",
             "{count} ECG recordings were not uploaded: ECG recordings need a Garmin Health "
