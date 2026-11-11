@@ -1048,11 +1048,14 @@ def test_the_tiles_of_the_zoom_before_are_let_go_once_the_new_ones_are_drawn(mon
     activity_map.set_tiles(True)
     shown, toplevel = a_map()
     try:
+        only_tiles(shown)  # the track drawn over white tiles would never let the map be white
         viewport = shown.map.get_viewport()
         zoom = round(viewport.get_zoom_level())
         until(lambda: uncovered(shown.map) == 255)
+        assert uncovered(shown.map) == 255  # the first zoom drawn whole
         viewport.set_zoom_level(zoom + 1)
         until(lambda: uncovered(shown.map) == 255 and not shown.tiles.asked)
+        assert uncovered(shown.map) == 255 and not shown.tiles.asked
         turn(0.1)
         assert {key[0] for key in shown.tiles.textures} == {zoom + 1}
     finally:

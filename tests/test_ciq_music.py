@@ -3736,6 +3736,27 @@ def test_music_add_dry_run_marks_the_file_it_would_replace(iq_device, device_roo
     assert (st.root / TWO).read_bytes() == songs[1].read_bytes()  # the new content
 
 
+def test_music_remove_apply_removes_only_the_files_it_names(iq_device, device_root, capsys):
+    """openexpress music remove TEXT: a dry run first; with --apply only the files that match
+    go from the device, the other tracks, the podcasts and the playlists stay."""
+    from openexpress.cli import main
+
+    st, _dev = iq_device
+    on_device(st, ONE, 103)
+    on_device(st, TWO, 203)
+    on_device(st, "Podcasts/Show/two.mp3", 50)
+    (st.root / "Music/Road trip.m3u8").write_text(f"{ONE}\n")
+    argv = ["--path", str(device_root), "music", "remove", "one.mp3"]
+    assert main(argv) == 0
+    assert (st.root / ONE).exists()
+    assert "Files to remove: 1" in capsys.readouterr().out
+
+    assert main([*argv, "--apply"]) == 0
+    assert not (st.root / ONE).exists()
+    assert all((st.root / p).exists()
+               for p in (TWO, "Podcasts/Show/two.mp3", "Music/Road trip.m3u8"))
+
+
 def test_music_add_without_a_replaced_file_says_nothing_of_replacing(iq_device, device_root, songs, capsys):
     from openexpress.cli import main
 

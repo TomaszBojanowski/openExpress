@@ -243,7 +243,7 @@ _md5_read: dict[tuple, str] = {}
 def _md5_of(storage: Storage, real: str, size: int, mtime: float) -> str:
     where = getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
     key = (where, real, size, mtime)
-    if mtime and key in _md5_read:
+    if key in _md5_read:  # never one of a file without a time (below)
         return _md5_read[key]
     digest = hashlib.md5(storage.read(real)).hexdigest()
     if mtime:

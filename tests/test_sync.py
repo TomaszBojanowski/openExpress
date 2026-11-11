@@ -1,3 +1,4 @@
+import pytest
 from fakes import SyncClient
 
 from openexpress import sync
@@ -65,6 +66,22 @@ def test_consent_flag_alone_does_not_skip_and_diagnostics_are_skipped(device_roo
     assert "ErrorShutdownReports" in plan.skipped_types
     plan = sync.plan_uploads(dev, st, cfg, state, include_diagnostics=True)
     assert "ErrorShutdownReports" in {c.datatype for c in plan.candidates}
+
+
+@pytest.mark.parametrize("marker", sync.DIAGNOSTIC_URL_MARKERS)
+def test_a_telemetry_address_keeps_back_any_data_type_without_the_option(device_root, tmp_path,
+                                                                          marker):
+    """Telemetry is told by its address too: a data type outside the diagnostic ones that
+    Garmin's upload settings send to a telemetry address stays on the device unless
+    --include-diagnostics is given."""
+    st, dev, state = _setup(device_root, tmp_path)
+    cfg = {"datatypes": [{"datatypename": "FIT_TYPE_4", "uploadlocations": [
+        {"url": f"https://api.example/{marker.strip('/')}/upload"}]}]}
+    plan = sync.plan_uploads(dev, st, cfg, state)
+    assert [c.name for c in plan.candidates if c.datatype == "FIT_TYPE_4"] == []
+    assert "FIT_TYPE_4" in plan.skipped_types
+    plan = sync.plan_uploads(dev, st, cfg, state, include_diagnostics=True)
+    assert [c.name for c in plan.candidates if c.datatype == "FIT_TYPE_4"] != []
 
 
 def test_upload_marks_state_and_skips_known(device_root, tmp_path):

@@ -495,6 +495,23 @@ def test_a_removal_not_counted_again_puts_the_line_right_by_what_it_removed(tmp_
     assert kept.dumps_at_last == (1, 300) and kept.recounted
 
 
+def test_a_line_counted_after_the_removal_is_not_put_right_again(tmp_path, clock):
+    """The window and the command line at once: the device was counted again after a removal
+    that could not count it; that removal must not take its sizes off the newer count."""
+    from datetime import timedelta
+
+    root = make_root(tmp_path, err=[], dumps=[("RAM_bak1.zip", 200), ("RAM.zip", 300)])
+    st, dev = opened(root)
+    assert history.note_connection(dev, st)
+    removed_at = clock.current
+    clock.current += timedelta(minutes=1)
+    history.note_counted(dev, st, clock.current)
+    counted = history.read(UNIT).lines[-1]
+    history.note_removed(dev, st, [("GARMIN/Debug/dump/RAM_bak1.zip", 200)], "logs",
+                         now=removed_at)
+    assert history.read(UNIT).lines[-1] == counted
+
+
 def test_the_report_tells_the_dumps_after_a_removal_from_the_command_line(tmp_path, clock):
     root = make_root(tmp_path, err=[], dumps=[("RAM_bak1.zip", 200), ("RAM.zip", 300)])
     st, dev = opened(root)
@@ -1132,12 +1149,9 @@ def test_the_command_line_says_the_error_logs_were_not_read_when_their_folder_fa
         return real(self, real_path)
 
     monkeypatch.setattr(storage_mod.LocalStorage, "_list", _list)
-    try:
-        cli.main(["diagnostics", "--path", str(root)])
-    except BaseException as e:  # noqa: BLE001
-        print("raised", type(e).__name__)
+    assert cli.main(["diagnostics", "--path", str(root)]) == 0
     out = capsys.readouterr().out
-    assert "no entries" not in out, out
+    assert "not every error log could be read" in out and "no entries" not in out, out
 
 
 def test_dumps_not_listed_at_the_opening_but_listed_by_the_page_are_not_no_data(

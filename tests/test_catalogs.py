@@ -302,11 +302,13 @@ def test_install_desktop_builds_the_catalogs_from_source_first(monkeypatch, caps
     monkeypatch.setattr(background, "in_flatpak", lambda: False)
     monkeypatch.setattr(desktop, "flatpak_installed", lambda: False)
     monkeypatch.setattr(catalogs, "build", lambda *a, **kw: order.append("catalogs") or [])
+    # Never the real one: it would write the metainfo into the source tree.
+    monkeypatch.setattr(catalogs, "compose_metainfo", lambda *a, **kw: order.append("metainfo"))
     monkeypatch.setattr(desktop, "install",
                         lambda dry_run: (order.append(f"files, dry run {dry_run}"), ([], []))[1])
     assert cli.main(["install-desktop"]) == 0
     assert cli.main(["install-desktop", "--apply"]) == 0
-    assert order == ["files, dry run True", "catalogs", "files, dry run False"]
+    assert order == ["files, dry run True", "catalogs", "metainfo", "files, dry run False"]
 
 
 def test_install_desktop_without_gettext_says_so_and_goes_on_in_english(monkeypatch, capsys):

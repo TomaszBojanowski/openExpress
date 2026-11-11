@@ -918,6 +918,26 @@ def test_nothing_can_be_said_without_a_size_or_an_md5(offered, monkeypatch):
     assert not upd.mark_present(st, [u])[0].on_device
 
 
+def test_a_file_the_device_gives_no_time_is_read_again_for_its_md5(offered, monkeypatch):
+    """A device that gives a file no time (0): the MD5 read before may be of other bytes of the
+    same size, so the file is read again each time, never taken from what was read before."""
+    import dataclasses
+
+    from openexpress import updates as upd
+    from openexpress.device.storage import LocalStorage
+
+    root, answer = offered
+    st = LocalStorage(root)
+    real_info = st.info
+    st.info = lambda path: dataclasses.replace(real_info(path), mtime=0.0)
+    monkeypatch.setattr(upd, "_md5_read", {})
+    u = upd.parse_updates(answer)[0]
+    assert upd.mark_present(st, [u])[0].on_device
+    real = st.resolve(u.device_path)
+    (root / real).write_bytes(bytes(len((root / real).read_bytes())))  # same size, other bytes
+    assert not upd.mark_present(st, [u])[0].on_device
+
+
 def test_readable_names_of_types_and_severities(offered):
     from openexpress import updates as upd
 

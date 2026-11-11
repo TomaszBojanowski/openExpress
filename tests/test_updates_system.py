@@ -614,6 +614,20 @@ def test_the_updates_page_says_the_device_did_not_install_it(device_root, on_the
     assert status["buttons"] == buttons
 
 
+@pytest.mark.needs_display
+def test_an_update_the_device_did_not_install_is_listed_beside_a_new_one(device_root):
+    """With another update to install, the top of the page tells that one; the update the
+    device did not install has a group of its own, with what became of it."""
+    _copied_gps()
+    _gps_on_the_device(device_root)
+    items = _offered_now(device_root, GPS_ENTRY, FONT_ENTRY)
+    _win, _status, groups, _buttons_ = _updates_page(items)
+    (group,) = [g for g in groups if g.title == "Not Installed by the Device"]
+    (row,) = group.rows
+    assert row.get_title() == "Test GPS Software"
+    assert AS_COPIED_LINE in row.get_subtitle()
+
+
 def test_the_row_device_software_and_the_tile_say_it(device_root):
     """No chip on its tile (neither "Eject to install" nor "Update available"); the row of the
     device, also when it is not connected, says it."""
@@ -951,7 +965,7 @@ def _updates_page(items, beta=False, drive=False, device=None):
     win.confirm_update = win.asked.append
     win.eject_device = lambda s, button=None: win.ejected.append(s)
     win.load_section = lambda *a, **kw: win.loads.append((a, kw))
-    for name in ("_updates_status", "_update_row", "_button"):
+    for name in ("_updates_status", "_update_row", "_not_installed_row", "_button"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     MainWindow.show_updates(win, items, beta)
     return (win, *_read_page(win))
