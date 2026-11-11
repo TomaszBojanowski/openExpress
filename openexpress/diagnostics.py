@@ -877,6 +877,20 @@ def _connection(device: GarminDevice, storage: Storage) -> tuple | None:
     return device.unit_id, usb.bus, usb.address
 
 
+def read_now(device: GarminDevice, storage: Storage) -> AtOpen:
+    """What the command line reads of the device's errors now, as the window reads them at
+    the opening (at_open): its error logs, its memory dumps and whether Copy Crash Logs
+    applies; nothing kept on this computer, no copy."""
+    missed: list[str] = []
+    present: list[str] = []
+    entries = read_errors(storage, missed=missed, present=present)
+    dumps = dumps_or_none(storage)
+    hidden = hidden_logs_to_copy(may_have_hidden_logs(storage), device.unit_id,
+                                 bool(getattr(storage, "test_drive", False)))
+    return AtOpen(entries, dumps or [], hidden, errors_known=not missed, error_logs=len(present),
+                  dumps_known=dumps is not None)
+
+
 def copy_on(settings=None) -> bool:
     from openexpress.settings import Settings, SetupError
 

@@ -102,6 +102,12 @@ def open_storage(args) -> Storage:
     return st
 
 
+# The commands that read the device's error logs and memory dumps themselves: they note the
+# connection in the device log with what they read (open_device does not), so that nothing is
+# read twice.
+NOTED_AFTER_READING = ("diagnostics", "report")
+
+
 def open_device(args) -> tuple[Storage, GarminDevice]:
     from openexpress import service
     from openexpress.device.gio_storage import mass_storage_text
@@ -124,7 +130,7 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
     # A device found now is remembered, and its connection noted in its log; a folder given
     # with --path may be a copy.
     dev = service.read_device(st, found_now=not args.path, refuse=refuse)
-    if not args.path:
+    if not args.path and command not in NOTED_AFTER_READING:
         from openexpress import history
 
         history.note_connection(dev, st)
@@ -211,7 +217,7 @@ def cmd_diagnostics(args) -> int:
     on this computer; with --apply the files it shows copied now, with --crash-logs also its
     hidden crash logs (a session of our own), with --dumps also its memory dumps. Nothing is
     ever sent."""
-    from openexpress import diagnostics
+    from openexpress import diagnostics, history
 
     st, dev = open_device(args)
     if args.path:
@@ -220,10 +226,14 @@ def cmd_diagnostics(args) -> int:
         # pushes out the device's own.
         st.test_drive = True
     if args.free_space:
+        if not args.path:
+            history.note_connection(dev, st)
         return _free_space_command(st, dev, args.apply)
     print(_diagnostics_copy_text(diagnostics.copy_on()))
-    missed: list[str] = []
-    entries = diagnostics.read_errors(st, missed=missed)
+    read = diagnostics.read_now(dev, st)
+    if not args.path:
+        history.note_connection(dev, st, found=read)  # with what was read: not read again
+    entries, missed = read.entries, not read.errors_known
     print(_("Error logs on the device:"))
     # The "Assert" entries an Edge writes at each start: their number, each of them with -v.
     asserts = 0 if args.verbose else sum(e.is_assert for e in entries)
@@ -244,7 +254,7 @@ def cmd_diagnostics(args) -> int:
     elif not entries:
         # TRANSLATORS: under "Error logs on the device:" when the device has none
         print("  " + _("no entries"))
-    dumps = diagnostics.dumps_or_none(st)
+    dumps = read.dumps if read.dumps_known else None
     if dumps is None:
         # TRANSLATORS: `openexpress diagnostics` when the device's folder of memory dumps
         # could not be listed
@@ -638,7 +648,7 @@ def cmd_info(args) -> int:
 
 
 def cmd_report(args) -> int:
-    from openexpress import report
+    from openexpress import diagnostics, history, report
 
     try:
         st, dev = open_device(args)
@@ -662,7 +672,10 @@ def cmd_report(args) -> int:
         print(_("No device was opened: the report says what is connected over USB."),
               file=sys.stderr)
     else:
-        report_text = report.build(dev, st, logged_in)
+        read = diagnostics.read_now(dev, st)
+        if not args.path:
+            history.note_connection(dev, st, found=read)  # with what was read: not read again
+        report_text = report.build(dev, st, logged_in, found=read)
         model = dev.description
     # An address that opens the form with the report filled in; never with the log.
     url = report.issue_url(report_text, model)

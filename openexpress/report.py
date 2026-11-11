@@ -142,19 +142,19 @@ CRASHES_SHOWN = 5
 def _diagnostics(device: GarminDevice, storage: Storage, ask: bool, found) -> list[str]:
     """The section of the device's diagnostics: its crashes from every source (crashes.history)
     with the date, the software version and the error, its memory dumps and whether their copy
-    is on. Never the program counter or the screen of a crash. `ask`: the error logs and the
-    dumps read now (the command line); else what the page tells (status.crashes_known and
-    status.dumps_now, from what the window read at the opening, `found`, diagnostics.AtOpen;
-    None: not read yet)."""
+    is on. Never the program counter or the screen of a crash. `ask`: the command line, with
+    what it read now (`found`, diagnostics.read_now; read here when not given); else what the
+    page tells (status.crashes_known and status.dumps_now, from what the window read at the
+    opening, `found`, diagnostics.AtOpen; None: not read yet)."""
     from openexpress import crashes, diagnostics, status
 
     if ask:
-        entries = diagnostics.errors_or_none(storage)
-        errors_known = entries is not None
-        found_crashes = crashes.history(device.unit_id, entries,
+        read = found if found is not None else diagnostics.read_now(device, storage)
+        errors_known = read.errors_known
+        found_crashes = crashes.history(device.unit_id, read.entries if errors_known else None,
                                         test_drive=bool(getattr(storage, "test_drive", False)))
-        listed = diagnostics.dumps_or_none(storage)
-        dumps = (len(listed), sum(size for _p, size in listed)) if listed is not None else None
+        dumps = ((len(read.dumps), sum(size for _p, size in read.dumps)) if read.dumps_known
+                 else None)
     else:
         errors_known = found is not None and found.errors_known
         found_crashes = status.crashes_known(device, storage, found)

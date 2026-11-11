@@ -483,6 +483,30 @@ def test_a_line_counted_after_the_removal_is_not_put_right_again(tmp_path, clock
     assert history.read(UNIT).lines[-1] == counted
 
 
+@pytest.mark.parametrize("command", ["diagnostics", "report"])
+def test_the_command_line_reads_the_error_logs_and_the_dumps_once(tmp_path, clock, monkeypatch,
+                                                                   command):
+    """`openexpress diagnostics` and `report` on a device just connected read its error logs
+    and list its memory dumps once (each a question over MTP), and the line of the connection
+    keeps what they read."""
+    from openexpress import cli
+
+    root = make_root(tmp_path, err=[trap("2026-10-20 10:00:00")], dumps=[("RAM.zip", 300)])
+    st, _dev = opened(root)
+    monkeypatch.setattr(cli, "open_storage", lambda args: st)
+    asked = []
+    real_read, real_list = diagnostics.read_errors, diagnostics.dump_files
+    monkeypatch.setattr(diagnostics, "read_errors",
+                        lambda *a, **kw: asked.append("error logs") or real_read(*a, **kw))
+    monkeypatch.setattr(diagnostics, "dump_files",
+                        lambda *a, **kw: asked.append("dumps") or real_list(*a, **kw))
+    with redirect_stdout(io.StringIO()):
+        cli.main(["--lang", "en", command])
+    assert sorted(asked) == ["dumps", "error logs"], asked
+    line = history.read(UNIT).lines[-1]
+    assert (len(line["crashes"]), line["dumps"]["count"]) == (1, 1)
+
+
 def test_the_report_tells_the_dumps_after_a_removal_from_the_command_line(tmp_path, clock):
     root = make_root(tmp_path, err=[], dumps=[("RAM_bak1.zip", 200), ("RAM.zip", 300)])
     st, dev = opened(root)
