@@ -138,13 +138,13 @@ failed); for a device without diagnostic data (D14), as its page: "No Diagnostic
   start ("Assert") and "Abnormal Powerdown" are counted in the log only.
 - **Sources, merged:** `err_log.txt` and `err_log.bak` on the device, the boot log (copied by Copy
   Crash Logs), every copy kept on this computer (the device keeps only its last entries), and
-  every crash the device log (D8) wrote at each connection (with the number of its error log
-  and the software version then), so that a device whose diagnostic
+  every crash the device log (D8) wrote at each connection (with the software version then), so that a device whose diagnostic
   files are not kept still has its crashes, also when it is not connected. One crash = the same
   entry seen again (the same time and codes, in each copy of an error log and in the device log),
   or one crash in two sources (the error log and the boot log) within a minute with codes that
-  agree: a boot log line joins one crash, the nearest before it, and never two crashes. Two entries of one file are two crashes, however close, even of the same time and codes:
-  a device restarting again and again writes each.
+  agree: a boot log line joins one crash, the nearest before it, and never two crashes. Two
+  entries of one file are two crashes, however close, unless of the same time and codes: a
+  device restarting again and again writes each, and cannot crash twice in one second.
 - **"The same error as the {n} before":** the crashes just before it, one after another, that had
   its error; a crash of another error between them ends the count.
 - **Shown** newest first with a relative date and the software version; "the same error as the {n}

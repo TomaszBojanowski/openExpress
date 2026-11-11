@@ -561,7 +561,7 @@ def test_a_linked_folder_is_still_walked_where_links_are_followed(tmp_path):
     assert [p for p, _e in st.walk_files("GARMIN")] == ["GARMIN/Activity/a.fit"]
 
 
-# --- the copies of each kind, the device log's extremes, like crashes of one file --------------
+# --- the copies of each kind, the device log's extremes -------------------------------------------
 
 
 def test_copy_memory_dumps_never_pushes_out_a_crash_log_copy_by_their_number(tmp_path, clock):
@@ -613,20 +613,6 @@ def test_a_line_that_is_not_utf8_stays_as_it_was_when_the_log_is_written_again(t
     history.note_counted(dev, st)
     assert where.read_bytes().startswith(damaged)
     assert "counted" in history.read(UNIT).lines[-1]
-
-
-def test_two_like_entries_of_one_file_are_two_crashes(tmp_path, clock):
-    """A device restarting again and again may write two entries of the same second and codes:
-    two crashes, also once its copies and its device log hold them too."""
-    root = make_root(tmp_path, err=[trap("2026-10-20 10:00:00"), trap("2026-10-20 10:00:00")])
-    st, dev = opened(root)
-    found = diagnostics.read_errors(st)
-    assert len(crashes.history(None, found)) == 2
-    history.note_connection(dev, st, found=diagnostics.AtOpen(
-        entries=found, hidden_logs=False, dumps=[]))
-    kept_copy("files", {"GARMIN/Debug/err_log.txt": (root / "GARMIN/Debug/err_log.txt")
-                        .read_bytes()})
-    assert len(crashes.history(UNIT, found)) == 2
 
 
 def test_the_same_error_as_the_one_before_is_the_crash_just_before(clock):

@@ -296,15 +296,6 @@ def _key(device: GarminDevice, storage: Storage, via: str) -> str:
     return hashlib.sha256(told.encode()).hexdigest()[:12]
 
 
-def _log_of(entry) -> dict:
-    """{"log": n}: the place of the entry's error log in diagnostics.ERR_LOGS; {} unknown."""
-    from openexpress.diagnostics import ERR_LOGS
-
-    names = [posixpath.basename(p).casefold() for p in ERR_LOGS]
-    name = (entry.source or "").casefold()
-    return {"log": names.index(name)} if name in names else {}
-
-
 def _crash_fields(crash) -> dict:
     fields = {"kind": crash.kind,
               "at": crash.at.strftime("%Y-%m-%d %H:%M:%S") if crash.at else None,
@@ -353,10 +344,7 @@ def _line(device: GarminDevice, storage: Storage, found, now: datetime, key: str
         line["crash"] = _crash(entries)  # None: the error logs hold no crash
         # Every crash they hold, so that the device's page from its records tells as many as
         # the page of the device connected did.
-        # With the error log of each, by its place in diagnostics.ERR_LOGS ("log"; no file name):
-        # two like entries of one file are two crashes, one in both error logs is one
-        # (crashes.history).
-        line["crashes"] = [{**_crash_fields(e), **_log_of(e)} for e in entries if e.is_crash]
+        line["crashes"] = [_crash_fields(e) for e in entries if e.is_crash]
         line["errors"] = len(entries)
         # Error logs without entries are not "no diagnostic data" (status.has_diagnostics).
         line["error_logs"] = error_logs
@@ -809,15 +797,14 @@ def valid(raw: str) -> dict | None:
 
 def _crash_ok(crash) -> bool:
     return (isinstance(crash, dict) and isinstance(crash.get("kind"), str)
-            and all(_text(crash.get(k)) for k in ("at", "error", "pc", "screen", "software"))
-            and ("log" not in crash or _count(crash["log"])))
+            and all(_text(crash.get(k)) for k in ("at", "error", "pc", "screen", "software")))
 
 
 def _crash_kept(crash: dict) -> dict:
-    """What the program reads of a crash of a line (valid): the optional fields only when
-    written."""
+    """What the program reads of a crash of a line (valid): the software only when written; a
+    field "log" (the place of its error log), which a line may hold, is left out."""
     return {**{k: crash.get(k) for k in ("kind", "at", "error", "pc", "screen")},
-            **{k: crash[k] for k in ("log", "software") if crash.get(k) is not None}}
+            **({"software": crash["software"]} if crash.get("software") is not None else {})}
 
 
 def _usable_time(text) -> None:
@@ -855,13 +842,8 @@ def _entry(crash: dict):
         at = datetime.strptime(crash["at"], "%Y-%m-%d %H:%M:%S") if crash.get("at") else None
     except ValueError:
         at = None
-    from openexpress.diagnostics import ERR_LOGS
-
-    log_ = crash.get("log")
-    source = (posixpath.basename(ERR_LOGS[log_]) if isinstance(log_, int)
-              and 0 <= log_ < len(ERR_LOGS) else "")
     return ErrorEntry(crash["kind"], at, crash.get("error"), crash.get("pc"),
-                      crash.get("screen"), source=source, software=crash.get("software"))
+                      crash.get("screen"), software=crash.get("software"))
 
 
 def crash_entry(line: dict):

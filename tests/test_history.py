@@ -654,20 +654,14 @@ def test_a_count_after_a_removal_that_cannot_list_the_dumps_leaves_them_not_know
 # --- a crash's error log and crash logs to copy, of their kinds; at most MAX_LINES -----------
 
 
-def crash_in(log) -> dict:
-    """A made-up crash of a line, kept with the place of its error log ("log")."""
-    return {"kind": "RTL Trap", "at": "2026-10-20 10:00:00", "error": "0x003",
-            "pc": "0x10000abc", "screen": "2301", "log": log}
-
-
-@pytest.mark.parametrize("log", ["0", -1, True, 1.5], ids=["text", "negative", "bool", "float"])
-def test_a_crash_whose_error_log_is_not_a_whole_number_skips_the_line(clock, log):
-    """The error log of a crash is its place among the error logs, a whole number from 0: a line
-    with anything else there is not the program's, and is skipped."""
-    write_lines(written(conn="made-up-a", crashes=[crash_in(log)]),
-                written(conn="made-up-b", crashes=[crash_in(1)]))
+def test_a_crash_kept_with_the_place_of_its_error_log_is_read(clock):
+    """A line whose crashes hold the place of their error log ("log", as a line may) is read
+    with its crashes, that field left out."""
+    crash = {"kind": "RTL Trap", "at": "2026-10-20 10:00:00", "error": "0x003",
+             "pc": "0x10000abc", "screen": "2301"}
+    write_lines(written(conn="made-up-a", crashes=[{**crash, "log": 1}]))
     kept = history.read(UNIT)
-    assert [line["conn"] for line in kept.lines] == ["made-up-b"] and kept.skipped == 1
+    assert kept.skipped == 0 and kept.lines[0]["crashes"] == [crash]
 
 
 @pytest.mark.parametrize("hidden", [1, "true", None], ids=["number", "text", "null"])

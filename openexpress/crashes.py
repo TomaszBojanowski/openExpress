@@ -43,9 +43,6 @@ class Crash:
     screen: str | None = None
     errnum: str | None = None  # the boot log's error number: another number than `error`
     sources: set[str] = field(default_factory=set)  # file names, BOOT_LOG, COPY
-    # The same time and codes written before in the same file: 0 for the first. Two entries of
-    # one file are two crashes; the n-th of a file is the n-th in each other.
-    repeat: int = field(default=0, compare=False, repr=False)
 
     def words(self) -> str:
         """The crash in one line, as the device names its parts (the command line)."""
@@ -103,16 +100,6 @@ def _fields(c: Crash) -> tuple:
     return (c.at, c.error, c.program_counter, c.screen, c.errnum)
 
 
-def _numbered(of_one_file: list[Crash]) -> list[Crash]:
-    """The crashes of one file, each the same time and codes as one before it in that file
-    numbered (repeat), so that they stay apart."""
-    seen: dict[tuple, int] = {}
-    for crash in of_one_file:
-        crash.repeat = seen.get(_fields(crash), 0)
-        seen[_fields(crash)] = crash.repeat + 1
-    return of_one_file
-
-
 def _join(into: Crash, crash: Crash) -> None:
     for name in ("software", "error", "program_counter", "screen", "errnum"):
         if getattr(into, name) is None:
@@ -129,18 +116,18 @@ def _boot_line_and_crash(a: Crash, b: Crash) -> bool:
 
 def merge(found: list[Crash]) -> list[Crash]:
     """One crash for each one written several times, newest first: the same entry seen again
-    (the same time and codes, and the same place among the like ones of its file: an error log,
-    each copy of it, the device log) is one; then a crash of another source within a minute
-    whose codes agree joins it, only a boot log's line and a crash of another source (the boot
-    log's line of the error log's crash). Two crashes of the same file are never joined: a
-    device that restarts again and again writes each."""
+    (the same time and codes: both error logs, each copy of them, the device log) is one, also
+    two like entries of one file (a device does not crash twice in the same second); then a
+    crash of another source within a minute whose codes agree joins it, only a boot log's line
+    and a crash of another source (the boot log's line of the error log's crash). Two crashes of
+    the same file are never joined: a device that restarts again and again writes each."""
     seen: dict[tuple, Crash] = {}
     for crash in found:
-        key = (_fields(crash), crash.repeat)
+        key = _fields(crash)
         same = seen.get(key)
         if same is None:
             seen[key] = Crash(crash.at, crash.software, crash.error, crash.program_counter,
-                              crash.screen, crash.errnum, set(crash.sources), crash.repeat)
+                              crash.screen, crash.errnum, set(crash.sources))
         else:
             _join(same, crash)
     out: list[Crash] = []
@@ -162,28 +149,17 @@ def history(unit_id: int | None, entries=None, test_drive: bool = False) -> list
     ID)."""
     from openexpress import history as device_log
 
-    found: list[Crash] = []
-    by_file: dict[str, list[Crash]] = {}
-    for e in entries or ():
-        if e.is_crash and e.at is not None:
-            source = e.source or "err_log"
-            by_file.setdefault(source, []).append(_from_entry(e, source))
-    for of_one_file in by_file.values():
-        found += _numbered(of_one_file)
+    found = [_from_entry(e, e.source or "err_log") for e in entries or ()
+             if e.is_crash and e.at is not None]
     if unit_id:
         for line in device_log.read(unit_id, test_drive).lines:
-            of_line: dict[str, list[Crash]] = {}  # by the error log each was in
-            for entry in device_log.crash_entries(line):
-                if entry.is_crash and entry.at is not None:
-                    of_line.setdefault(entry.source, []).append(_from_entry(entry, DEVICE_LOG))
-            for of_one_file in of_line.values():
-                found += _numbered(of_one_file)
+            found += [_from_entry(e, DEVICE_LOG) for e in device_log.crash_entries(line)
+                      if e.is_crash and e.at is not None]
         for name, data in diagnostics.kept_files(unit_id, (*_ERR_LOG_NAMES, _BOOT_LOG_NAME),
                                                   test_drive):
             if name.casefold() == _BOOT_LOG_NAME.casefold():
-                found += _numbered(_boot_log(data))
+                found += _boot_log(data)
             else:
-                found += _numbered([_from_entry(e, COPY)
-                                    for e in diagnostics.parse_err_log(data, name)
-                                    if e.is_crash and e.at is not None])
+                found += [_from_entry(e, COPY) for e in diagnostics.parse_err_log(data, name)
+                          if e.is_crash and e.at is not None]
     return merge(found)
