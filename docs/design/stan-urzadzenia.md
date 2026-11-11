@@ -333,6 +333,12 @@ odczytać"; under it the storage card. A device that gives neither its storage n
 the status page alone. Error logs not read and memory dumps not listed are not known, never
 none: such a device has the page, not this one.
 
+Only a device that keeps no error logs and no memory dumps (a bike accessory, a drive) gets this
+page. A device whose error logs are there and were read but hold no entries, with no memory
+dumps, gets the summary like any device without crashes: "No Problems Found" with its free space,
+and the row Device Status says the same. The sentence above would be untrue of it: it keeps
+error logs, and the storage card shows their space under "Logs and Memory Dumps".
+
 ### D15. Steps
 
 Each step is checked on its own (tests first, then a live trial) and committed on its own:
