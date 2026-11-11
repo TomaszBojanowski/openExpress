@@ -5,7 +5,8 @@ wraps never leaves a short word or a mark alone at the end or the start of a lin
   word (Polish w, z, i, o, u, a; Czech and Slovak k, s, v, z, o, u, a, i; and their capitals);
 - French: a narrow hard space (U+202F) instead of a plain one before ; : ! ? and inside « ».
 The language is the file's name (pl.po), or --lang. A language without rules is left as it
-is. tests/test_i18n.py checks every language of po/LINGUAS that has rules.
+is. In the repository only Polish is changed: every other language is its translators', in
+Weblate, and its file here is refused. tests/test_i18n.py checks Polish.
 
 Usage, after new translations (e.g. tools/po-fill.py):
     tools/po-hard-spaces.py po/pl.po            preview: what would change, nothing written
@@ -92,8 +93,14 @@ def fields(lines):
         yield current
 
 
+PO = Path(__file__).resolve().parent.parent / "po"
+
+
 def main():
     path = Path(sys.argv[1])
+    if path.resolve().parent == PO.resolve() and path.name != "pl.po":
+        print(f"{path.name}: the translators' language, changed only in Weblate: not touched")
+        sys.exit(1)
     apply = "--apply" in sys.argv[2:]
     lang = sys.argv[sys.argv.index("--lang") + 1] if "--lang" in sys.argv else path.stem
     rule = RULES.get(lang)

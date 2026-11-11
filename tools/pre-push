@@ -1,13 +1,14 @@
 #!/usr/bin/env bash
-# Git pre-push hook: refuses to publish private branches and runs the secret check
-# on everything that is about to be pushed.
+# Git pre-push hook: refuses to publish private branches, runs the secret check on everything
+# that is about to be pushed, and refuses a commit of ours that changes another language than
+# Polish (tools/check-translations.py).
 # Install once per clone:  ln -sf ../../tools/pre-push .git/hooks/pre-push
 set -euo pipefail
 # The tools next to this hook (git runs the clone's hook, a link to tools/pre-push, from any of
 # its worktrees, also one whose tree has no tools/, such as the website's branch).
 tools=$(dirname "$(readlink -f "$0")")
 zero=0000000000000000000000000000000000000000
-while read -r local_ref local_sha remote_ref _remote_sha; do
+while read -r local_ref local_sha remote_ref remote_sha; do
     case "$local_ref $remote_ref" in
         *private*)
             echo "STOP: '$local_ref' is a private branch and must never be pushed." >&2
@@ -15,4 +16,6 @@ while read -r local_ref local_sha remote_ref _remote_sha; do
     esac
     [[ $local_sha == "$zero" ]] && continue   # deleting a remote ref
     "$tools/check-secrets.sh" "$local_sha"
+    # Every language but Polish is changed only in Weblate (from the release the tool names).
+    "$tools/check-translations.py" "$local_sha" "$remote_sha"
 done

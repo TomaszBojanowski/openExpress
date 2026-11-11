@@ -8,8 +8,9 @@ import pytest
 from openexpress import catalogs, i18n
 
 ROOT = Path(__file__).resolve().parent.parent
-# Every language of po/LINGUAS: its placeholders and plural forms; Polish, the one complete
-# translation, also its completeness and hard spaces.
+# Every language of po/LINGUAS: its placeholders and plural forms (whether its file is right, not
+# whether it is complete: every language but Polish is its translators', in Weblate); Polish,
+# the maintainer's, also its completeness and hard spaces.
 PO_FILES = [ROOT / "po" / f"{language}.po" for language in catalogs.languages()]
 HARD_SPACES = ROOT / "tools" / "po-hard-spaces.py"
 PLACEHOLDER = re.compile(r"\{\w+\}|%\(\w+\)\w|%s")
@@ -132,14 +133,24 @@ def test_the_tool_puts_hard_spaces_into_msgstr_only(tmp_path):
         .replace('"W tle"', f'"W{nb}tle"').replace('"u nas"', f'"u{nb}nas"'))
 
 
-@pytest.mark.parametrize("po", PO_FILES, ids=lambda p: p.stem)
-def test_every_language_with_rules_has_its_hard_spaces(po):
-    """tools/po-hard-spaces.py finds nothing to change in any language it has rules for (a
-    language without rules is said to have none)."""
-    done = subprocess.run([sys.executable, "-I", str(HARD_SPACES), str(po)],
+def test_polish_has_its_hard_spaces():
+    """tools/po-hard-spaces.py finds nothing to change in Polish, the one language the
+    repository changes."""
+    done = subprocess.run([sys.executable, "-I", str(HARD_SPACES), str(ROOT / "po" / "pl.po")],
                           capture_output=True, text=True, check=True)
-    assert done.stdout.endswith("\n0 texts, 0 spaces (preview, nothing written)\n") or (
-        done.stdout == f"{po.stem}: no rules for hard spaces, nothing to do\n")
+    assert done.stdout.endswith("\n0 texts, 0 spaces (preview, nothing written)\n")
+
+
+@pytest.mark.parametrize("language", ["cs", "de"])
+def test_the_file_of_another_language_here_is_never_changed_by_the_tool(language):
+    """Every language but Polish is its translators', in Weblate: the tool refuses its file in
+    po/, also with --apply."""
+    po = ROOT / "po" / f"{language}.po"
+    before = po.read_bytes() if po.exists() else None
+    done = subprocess.run([sys.executable, "-I", str(HARD_SPACES), str(po), "--apply"],
+                          capture_output=True, text=True, check=False)
+    assert done.returncode == 1 and "changed only in Weblate" in done.stdout
+    assert (po.read_bytes() if po.exists() else None) == before
 
 
 def test_polish_is_complete():

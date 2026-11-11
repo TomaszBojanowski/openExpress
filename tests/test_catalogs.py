@@ -3,8 +3,8 @@ po/LINGUAS, each with its po/<language>.po; the compiled catalogs (.mo) are made
 (the Flatpak's manifest, install-desktop, the tests) and never kept in the repository; the
 template (po/openexpress.pot) holds every text of the files po/POTFILES lists, the metainfo's
 too; the metainfo is translated through gettext from its template, its release notes left in
-English; after tools/update-template.sh and tools/update-translations.sh every language has the
-template's date. GNU gettext's tools are needed; made-up catalogs only where one is written."""
+English; after tools/update-template.sh and tools/update-translations.sh Polish has the
+template's date and every other language is as it was (its translators', in Weblate). GNU gettext's tools are needed; made-up catalogs only where one is written."""
 
 import os
 import re
@@ -131,10 +131,10 @@ def _run_the_scripts(tmp_path, prepare=None) -> list[Path]:
 
 
 @needs_gettext
-def test_after_the_scripts_every_language_has_the_template_s_date(tmp_path):
-    """The header of each po/<language>.po has the template's date, as Weblate's msgmerge
-    add-on writes it, so Weblate has no pull request of that one line to open after the template
-    changes."""
+def test_after_the_scripts_polish_has_the_template_s_date_and_the_others_are_untouched(tmp_path):
+    """Polish, the maintainer's, is merged with the template and has its date; every other
+    language is its translators', in Weblate (whose msgmerge add-on keeps it in line with the
+    template): the scripts leave its file byte for byte."""
     old = "2000-01-01 00:00+0000"  # no template's date
 
     def an_old_date(po):
@@ -142,11 +142,18 @@ def test_after_the_scripts_every_language_has_the_template_s_date(tmp_path):
         po.write_text(POT_DATE.sub(lambda _m: f'"POT-Creation-Date: {old}\\n"', text, count=1),
                       encoding="utf-8")
 
-    languages = _run_the_scripts(tmp_path, an_old_date)
+    others = {}
+
+    def prepare(po):
+        an_old_date(po)
+        if po.name != "pl.po":
+            others[po.name] = po.read_bytes()
+
+    languages = _run_the_scripts(tmp_path, prepare)
     template = _pot_date(tmp_path / "po" / "openexpress.pot")
-    dates = {po.name: _pot_date(po) for po in languages}
     assert languages and template != old
-    assert dates == dict.fromkeys(dates, template)
+    assert _pot_date(tmp_path / "po" / "pl.po") == template
+    assert {name: (tmp_path / "po" / name).read_bytes() for name in others} == others
 
 
 # --- the flags of Weblate -----------------------------------------------------------------------
@@ -169,15 +176,16 @@ def test_every_text_of_the_weblate_flags_is_one_of_the_template():
 
 
 @needs_gettext
-def test_after_the_scripts_the_weblate_flags_are_in_the_template_and_every_language(tmp_path):
-    """msgmerge and msgattrib drop the flags they do not know: the scripts write them again."""
+def test_after_the_scripts_the_weblate_flags_are_in_the_template_and_polish(tmp_path):
+    """msgmerge and msgattrib drop the flags they do not know: the scripts write them again,
+    into the files they write."""
     def no_weblate_flags(po):
         po.write_text(re.sub(r", ignore-[a-z-]+", "", po.read_text(encoding="utf-8")),
                       encoding="utf-8")
 
-    languages = _run_the_scripts(tmp_path, no_weblate_flags)
+    _run_the_scripts(tmp_path, no_weblate_flags)
     listed = catalogs.read_flags(tmp_path / "po" / "weblate-flags.txt")
-    for path in [tmp_path / "po" / "openexpress.pot", *languages]:
+    for path in [tmp_path / "po" / "openexpress.pot", tmp_path / "po" / "pl.po"]:
         found = _flags_in(path)
         missing = {key: flags for key, flags in listed.items()
                    if not set(flags) <= set(found.get(key, []))}
