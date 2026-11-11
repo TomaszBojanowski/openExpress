@@ -70,8 +70,6 @@ def decode(data: bytes) -> list[Field]:
 
 
 def _varint(n: int) -> bytes:
-    if n < 0:
-        n &= (1 << 64) - 1
     out = bytearray()
     while True:
         b = n & 0x7F

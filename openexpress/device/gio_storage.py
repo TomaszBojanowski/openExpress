@@ -1306,7 +1306,7 @@ def _mount_words(uri: str | None, now: float, usb: GarminUsb | None = None) -> s
     return "not known when it was mounted"
 
 
-def mount(dev: FoundDevice, timeout_s: float | None = None) -> None:
+def mount(dev: FoundDevice) -> None:
     """Mount the volume of a device found not mounted (as the file manager does)."""
     if dev.mounted or dev.volume is None:
         if dev.mounted:
@@ -1316,8 +1316,7 @@ def mount(dev: FoundDevice, timeout_s: float | None = None) -> None:
     _wait(lambda done, cancellable: volume.mount(
         Gio.MountMountFlags.NONE, None, cancellable,
         lambda vol, res: done(lambda: vol.mount_finish(res))),
-        MOUNT_TIMEOUT_S if timeout_s is None else timeout_s, _("Cannot mount the device"),
-        "mount")
+        MOUNT_TIMEOUT_S, _("Cannot mount the device"), "mount")
     dev.mounted = True
     _note_mounted(dev.uri, by_us=True, usb=dev.usb)
 

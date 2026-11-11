@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import logging
 import posixpath
+import threading
 import time
 import uuid
 from collections.abc import Callable
@@ -76,7 +77,7 @@ def stopped_text() -> str:
     return _("Stopped waiting for TrueUp; Garmin Connect sends it with the next sync.")
 
 
-def _wait(seconds: float, progress, sleep, stop, result: TrueUpResult) -> bool:
+def _wait(seconds: float, progress, stop, result: TrueUpResult) -> bool:
     """Wait `seconds` in WAIT_STEPS steps, each told; False when it was stopped (`stop` set,
     or Ctrl+C: only here is it taken for "stop waiting", so that the sync ends as usual)."""
     length = duration_text(seconds)
@@ -92,11 +93,8 @@ def _wait(seconds: float, progress, sleep, stop, result: TrueUpResult) -> bool:
     progress(TimedWait(text, seconds, 0.0, short=short, about=text))
     for i in range(1, WAIT_STEPS + 1):
         try:
-            if stop is not None:
-                if stop.wait(step):
-                    return False
-            else:
-                sleep(step)
+            if stop.wait(step):
+                return False
         except KeyboardInterrupt:
             log.info("TrueUp: Ctrl+C during the wait")
             return False
@@ -111,13 +109,13 @@ def run(
     client: GarminClient,
     messages: list[dict],
     progress: Callable[[str], None] | None = None,
-    sleep: Callable[[float], None] = time.sleep,
     now: Callable[[], float] = time.time,
     stop=None,  # set by the window's Stop Waiting, or the background service quitting
 ) -> TrueUpResult:
     """`stop`: a threading.Event that stops the wait when it is set (its wait() is a step of
-    the wait); without it the wait sleeps. Ctrl+C during the wait stops it the same way."""
+    the wait); none: only Ctrl+C stops it, the same way."""
     progress = say_to(progress)
+    stop = stop if stop is not None else threading.Event()
     result = TrueUpResult()
     targets = device.targets(DATATYPE)
     if not targets:
@@ -136,7 +134,7 @@ def run(
         delay = 0.0 if when is None else when - now()
         wait = wait_for(delay)
         log.info("TrueUp: check back (round %d), waiting %.0f s", _round + 1, wait)
-        if wait and not _wait(wait, progress, sleep, stop, result):
+        if wait and not _wait(wait, progress, stop, result):
             result.stopped = True
             log.info("TrueUp: wait stopped after %.0f s, nothing more asked", result.waited_s)
             progress(stopped_text())

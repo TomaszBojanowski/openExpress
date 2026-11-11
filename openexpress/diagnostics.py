@@ -848,7 +848,6 @@ class AtOpen:
     """What the window learns of the device's errors when it opens it."""
 
     entries: list[ErrorEntry]
-    crash: ErrorEntry | None
     dumps: list[tuple[str, int]]
     hidden_logs: bool  # "Copy Crash Logs" is offered
     copied: Copied | None = None
@@ -909,10 +908,11 @@ def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None)
                       device.unit_id, bool(getattr(storage, "test_drive", False))))
     else:
         dumps, hidden = [], False
-    found = AtOpen(entries, last_crash(entries, now), dumps, hidden,
-                   errors_known=not missed, dumps_known=seen is not None, began=began)
-    if found.crash is not None:
-        log.info("diagnostics: the device logged %s", found.crash.words())
+    found = AtOpen(entries, dumps, hidden, errors_known=not missed,
+                   dumps_known=seen is not None, began=began)
+    crash = last_crash(entries, now)
+    if crash is not None:
+        log.info("diagnostics: the device logged %s", crash.words())
     if copying:
         try:
             found.copied = copy_files(device, storage, now,

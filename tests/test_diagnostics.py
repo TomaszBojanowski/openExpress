@@ -193,7 +193,8 @@ def test_only_an_rtl_trap_of_the_last_30_days_is_a_crash():
 def test_the_logs_are_read_with_the_copy_off_and_nothing_is_copied(device, clock):
     st, dev = device
     found = diagnostics.at_open(dev, st)
-    assert found.crash is not None and found.crash.at == datetime(2026, 10, 20, 22, 24, 6)
+    crash = diagnostics.last_crash(found.entries, datetime.now())
+    assert crash is not None and crash.at == datetime(2026, 10, 20, 22, 24, 6)
     assert found.copied is None
     assert not diagnostics.folder(UNIT).exists()
     assert sorted(path for path, _size in found.dumps) == ["GARMIN/Debug/dump/RAM.zip",
@@ -287,7 +288,7 @@ def test_a_folder_that_cannot_be_listed_is_a_line_in_the_log(device, clock, capl
     st.walk_files = gone
     with caplog.at_level(logging.INFO, logger="openexpress"):
         found = diagnostics.at_open(dev, st)
-    assert found.crash is not None and found.dumps == [] and found.copied is None
+    assert any(e.is_crash for e in found.entries) and found.dumps == [] and found.copied is None
     messages = [r.getMessage() for r in caplog.records]
     assert "diagnostics: the folders not listed (DeviceError)" in messages
     assert "diagnostics: the copy failed (DeviceError: gone)" in messages
@@ -476,7 +477,8 @@ def test_they_are_read_in_the_background_once_the_page_is_shown(device, clock, i
     assert not reading.is_set() and session.diagnostics is None
     done(work())
     assert reading.is_set()
-    assert session.diagnostics.crash is not None and session.diagnostics.copied.saved
+    assert (any(e.is_crash for e in session.diagnostics.entries)
+            and session.diagnostics.copied.saved)
     assert drawn == [session.diagnostics]  # the row "Device Status" drawn with them
     assert [c.error for c in status.told(session).crashes] == ["0x003"]
 
@@ -651,7 +653,7 @@ def _labelled(label):
 
 def _found(**kw):
     (crash,) = diagnostics.parse_err_log(err_log(TRAP))
-    values = {"entries": [crash], "crash": crash, "dumps": [("GARMIN/Debug/dump/RAM.zip", 8_090_553)],
+    values = {"entries": [crash], "dumps": [("GARMIN/Debug/dump/RAM.zip", 8_090_553)],
               "hidden_logs": True}
     return diagnostics.AtOpen(**{**values, **kw})
 
@@ -680,7 +682,7 @@ def test_the_row_before_the_reading_and_after_it_failed(clock):
 
     from openexpress.gui.device_page import status_row
 
-    win = _window(_found(crash=None, entries=[]))
+    win = _window(_found(entries=[]))
     status_row(win, Adw.PreferencesGroup())
     assert _row(win) == ("Device Status", "No Problems Found")
     win = _window(None, reading=threading.Event())  # being read
@@ -695,7 +697,8 @@ def test_the_row_before_the_reading_and_after_it_failed(clock):
 def test_no_crash_logs_found_takes_the_button_away(monkeypatch):
     from gi.repository import Adw
 
-    from openexpress.gui.device_page import copy_crash_logs, status_row
+    from openexpress.gui.device_page import status_row
+    from openexpress.gui.status_page import copy_crash_logs
 
     found = _found()
     win = _window(found)
@@ -719,7 +722,7 @@ def test_no_crash_logs_found_takes_the_button_away(monkeypatch):
 
 @pytest.mark.needs_display
 def test_copy_memory_dumps_says_what_did_not_fit(monkeypatch):
-    from openexpress.gui.device_page import copy_dumps
+    from openexpress.gui.status_page import copy_dumps
 
     win = _window(_found())
     monkeypatch.setattr(diagnostics, "copy_dumps",
@@ -863,8 +866,7 @@ def _connected_again(st):
 
 
 def _same(a, b):
-    assert (a.entries, a.crash, a.dumps, a.hidden_logs) == (b.entries, b.crash, b.dumps,
-                                                            b.hidden_logs)
+    assert (a.entries, a.dumps, a.hidden_logs) == (b.entries, b.dumps, b.hidden_logs)
 
 
 @pytest.mark.parametrize("copy", [True, False])
@@ -900,7 +902,7 @@ def test_an_error_log_and_a_dump_written_after_the_places_were_kept_are_found(tm
     (debug / "dump" / "RAM.zip").write_bytes(b"d" * 300)
     _connected_again(st)
     found = diagnostics.at_open(dev, st)
-    assert found.crash is not None and [size for _p, size in found.dumps] == [300]
+    assert any(e.is_crash for e in found.entries) and [size for _p, size in found.dumps] == [300]
     _connected_again(st)
     diagnostics.at_open(dev, st)
     assert sorted(st.lists) == LOGS_LISTED  # the new note holds

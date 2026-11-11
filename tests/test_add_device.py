@@ -12,7 +12,6 @@ from openexpress.connect import (
     REGISTER_PATH,
     OtherOwner,
     OwnershipUnknown,
-    Registration,
     Unauthorized,
 )
 from openexpress.device.xmldevice import GarminDevice
@@ -80,8 +79,7 @@ def test_adding_sends_one_request_and_reads_the_list_again(caplog):
     client = garmin([[{"unitid": OTHER_UNIT}], [{"unitid": OTHER_UNIT}, {"unitid": UNIT}]])
     with caplog.at_level(logging.INFO):
         result = service.add_device(client, device(), apply=True)
-    assert result == service.DeviceAddition(already=False, registration=Registration(True, "active"),
-                                            made_active=False, listed=True)
+    assert result == service.DeviceAddition(already=False, made_active=False, listed=True)
     assert requests_made(client) == [("GET", DEVICES_PATH), ("POST", REGISTER_PATH),
                                      ("GET", DEVICES_PATH)]
     assert client.verified_unit_id == UNIT
@@ -106,7 +104,7 @@ def test_a_retired_device_is_made_active():
 def test_accepted_but_not_on_the_list_yet():
     client = garmin([[], []])
     result = service.add_device(client, device(), apply=True)
-    assert result.listed is False and result.registration == Registration(True, "active")
+    assert result.listed is False
     assert client.verified_unit_id is None
 
 
@@ -115,7 +113,7 @@ def test_a_list_that_cannot_be_read_after_adding():
     client = garmin([[]])
     client.http.routes[DEVICES_PATH] = lambda: next(lists)
     result = service.add_device(client, device(), apply=True)
-    assert result.listed is None and result.registration is not None
+    assert result.listed is None
 
 
 def test_a_refusal_ends_it_without_reading_the_list_again():

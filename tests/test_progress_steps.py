@@ -3,6 +3,7 @@ what (a name a person knows, never a file's) and how far ("3 of 8", "412 MB of 1
 words change at most once a second, the bar at most ten times a second; the command line writes
 one line over itself on a terminal, a line a step elsewhere."""
 import io
+import sys
 
 import pytest
 
@@ -133,11 +134,13 @@ class Stream(io.StringIO):
         return self.tty
 
 
-def test_the_command_line_writes_one_line_over_itself_on_a_terminal():
+def test_the_command_line_writes_one_line_over_itself_on_a_terminal(monkeypatch):
     from openexpress.cli import _Status
 
     err, out = Stream(True), Stream(False)
-    status = _Status(err=err, out=out)
+    monkeypatch.setattr(sys, "stderr", err)
+    monkeypatch.setattr(sys, "stdout", out)
+    status = _Status()
     status(Step("Uploading activities", 1, 2))
     status(Step("Uploading activities", 2, 2))
     status("Checking for files from Garmin Connect…")
@@ -148,14 +151,16 @@ def test_the_command_line_writes_one_line_over_itself_on_a_terminal():
 
 
 @pytest.mark.parametrize("tty", [True, False], ids=["terminal", "elsewhere"])
-def test_the_command_line_writes_its_progress_with_plain_spaces(tty):
+def test_the_command_line_writes_its_progress_with_plain_spaces(tty, monkeypatch):
     """Its own streams too (not the command's, which write plain spaces anyway): every kind of
     message, on a terminal and elsewhere."""
     from openexpress.cli import _Status
     from openexpress.progress import TimedWait
 
     err, out = Stream(tty), Stream(False)
-    status = _Status(err=err, out=out)
+    monkeypatch.setattr(sys, "stderr", err)
+    monkeypatch.setattr(sys, "stdout", out)
+    status = _Status()
     status(TimedWait("Waiting 3\u00a0min", seconds=200))
     status(TimedWait("Waiting 3\u00a0min", seconds=200, done=1))
     status(Step("Copying a\u00a0map", 1, 2))
@@ -170,11 +175,13 @@ def test_the_command_line_writes_its_progress_with_plain_spaces(tty):
         assert out.getvalue() == "  Waiting 3 min\n  Copying a map\n  Done in 2 s\n"
 
 
-def test_elsewhere_a_line_a_step():
+def test_elsewhere_a_line_a_step(monkeypatch):
     from openexpress.cli import _Status
 
     err, out = Stream(False), Stream(False)
-    status = _Status(err=err, out=out)
+    monkeypatch.setattr(sys, "stderr", err)
+    monkeypatch.setattr(sys, "stdout", out)
+    status = _Status()
     for n in (1, 2):
         status(Step("Uploading activities", n, 3))
     status(Step("Uploading monitoring", 3, 3))

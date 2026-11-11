@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.0\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 19:56+0100\n"
+"POT-Creation-Date: 2026-11-11 12:10+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3172,16 +3172,6 @@ msgid "Would write {path}"
 msgstr ""
 
 #: openexpress/cli.py
-#, python-brace-format
-msgid "Removed old file {path}"
-msgstr ""
-
-#: openexpress/cli.py
-#, python-brace-format
-msgid "Would remove old file {path}"
-msgstr ""
-
-#: openexpress/cli.py
 msgid "To enable background sync, run:"
 msgstr ""
 
@@ -5797,24 +5787,6 @@ msgstr[1] ""
 msgid "Backup Incomplete"
 msgstr ""
 
-#. TRANSLATORS: the number of an error the device logged, e.g. "error 0x003"
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "error {number}"
-msgstr ""
-
-#. TRANSLATORS: where in its software the device stopped (a program counter)
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "at {address}"
-msgstr ""
-
-#. TRANSLATORS: the number of the screen the device showed when the error came
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "screen {number}"
-msgstr ""
-
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
 #: openexpress/gui/device_page.py openexpress/gui/start_window.py
@@ -5882,36 +5854,6 @@ msgstr ""
 
 #: openexpress/gui/device_page.py
 msgid "Garmin Connect could not be asked for the picture. Try again later."
-msgstr ""
-
-#: openexpress/gui/device_page.py
-msgid "Crash logs copied to this computer"
-msgstr ""
-
-#: openexpress/gui/device_page.py
-msgid "The device has no hidden crash logs"
-msgstr ""
-
-#: openexpress/gui/device_page.py
-msgid "Copying the Crash Logs…"
-msgstr ""
-
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "{count} memory dump copied to this computer"
-msgid_plural "{count} memory dumps copied to this computer"
-msgstr[0] ""
-msgstr[1] ""
-
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "{count} file skipped: did not fit in {size}"
-msgid_plural "{count} files skipped: did not fit in {size}"
-msgstr[0] ""
-msgstr[1] ""
-
-#: openexpress/gui/device_page.py
-msgid "Copying the Memory Dumps…"
 msgstr ""
 
 #. TRANSLATORS: subtitle of "Primary Training Device" while not logged in
@@ -7150,6 +7092,54 @@ msgstr ""
 
 #: openexpress/gui/start_window.py
 msgid "Several Garmin devices are connected. Choose one on the Device page."
+msgstr ""
+
+#. TRANSLATORS: the number of an error the device logged, e.g. "error 0x003"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "error {number}"
+msgstr ""
+
+#. TRANSLATORS: where in its software the device stopped (a program counter)
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "at {address}"
+msgstr ""
+
+#. TRANSLATORS: the number of the screen the device showed when the error came
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "screen {number}"
+msgstr ""
+
+#: openexpress/gui/status_page.py
+msgid "Crash logs copied to this computer"
+msgstr ""
+
+#: openexpress/gui/status_page.py
+msgid "The device has no hidden crash logs"
+msgstr ""
+
+#: openexpress/gui/status_page.py
+msgid "Copying the Crash Logs…"
+msgstr ""
+
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{count} memory dump copied to this computer"
+msgid_plural "{count} memory dumps copied to this computer"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{count} file skipped: did not fit in {size}"
+msgid_plural "{count} files skipped: did not fit in {size}"
+msgstr[0] ""
+msgstr[1] ""
+
+#: openexpress/gui/status_page.py
+msgid "Copying the Memory Dumps…"
 msgstr ""
 
 #. TRANSLATORS: a kind of file in the storage of the page Device Status

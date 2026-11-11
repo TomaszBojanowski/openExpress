@@ -83,7 +83,7 @@ def _delete(unit_id: int, discard_pending: bool, backups: bool) -> str:
     folder = paths.device_dir(unit_id)
     # Under the lock of the device records: a write begun before (the reading of a device just
     # unplugged, a count after a removal) waits, then sees the device forgotten.
-    with history.device_locked(unit_id):
+    with history.records_locked():
         if folder.exists():
             shutil.rmtree(folder)
         history.forgotten(unit_id)

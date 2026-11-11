@@ -370,7 +370,7 @@ def display_key(tile, how: str) -> tuple:
 # The chips of a tile: only what the tile would not say otherwise, at most MAX_CHIPS, in
 # this order: an update copied already that the connected device installs once unplugged
 # (or ejected, a drive), else an update to install (found by the window's check, at most
-# tile_facts.UPDATE_KEPT_S ago), activities to sync or a device never
+# known_devices.UPDATE_FOUND_KEPT_S ago), activities to sync or a device never
 # synced here (connected, of the account), a USB drive, the account's primary device, a
 # device off the account (only when the account's list is known for it; never a drive, which
 # needs no account), and last a device synced here before with nothing to upload now. The

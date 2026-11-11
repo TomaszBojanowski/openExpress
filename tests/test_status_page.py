@@ -46,7 +46,7 @@ def facts(**changes) -> status.Facts:
                      screen="2301"), crash(9), crash(21)]
     lines = [line(150, "21.05"), line(40, "21.12"), line(25, "21.18"), line(0.01, "21.18")]
     made = status.Facts(
-        via="mtp", free=12_400 * MB, capacity=31_100 * MB, categories=dict(CATEGORIES),
+        free=12_400 * MB, capacity=31_100 * MB, categories=dict(CATEGORIES),
         counted_at=NOW - timedelta(minutes=10), crashes=crashes, errors_known=True,
         dumps=[("GARMIN/Debug/dump/RAM.zip", 9 * MB, 1_700_000_300.0),
                ("GARMIN/Debug/dump/RAM_bak1.zip", 8 * MB, 1_700_000_200.0),
@@ -635,7 +635,7 @@ def drive_page(clock, in_the_window, tmp_path):
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     history.note_connection(device, storage, now=NOW - timedelta(minutes=10))
     # What the window read of it when it opened it: no error log, the dumps listed.
-    at_open = diagnostics.AtOpen(entries=[], crash=None, hidden_logs=False, dumps=[
+    at_open = diagnostics.AtOpen(entries=[], hidden_logs=False, dumps=[
         (f"GARMIN/Debug/dump/{p.name}", p.stat().st_size) for p in dump.iterdir()])
     session = types.SimpleNamespace(device=device, storage=storage, diagnostics=at_open,
                                     space=None)
@@ -794,7 +794,7 @@ def test_the_diagnostic_files_and_the_report(clock):
     assert titled(section, "Memory Dumps").get_subtitle() == "3 dumps\u00a0· 27.0\u00a0MB\u00a0· encrypted"
     assert titled(section, "Crash Logs")  # the device hides them
     titled(section, "Report to openExpress")
-    drive = page(facts(via="drive", hidden_logs=False))[1]
+    drive = page(facts(hidden_logs=False))[1]
     assert "Crash Logs" not in [r.get_title() for r in rows(drive)]
 
 
@@ -987,7 +987,7 @@ def test_the_reading_is_in_the_session_before_anyone_learns_it_is_done(monkeypat
 
     def at_open(device, storage, now=None):
         time.sleep(0.01)
-        return AtOpen(entries=[crash_entry], crash=crash_entry, dumps=[], hidden_logs=False)
+        return AtOpen(entries=[crash_entry], dumps=[], hidden_logs=False)
 
     monkeypatch.setattr(diagnostics, "at_open", at_open)
     for n in range(20):
@@ -1031,7 +1031,7 @@ def test_the_page_waits_for_the_reading_without_a_task_then_reads(clock):
     assert win.run_task.calls == [] and not win.busy
     assert win.session.page_waits and section.stack.get_visible_child_name() == "loading"
     entry_ = ErrorEntry("RTL Trap", datetime(2026, 10, 20, 10, 0), "0x003")
-    win.session.diagnostics = AtOpen(entries=[entry_], crash=entry_, dumps=[],
+    win.session.diagnostics = AtOpen(entries=[entry_], dumps=[],
                                      hidden_logs=False)
     win.session.diagnostics_reading.set()
     status_changed(win)
@@ -1046,12 +1046,12 @@ def test_after_copy_crash_logs_the_row_and_the_page_count_the_boot_logs_crashes(
 
     from openexpress import diagnostics
     from openexpress.diagnostics import AtOpen, Copied
-    from openexpress.gui import device_page
+    from openexpress.gui import status_page
 
     unit = 3_000_000_321
     s = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit), storage=None,
                               space=None, client=None,
-                              diagnostics=AtOpen(entries=[], crash=None, dumps=[],
+                              diagnostics=AtOpen(entries=[], dumps=[],
                                                  hidden_logs=True))
 
     def copy_crash_logs(device, storage, progress=None):
@@ -1070,7 +1070,7 @@ def test_after_copy_crash_logs_the_row_and_the_page_count_the_boot_logs_crashes(
     win = window(session=s, run_task=RunNow(), toast=toasts.append, progress=None,
                  sections={"status": types.SimpleNamespace(loaded=True)},
                  load_section=lambda key, force=False: reloads.append(key))
-    device_page.copy_crash_logs(win)
+    status_page.copy_crash_logs(win)
     (crash,) = status.told(s).crashes
     assert crash.errnum == "0x6e5d8003"
     assert reloads == ["status"]
@@ -1341,7 +1341,7 @@ def test_a_page_that_waited_is_not_read_for_another_device(clock):
     done.set()
     win.session = types.SimpleNamespace(  # unplugged; another device, its page never chosen
         device=types.SimpleNamespace(unit_id=None), storage=None, diagnostics_reading=done,
-        diagnostics=AtOpen(entries=[], crash=None, dumps=[], hidden_logs=False))
+        diagnostics=AtOpen(entries=[], dumps=[], hidden_logs=False))
     section.loaded = False
     loads = []
     win.load_section = lambda key, force=False: loads.append(key)
@@ -1418,7 +1418,7 @@ class _Watch:
         from openexpress.device.xmldevice import parse
 
         dev = parse(st.read("GARMIN/GarminDevice.xml"))
-        found = diagnostics.AtOpen(entries=[], crash=None, hidden_logs=False, dumps=[
+        found = diagnostics.AtOpen(entries=[], hidden_logs=False, dumps=[
             (p, e.size) for p, e in diagnostics.dump_files(st)])
         history.note_connection(dev, st, found=found)
         return types.SimpleNamespace(device=dev, storage=st, diagnostics=found,
@@ -1610,7 +1610,7 @@ def test_a_page_that_waited_is_read_when_chosen_not_while_another_is_shown(clock
     MainWindow.load_status(win)
     assert s.page_waits
     win.pages = types.SimpleNamespace(get_visible_child_name=lambda: "maps")
-    s.diagnostics = diagnostics.AtOpen(entries=[], crash=None, dumps=[], hidden_logs=False)
+    s.diagnostics = diagnostics.AtOpen(entries=[], dumps=[], hidden_logs=False)
     s.diagnostics_reading.set()
     loads = []
     win.load_section = lambda key, force=False: loads.append(key)
@@ -1925,7 +1925,7 @@ def test_the_page_takes_a_count_newer_than_the_sessions(tmp_path, clock):
     history.note_connection(dev, st)
     t1 = clock.current
     s = types.SimpleNamespace(device=dev, storage=st, diagnostics=diagnostics.AtOpen(
-        [], None, [], False), diagnostics_reading=None, space=(4_000_000, 10_000_000_000),
+        [], [], False), diagnostics_reading=None, space=(4_000_000, 10_000_000_000),
         client=None, recount=status.Recount({"logs": 5}, 4_000_000, 10_000_000_000, t1, []))
     clock.current += timedelta(minutes=5)
     st.free = 9_000_000  # the command line removed a file

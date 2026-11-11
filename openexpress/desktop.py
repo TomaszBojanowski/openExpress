@@ -24,12 +24,6 @@ COMMENT = N_("Sync, updates and maps for Garmin devices")
 KEYWORDS = N_("Garmin;Fenix;Connect;sync;")
 SERVICE_DESCRIPTION = "openExpress: sync when the watch is connected"
 ICON = Path(__file__).parent / "data" / f"{DESKTOP_ID}.svg"
-# Files written by pre-release versions (named "garmin-linux").
-LEGACY_FILES = (
-    "applications/io.github.garminlinux.GarminLinux.desktop",
-    "applications/io.github.garminlinux.GarminLinux.Watch.desktop",
-)
-LEGACY_SERVICE = "garmin-linux-watch.service"
 
 
 def _localized(key: str, message: str) -> str:
@@ -138,28 +132,15 @@ WantedBy=graphical-session.target
     return result
 
 
-def legacy_files() -> list[Path]:
-    data = paths.xdg("XDG_DATA_HOME", ".local/share")
-    config = paths.xdg("XDG_CONFIG_HOME", ".config")
-    paths_ = [data / f for f in LEGACY_FILES] + [config / "systemd" / "user" / LEGACY_SERVICE,
-                                                 config / "systemd" / "user" /
-                                                 "graphical-session.target.wants" / LEGACY_SERVICE]
-    return [p for p in paths_ if p.exists() or p.is_symlink()]
-
-
-def install(dry_run: bool) -> tuple[list[Path], list[Path]]:
-    """Returns (written files, removed legacy files)."""
+def install(dry_run: bool) -> list[Path]:
+    """Returns the files written (to be written, in a dry run)."""
     written = []
     for path, content in files().items():
         written.append(path)
         if not dry_run:
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_text(content)
-    removed = legacy_files()
-    if not dry_run:
-        for path in removed:
-            path.unlink()
-    return written, removed
+    return written
 
 
 def flatpak_installed() -> bool:
@@ -179,8 +160,8 @@ def _service_wants_link() -> Path:
 
 
 def uninstall(dry_run: bool) -> list[Path]:
-    """Disables the service, then removes the launcher, icon and service written by install()
-    (and legacy files)."""
+    """Disables the service, then removes the launcher, icon and service written by
+    install()."""
     import shutil
     import subprocess
 
@@ -188,7 +169,6 @@ def uninstall(dry_run: bool) -> list[Path]:
     paths_ = [p for p in files() if p.exists()]
     if link.exists() or link.is_symlink():
         paths_.append(link)
-    paths_ += legacy_files()
     if not dry_run:
         if shutil.which("systemctl"):
             try:

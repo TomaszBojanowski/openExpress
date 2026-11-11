@@ -1,5 +1,6 @@
 """TrueUp in the progress of a sync: its steps by the pattern of the others ("Downloading
 TrueUp", "Writing TrueUp to the device"), never a file. All files and answers are made up."""
+from fakes import Waits
 from test_trueup_wait import CHECK, NOW, client, watch  # noqa: F401 - the fixture
 
 from openexpress import i18n, trueup
@@ -9,8 +10,8 @@ from openexpress.progress import Step, TimedWait, Waiting
 def _run(watch, delay=200):
     dev, st = watch
     seen = []
-    trueup.run(dev, st, client(delay), [CHECK], progress=seen.append, sleep=lambda s: None,
-               now=lambda: NOW)
+    trueup.run(dev, st, client(delay), [CHECK], progress=seen.append, now=lambda: NOW,
+               stop=Waits())
     return seen
 
 

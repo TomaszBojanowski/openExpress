@@ -14,6 +14,22 @@ from dataclasses import dataclass
 Call =namedtuple("Call", "title fn done failed device in_page button")
 
 
+class Waits:
+    """A stand-in of the Event that stops a wait (TrueUp's `stop`): each step of the wait
+    (wait(seconds)) noted and never stopped; `then`: raised at the first step instead (e.g.
+    KeyboardInterrupt, Ctrl+C)."""
+
+    def __init__(self, then: BaseException | type | None = None):
+        self.waited: list[float] = []
+        self.then = then
+
+    def wait(self, seconds: float) -> bool:
+        if self.then is not None:
+            raise self.then
+        self.waited.append(seconds)
+        return False
+
+
 class RunNow:
     """The window's run_task (gui/window_tasks.py), run at once: the work (in a thread,
     waited for, with `thread=True`), then done or failed; an error `failed` does not take goes

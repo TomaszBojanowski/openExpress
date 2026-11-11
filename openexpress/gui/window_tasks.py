@@ -206,8 +206,9 @@ def show_working(button: Gtk.Button):
     return restore
 
 
-# How long a task that writes to the device waits for its diagnostics at most.
-DIAGNOSTICS_WAIT_S = 120
+# How long a task waits at most for the reading of the error logs at the opening and for the
+# count after a write.
+DEVICE_WAIT_S = 120
 
 
 def wait_for_the_diagnostics(session, fn) -> None:
@@ -219,9 +220,9 @@ def wait_for_the_diagnostics(session, fn) -> None:
     if reading is None or reading.is_set() or not getattr(fn, "writes_to_device", False):
         return
     log.info("task: waits until the diagnostics of the device are read")
-    if not reading.wait(DIAGNOSTICS_WAIT_S):
+    if not reading.wait(DEVICE_WAIT_S):
         log.info("task: the diagnostics still not read after %d s, it goes on",
-                 DIAGNOSTICS_WAIT_S)
+                 DEVICE_WAIT_S)
 
 
 def wait_for_the_count(session) -> None:
@@ -233,8 +234,8 @@ def wait_for_the_count(session) -> None:
     if counting is None or counting.is_set():
         return
     log.info("task: waits until the device is counted again")
-    if not counting.wait(DIAGNOSTICS_WAIT_S):
-        log.info("task: the device still not counted after %d s, it goes on", DIAGNOSTICS_WAIT_S)
+    if not counting.wait(DEVICE_WAIT_S):
+        log.info("task: the device still not counted after %d s, it goes on", DEVICE_WAIT_S)
 
 
 def read_space(storage, capacity: int | None = None) -> tuple[int | None, int | None]:
@@ -614,9 +615,9 @@ class TaskRunner:
                  in_page: bool = False, button: Gtk.Button | None = None) -> None:
         """Run `fn()` in a thread, then `on_done(result)` or `on_error(e)` on the GUI thread
         after the bar and `button` are restored; the error is shown unless `on_error`
-        returns true. While busy: a toast only. `device`: False when the device is not touched
-        (no "keep it plugged in"). `in_page`: as set_busy. `button`: spins at once, the bar
-        with `title` after TEXT_AFTER_MS."""
+        returns true. While busy: a toast only. `device`: False when the task writes nothing to
+        the device (no "keep it plugged in"). `in_page`: as set_busy. `button`: spins at once,
+        the bar with `title` after TEXT_AFTER_MS."""
         if self.busy:
             log.info("task %s: not started, another one is running", task_name(fn))
             self.toast(_("Another operation is in progress"))

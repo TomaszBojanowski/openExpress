@@ -21,7 +21,8 @@ def forget_on_refresh(session) -> None:
 
 def writes_to_device(fn):
     """The work of a task that writes to the device: once run_task has run it (also when it
-    failed: a part may be written), the free space of the device is read again."""
+    failed: a part may be written), the device is counted again (its kinds of file, its space
+    and its memory dumps: window_tasks.count_again)."""
     @functools.wraps(fn)
     def work(*args, **kwargs):
         return fn(*args, **kwargs)

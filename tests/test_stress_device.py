@@ -52,7 +52,7 @@ class Device:
         self.asked.append(("unmount", gio_storage.UNMOUNT_TIMEOUT_S))
         self.mounted = False
 
-    def mount(self, found, timeout_s=None):
+    def mount(self, found):
         self.asked.append(("mount",))
         self.mounted = True
 

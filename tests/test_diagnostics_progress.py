@@ -82,7 +82,7 @@ def test_the_command_line_tells_each_copy_once(hiding, clock, monkeypatch, capsy
 def test_the_window_tells_both_copies_on_its_bar(monkeypatch):
     from test_diagnostics import _found, _window
 
-    from openexpress.gui.device_page import copy_crash_logs, copy_dumps
+    from openexpress.gui.status_page import copy_crash_logs, copy_dumps
 
     win = _window(_found())
     told = []

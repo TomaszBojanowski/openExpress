@@ -7,8 +7,8 @@ import time
 import types
 
 import pytest
+from fakes import Waits, window_methods
 from fakes import window as stand_in
-from fakes import window_methods
 from test_upload_consent import QUEUED, Account
 
 from openexpress import service
@@ -46,7 +46,7 @@ def test_trueup_reports_its_wait_for_connect_as_a_wait(device_root):
         ack_message=lambda mid: None, device_messages=lambda unit: [true])
     seen = []
     trueup.run(dev, LocalStorage(device_root), client, [check], progress=seen.append,
-               sleep=lambda s: None, now=lambda: now)
+               now=lambda: now, stop=Waits())
     # The wait of a known length (20 s here) is told step by step besides (test_trueup_wait).
     from openexpress.progress import TimedWait
 

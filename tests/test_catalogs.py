@@ -305,7 +305,7 @@ def test_install_desktop_builds_the_catalogs_from_source_first(monkeypatch, caps
     # Never the real one: it would write the metainfo into the source tree.
     monkeypatch.setattr(catalogs, "compose_metainfo", lambda *a, **kw: order.append("metainfo"))
     monkeypatch.setattr(desktop, "install",
-                        lambda dry_run: (order.append(f"files, dry run {dry_run}"), ([], []))[1])
+                        lambda dry_run: (order.append(f"files, dry run {dry_run}"), [])[1])
     assert cli.main(["install-desktop"]) == 0
     assert cli.main(["install-desktop", "--apply"]) == 0
     assert order == ["files, dry run True", "catalogs", "metainfo", "files, dry run False"]
@@ -320,6 +320,6 @@ def test_install_desktop_without_gettext_says_so_and_goes_on_in_english(monkeypa
     monkeypatch.setattr(background, "in_flatpak", lambda: False)
     monkeypatch.setattr(desktop, "flatpak_installed", lambda: False)
     monkeypatch.setattr(catalogs, "build", no_gettext)
-    monkeypatch.setattr(desktop, "install", lambda dry_run: ([], []))
+    monkeypatch.setattr(desktop, "install", lambda dry_run: [])
     assert cli.main(["install-desktop", "--apply"]) == 0
     assert "made-up: msgfmt is missing" in capsys.readouterr().err

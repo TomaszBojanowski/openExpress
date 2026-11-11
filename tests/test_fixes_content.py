@@ -417,8 +417,8 @@ def test_map_with_missing_deliverable_not_installable(server, device_root, xdg):
 
 
 def _track(local, album, disc=None, size=10):
-    return music.Track(local=Path(local), title="t", artist="Art", album=album, genre="",
-                       compilation=False, kind="track", size=size, disc=disc)
+    return music.Track(local=Path(local), artist="Art", album=album, compilation=False,
+                       kind="track", size=size, disc=disc)
 
 
 def test_plan_copy_disambiguates_duplicates(iq_device):

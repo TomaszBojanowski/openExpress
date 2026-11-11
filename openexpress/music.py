@@ -51,10 +51,8 @@ class MusicError(UserFacingError):
 @dataclass
 class Track:
     local: Path
-    title: str
     artist: str
     album: str
-    genre: str
     compilation: bool
     kind: str
     size: int
@@ -175,10 +173,8 @@ def scan(paths: list[Path], device: GarminDevice, forced_kind: str | None = None
         folder_artist = folders[-2] if len(folders) >= 2 and forced_kind is None else ""
         tracks.append(Track(
             local=f,
-            title=tags.get("title") or f.stem,
             artist=tags.get("artist") or folder_artist,
             album=tags.get("album") or folder_album,
-            genre=tags.get("genre", ""),
             compilation=bool(tags.get("compilation")),
             kind=kind,
             size=f.stat().st_size,

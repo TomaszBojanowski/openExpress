@@ -5,7 +5,7 @@ and read.
 Each fact holds for so long, and only while what it was told against stays the same; past
 that it is not known: no chip, never the contrary of the fact.
 - what the last check of updates found (an update to install, one copied already, when it
-  was checked): UPDATE_KEPT_S (30 days), and the same software of the device;
+  was checked): known_devices.UPDATE_FOUND_KEPT_S (30 days), and the same software of the device;
 - the last count of its activities to upload: known_devices.SYNC_COUNT_KEPT_S (7 days), and
   the same sync state (service.sync_stamp);
 - whether this installation synced it, when it last did and whether that sync could not
@@ -35,7 +35,6 @@ from openexpress.known_devices import AccountFact, KnownDevice, SyncCount, Synce
 
 log = logging.getLogger(__name__)
 
-UPDATE_KEPT_S = known_devices.UPDATE_FOUND_KEPT_S
 ACCOUNT_KEPT_S = 7 * 86400
 
 # The fields of a tile (devicelist.Tile) that come from read(), and what the chips of a tile
@@ -101,7 +100,7 @@ def of_account_entry(primary: bool) -> TileFacts:
     return TileFacts(primary=primary, on_account=True)
 
 
-# When an update was found, if that was less than UPDATE_KEPT_S ago; else None: for the chips,
+# When an update was found, if that was less than UPDATE_FOUND_KEPT_S ago; else None: for the chips,
 # which are drawn again later than read, the reader's own rule.
 update_still_recent = known_devices.update_found_recently
 

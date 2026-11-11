@@ -107,10 +107,10 @@ def test_no_dump_is_offered_when_the_time_of_one_is_not_known():
 
 
 def test_the_copy_takes_the_newest_first_while_they_fit(small_limit):
-    copied, too_large = freeing.copy_split(DUMPS[1:])
+    copied, without_copy = freeing.copy_split(DUMPS[1:])
     assert [p for p, _s, _t in copied] == ["GARMIN/Debug/dump/RAM_bak1.zip",
                                            "GARMIN/Debug/dump/RAM_bak2.zip"]
-    assert [p for p, _s, _t in too_large] == ["GARMIN/Debug/ramdump1.log"]
+    assert [p for p, _s, _t in without_copy] == ["GARMIN/Debug/ramdump1.log"]
 
 
 @pytest.mark.parametrize(("path", "waits"), [
@@ -1101,8 +1101,8 @@ def test_dumps_that_take_exactly_the_room_of_the_copies_are_all_copied(small_lim
     """The limit is what the copies may take: copies that fill it exactly fit."""
     older = [("GARMIN/Debug/dump/RAM_bak1.zip", 600, 1_700_000_300),
              ("GARMIN/Debug/dump/RAM_bak2.zip", LIMIT - 600, 1_700_000_200)]
-    copied, too_large = freeing.copy_split(older)
-    assert (len(copied), too_large) == (2, [])
+    copied, without_copy = freeing.copy_split(older)
+    assert (len(copied), without_copy) == (2, [])
 
 
 def test_an_update_file_of_the_same_size_but_another_time_is_not_removed(tmp_path, monkeypatch):

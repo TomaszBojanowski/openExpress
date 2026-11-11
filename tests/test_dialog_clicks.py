@@ -428,13 +428,12 @@ def _add_to_account(ctx):
 
 def _added(ctx, listed=True, refusal=None):
     """Add to Account as Garmin answered it: the list after it (`listed`), or a refusal."""
-    from openexpress.connect import Registration
     from openexpress.gui.add_to_account import add_to_account
 
     def add_device(client, device, apply=False):
         if refusal is not None:
             raise refusal
-        return service.DeviceAddition(False, Registration(True, "active"), False, listed)
+        return service.DeviceAddition(False, False, listed)
 
     ctx.monkeypatch.setattr(service, "add_device", add_device)
     add_to_account(_off_account_window(ctx))

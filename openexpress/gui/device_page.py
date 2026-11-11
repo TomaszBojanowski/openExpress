@@ -1,5 +1,5 @@
 """The device view of the window: the page of the open device ("Device": its software, maps,
-apps and music, storage, sync, backup, account, the error logs of the device), its banners
+apps and music, storage, sync, backup, account, the row Device Status), its banners
 and the pages of its side panel as they are loaded (load_section, _load), and the sync with
 Garmin Connect started from it. DevicePage is a mixin of MainWindow (gui/app.py), without
 __init__ of its own; Section is one page of the side panel.
@@ -86,7 +86,7 @@ from openexpress.gui.words import (  # noqa: E402
     update_state_text,
     with_activities_to_upload,
 )
-from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # noqa: E402
+from openexpress.i18n import N_, _, caption, ngettext, pgettext  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -205,21 +205,6 @@ def show_backups(win) -> None:
         return
     row.set_subtitle(GLib.markup_escape_text(backups_text(getattr(s.device, "unit_id", None))))
     row.set_tooltip_text(str(paths.default_backup_dir()))
-
-
-def device_error_details(entry) -> str:
-    """What else the device logged with the error (its number, where, on which screen)."""
-    parts = []
-    if entry.error:
-        # TRANSLATORS: the number of an error the device logged, e.g. "error 0x003"
-        parts.append(_("error {number}").format(number=entry.error))
-    if entry.program_counter:
-        # TRANSLATORS: where in its software the device stopped (a program counter)
-        parts.append(_("at {address}").format(address=entry.program_counter))
-    if entry.screen:
-        # TRANSLATORS: the number of the screen the device showed when the error came
-        parts.append(_("screen {number}").format(number=entry.screen))
-    return caption(*parts)
 
 
 def status_row(win, group=None) -> None:
@@ -478,64 +463,6 @@ def read_diagnostics(win) -> None:
     # Once the page is shown, not in the opening: on a watch it took 3.7-4.4 s of the
     # 4.5-5 s of an opening.
     win.in_background(work, done, failed)
-
-
-def copy_crash_logs(win, button=None) -> None:
-    """Copy Crash Logs: one read-only session of our own (the device leaves the file manager
-    for a moment); none found: the button is not offered again."""
-    s = win.session
-    if s is None:
-        return
-
-    def work():
-        # Its boot log is among the copies then: the row, the page and the report count the
-        # crashes from them anew (status.told, report).
-        return diagnostics.copy_crash_logs(s.device, s.storage, progress=win.progress)
-
-    def done(copied):
-        if win.session is not s:
-            return
-        if copied.saved:
-            win.toast(_("Crash logs copied to this computer"))
-            status_changed(win)  # the crashes of its boot log, the copies kept
-            return
-        win.toast(_("The device has no hidden crash logs"))
-        if s.diagnostics is not None:
-            s.diagnostics.hidden_logs = False
-        status_changed(win)
-
-    win.run_task(_("Copying the Crash Logs…"), work, done, button=button)
-
-
-def copy_dumps(win, button=None) -> None:
-    """Copy Memory Dumps: through the ordinary connection, the newest first while they fit
-    within the limit of the copies."""
-    s = win.session
-    if s is None:
-        return
-
-    def work():
-        return diagnostics.copy_dumps(s.device, s.storage, progress=win.progress)
-
-    def done(copied):
-        if win.session is not s:
-            return
-        copied_count = copied.new + copied.unchanged
-        text = ngettext("{count} memory dump copied to this computer",
-                        "{count} memory dumps copied to this computer",
-                        copied_count).format(count=copied_count)
-        if copied.not_copied:
-            # TRANSLATORS: after the files copied to this computer: those left out as they did
-            # not fit in the room the copies may take ({size}: "50 MB")
-            text = caption(text, ngettext(
-                "{count} file skipped: did not fit in {size}",
-                "{count} files skipped: did not fit in {size}",
-                len(copied.not_copied)).format(count=len(copied.not_copied),
-                                               size=human_size(diagnostics.LIMIT)))
-        win.toast(text)
-        status_changed(win)  # the copies kept
-
-    win.run_task(_("Copying the Memory Dumps…"), work, done, button=button)
 
 
 def primary_training_unknown(s) -> str:

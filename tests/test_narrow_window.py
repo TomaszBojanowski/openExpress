@@ -12,6 +12,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from fakes import (
+    Waits,
     descendants,
     gpx_file,
     gpx_route,
@@ -69,8 +70,7 @@ def _device_errors():
 
     crash = diagnostics.ErrorEntry("RTL Trap", datetime(2026, 10, 20, 22, 24, 6), "0x003",
                                    "0x10000abc", "2301", "err_log.bak")
-    return diagnostics.AtOpen([crash], crash, [("Garmin/Debug/dump/RAM.zip", 8_090_553)] * 5,
-                              True)
+    return diagnostics.AtOpen([crash], [("Garmin/Debug/dump/RAM.zip", 8_090_553)] * 5, True)
 
 
 def _status_facts():
@@ -94,7 +94,7 @@ def _status_facts():
     update = _update("Oprogramowanie systemu GPS z bardzo długą nazwą", "6.20", "GARMIN/GPS.GCD",
                      4_100_000, on_device=True)
     return status.Facts(
-        via="mtp", free=12_400_000_000, capacity=31_100_000_000,
+        free=12_400_000_000, capacity=31_100_000_000,
         categories={"maps": 17_200_000_000, "activities": 52_000_000, "music": 410_000_000,
                     "apps": 12_000_000, "courses": 305_000, "updates": 9_100_000,
                     "logs": 61_000_000, "system": 930_000_000},
@@ -1167,7 +1167,7 @@ def test_the_wait_for_trueup_is_whole_in_the_narrowest_window(narrow_window, lan
     win.session.stop_waiting = threading.Event()
     win.set_busy(True, "Sync", device=True)
     seen = []
-    trueup._wait(299, seen.append, lambda seconds: None, None, trueup.TrueUpResult())
+    trueup._wait(299, seen.append, Waits(), trueup.TrueUpResult())
     wait = seen[0]
     win._show_progress(wait)
     deadline = time.monotonic() + 5
@@ -1278,7 +1278,7 @@ def test_the_page_from_the_records_fits_the_narrowest_window(narrow_window, lang
     crashes = [Crash(now - timedelta(days=2), software="21.18", error="0x003",
                      program_counter="0x10000abc", screen="2301", sources={"device log"})]
     facts = status.Facts(
-        via="mtp", free=12_400_000_000, capacity=31_100_000_000,
+        free=12_400_000_000, capacity=31_100_000_000,
         categories={"maps": 17_200_000_000, "music": 410_000_000, "logs": 61_000_000,
                     "updates": 9_100_000, "courses": 305_000, "system": 930_000_000},
         counted_at=now - timedelta(days=3), crashes=crashes, errors_known=True, dumps=None,

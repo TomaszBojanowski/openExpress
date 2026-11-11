@@ -96,7 +96,6 @@ def _same_in_a_row(crash: crashes.Crash, older: list[crashes.Crash]) -> int:
 
 @dataclass
 class Facts:
-    via: str  # "mtp", "drive"
     free: int | None
     capacity: int | None
     categories: dict[str, int]  # history.CATEGORIES; {}: not counted
@@ -109,7 +108,7 @@ class Facts:
     copies: tuple[int, int, datetime | None]  # copies kept here: how many, bytes, the last
     not_installed: list = field(default_factory=list)  # updates.SoftwareUpdate, file on it
     has_diagnostics: bool = True  # error logs, dumps, crashes or copies: else the empty page
-    recounted: bool = False  # categories and space counted again after a removal (recount)
+    recounted: bool = False  # categories and space counted again after a write (recount)
     updates_why: str | None = None  # why the update files were not checked (freeing.Plan.why)
     connected: bool = True  # False: a device not connected, from its records (read_kept)
     dumps_removable: bool = True  # its older dumps may be removed (freeing.dumps_removable)
@@ -127,8 +126,8 @@ class Facts:
 @dataclass
 class Recount:
     """The kinds of file, the space and the memory dumps of the device counted again (after a
-    removal): what the page, the device page and the report show instead of the count of the
-    connection (the device log's line, the window's reading at the opening)."""
+    write to it, a removal too): what the page, the device page and the report show instead of
+    the count of the connection (the device log's line, the window's reading at the opening)."""
 
     categories: dict[str, int]
     free: int | None
@@ -300,7 +299,6 @@ def read(session) -> Facts:
     plan = (freeing.plan(storage, device, getattr(session, "client", None))
             if storage is not None else None)
     return Facts(
-        via="drive" if getattr(session, "mass_storage", False) else "mtp",
         free=t.free, capacity=t.capacity,
         categories=t.categories, counted_at=t.counted_at,
         crashes=t.crashes, errors_known=t.errors_known,
@@ -336,7 +334,6 @@ def read_kept(unit_id: int) -> Facts | None:
                           copies[0], diagnostics.hidden_logs_to_copy(
                               newest.get("hidden") if newest is not None else None, unit_id))
     return Facts(
-        via=newest["via"] if newest is not None else "mtp",
         free=newest.get("free") if newest is not None else None,
         capacity=newest.get("capacity") if newest is not None else None,
         categories=dict(newest["categories"]) if newest is not None else {},

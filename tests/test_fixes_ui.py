@@ -359,10 +359,6 @@ def test_an_empty_xdg_variable_counts_as_not_set(xdg, monkeypatch, tmp_path):
     written = list(desktop.files())
     assert written and all(p.is_relative_to(home) for p in written)
     assert desktop._service_wants_link().is_relative_to(home / ".config")
-    old = home / ".local/share" / desktop.LEGACY_FILES[0]
-    old.parent.mkdir(parents=True)
-    old.write_text("")
-    assert desktop.legacy_files() == [old]
 
 
 # --- uninstall ---------------------------------------------------------------------------
@@ -377,7 +373,7 @@ def test_uninstall_disables_service_and_removes_wants_link(xdg, monkeypatch, tmp
     monkeypatch.setattr(shutil, "which", lambda name: "/usr/bin/" + name)
     monkeypatch.setattr(subprocess, "run", lambda cmd, **kw: calls.append(cmd)
                         or types.SimpleNamespace(returncode=0, stdout="", stderr=""))
-    written, _removed = desktop.install(dry_run=False)
+    written = desktop.install(dry_run=False)
     unit = next(p for p in written if p.name == desktop.SERVICE)
     wants = unit.parent / "graphical-session.target.wants" / desktop.SERVICE
     wants.parent.mkdir(parents=True)
@@ -399,7 +395,7 @@ def test_uninstall_without_systemctl(xdg, monkeypatch, tmp_path):
 
     monkeypatch.setattr(shutil, "which", lambda name: None)
     monkeypatch.setattr(subprocess, "run", lambda *a, **k: pytest.fail("must not run"))
-    written, _ = desktop.install(dry_run=False)
+    written = desktop.install(dry_run=False)
     desktop.uninstall(dry_run=False)
     assert not any(p.exists() for p in written)
 

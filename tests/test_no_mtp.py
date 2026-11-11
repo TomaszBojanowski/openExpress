@@ -158,7 +158,7 @@ def test_the_command_line_names_other_programs_also_when_mounting_fails(plugged,
     volume, and every mount fails at once with "Unable to open MTP device". After 45 s the
     command line says that error and the same sentence as the window's page (the window says
     it from the USB state, whatever the last failure was)."""
-    def mount(dev, timeout_s=30):
+    def mount(dev):
         raise gio_storage.DeviceError(MOUNT_FAILED)
 
     monkeypatch.setattr(gio_storage, "mount", mount)

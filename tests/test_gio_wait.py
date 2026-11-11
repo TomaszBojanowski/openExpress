@@ -150,7 +150,7 @@ def test_and_its_time_limit_fires_without_the_window_thread(fast):
     dev = _found(op)
     started = time.monotonic()
     with window_thread_busy():
-        worker, said = in_a_worker(lambda: gio_storage.mount(dev, timeout_s=LIMIT))
+        worker, said = in_a_worker(lambda: gio_storage.mount(dev))
         worker.join(3)
         finished = not worker.is_alive()
     settle(worker)
@@ -257,7 +257,7 @@ def test_an_answer_given_at_once_needs_no_wait(monkeypatch):
     monkeypatch.setattr(gio_storage, "MOUNT_TIMEOUT_S", 5.0, raising=False)
     dev = _found(GioOp("at once"))
     started = time.monotonic()
-    gio_storage.mount(dev, timeout_s=5)
+    gio_storage.mount(dev)
     assert dev.mounted and time.monotonic() - started < 1
 
 
@@ -275,7 +275,7 @@ def test_an_answer_before_the_limit_is_as_it_was(fast, caplog):
 def test_mount_says_its_time_limit_as_every_wait(fast):
     """Mounting waits as every other operation, with the same words at its time limit."""
     with pytest.raises(gio_storage.DeviceError) as error:
-        gio_storage.mount(_found(GioOp("never")), timeout_s=LIMIT)
+        gio_storage.mount(_found(GioOp("never")))
     assert str(error.value) == NOT_IN_TIME
 
 

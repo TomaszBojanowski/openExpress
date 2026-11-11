@@ -8,6 +8,7 @@ import threading
 import types
 
 import pytest
+from fakes import Waits
 
 from openexpress import trueup
 from openexpress.device.storage import LocalStorage
@@ -59,18 +60,18 @@ def written(storage):
     (-5, 0), (0, 0), (20, 20), (200, 200), (299, 299), (300, 90), (3600, 90)])
 def test_trueup_waits_the_whole_check_back_time_under_300_s(watch, delay, waited):
     dev, st = watch
-    slept = []
-    res = trueup.run(dev, st, client(delay), [CHECK], sleep=slept.append, now=lambda: NOW)
-    assert sum(slept) == pytest.approx(waited) and res.waited_s == pytest.approx(waited)
+    stop = Waits()
+    res = trueup.run(dev, st, client(delay), [CHECK], now=lambda: NOW, stop=stop)
+    assert sum(stop.waited) == pytest.approx(waited) and res.waited_s == pytest.approx(waited)
     assert res.written is not None and not res.stopped
 
 
 def test_trueup_waits_in_ten_steps_and_tells_each(watch):
     dev, st = watch
-    slept, seen = [], []
-    trueup.run(dev, st, client(200), [CHECK], progress=seen.append, sleep=slept.append,
-               now=lambda: NOW)
-    assert slept == [20.0] * 10
+    stop, seen = Waits(), []
+    trueup.run(dev, st, client(200), [CHECK], progress=seen.append, now=lambda: NOW,
+               stop=stop)
+    assert stop.waited == [20.0] * 10
     waits = [m for m in seen if isinstance(m, TimedWait)]
     assert [(m.seconds, round(m.done, 2)) for m in waits] == [
         (200.0, i / 10) for i in range(11)]
@@ -90,14 +91,14 @@ def test_a_message_gone_when_it_is_acknowledged_is_no_failure(watch):
         raise ApiError("not found", 404)
 
     c.ack_message = gone
-    res = trueup.run(dev, st, c, [CHECK], sleep=lambda s: None, now=lambda: NOW)
+    res = trueup.run(dev, st, c, [CHECK], now=lambda: NOW, stop=Waits())
     assert res.written is not None and len(written(st)) == 1
 
 
 def test_trueup_asks_again_at_most_three_times(watch):
     dev, st = watch
     c = client(20, later=[CHECK])
-    res = trueup.run(dev, st, c, [CHECK], sleep=lambda s: None, now=lambda: NOW)
+    res = trueup.run(dev, st, c, [CHECK], now=lambda: NOW, stop=Waits())
     assert len(c.asked) == 3 and res.written is None and written(st) == []
 
 
@@ -122,10 +123,8 @@ def test_a_stopped_wait_writes_nothing_and_asks_no_more(watch):
 def test_ctrl_c_during_the_wait_stops_it_without_harm(watch):
     dev, st = watch
 
-    def interrupted(seconds):
-        raise KeyboardInterrupt
-
-    res = trueup.run(dev, st, client(200), [CHECK], sleep=interrupted, now=lambda: NOW)
+    res = trueup.run(dev, st, client(200), [CHECK], now=lambda: NOW,
+                     stop=Waits(then=KeyboardInterrupt))
     assert res.stopped and res.written is None and written(st) == []
 
 
@@ -139,7 +138,7 @@ def test_ctrl_c_elsewhere_still_stops_the_program(watch):
 
     c.device_messages = interrupted
     with pytest.raises(KeyboardInterrupt):
-        trueup.run(dev, st, c, [CHECK], sleep=lambda s: None, now=lambda: NOW)
+        trueup.run(dev, st, c, [CHECK], now=lambda: NOW, stop=Waits())
 
 
 def test_the_duration_in_words():
@@ -256,8 +255,8 @@ def test_the_wait_in_polish(watch):
     seen = []
     i18n.setup("pl")
     try:
-        trueup.run(dev, st, client(200), [CHECK], progress=seen.append, sleep=lambda s: None,
-                   now=lambda: NOW, stop=None)
+        trueup.run(dev, st, client(200), [CHECK], progress=seen.append, now=lambda: NOW,
+                   stop=Waits())
         stopped = trueup.stopped_text()
     finally:
         i18n.setup("en")

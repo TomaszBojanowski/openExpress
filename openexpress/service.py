@@ -26,7 +26,6 @@ from openexpress.connect import (
     NotAccountDevice,
     OwnershipError,
     OwnershipUnknown,
-    Registration,
     Unauthorized,
     unexpected_answer_text,
 )
@@ -73,9 +72,9 @@ class DeviceSession:
     # device waits for it); None: not started.
     diagnostics: object | None = None
     diagnostics_reading: threading.Event | None = field(default=None, repr=False)
-    # The kinds of file and the space counted again after the window removed files from the
-    # device (status.recount): the page Device Status shows them instead of the count of the
-    # connection; None: no removal yet.
+    # The kinds of file and the space counted again after the window wrote to the device or
+    # removed files from it (status.recount): the page Device Status shows them instead of the
+    # count of the connection; None: not counted again yet.
     recount: object | None = None
     # Set to stop the wait of TrueUp (the window's Stop Waiting, the background service
     # quitting); cleared before each wait.
@@ -507,9 +506,8 @@ class DeviceAddition:
     """The outcome of `add_device`."""
 
     already: bool  # the account listed the device before: nothing was sent
-    # With apply: what Garmin answered, whether a retired device was made active, and whether
-    # the account's list, read again, holds the device (None: it could not be read).
-    registration: Registration | None = None
+    # With apply: whether a retired device was made active, and whether the account's list,
+    # read again, holds the device (None: it could not be read).
     made_active: bool = False
     listed: bool | None = None
 
@@ -559,7 +557,7 @@ def add_device(client: GarminClient, device: GarminDevice, apply: bool = False) 
     except OwnershipUnknown:
         listed = None
     log.info("register: on the account's list after adding it: %s", LISTED_WORDS[listed])
-    return DeviceAddition(False, registration, made_active, listed)
+    return DeviceAddition(False, made_active, listed)
 
 
 # --- may data be uploaded? ---------------------------------------------------------------

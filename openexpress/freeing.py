@@ -63,13 +63,13 @@ def removed_folder(unit_id: int, test_drive: bool = False) -> Path:
     return diagnostics.folder(unit_id, test_drive) / diagnostics.REMOVED
 
 
-def by_age(dumps: list[Dump] | None, now: float | None = None) -> list[Dump] | None:
+def by_age(dumps: list[Dump] | None) -> list[Dump] | None:
     """The dumps, the newest first; None when which is the newest cannot be told: no listing, a
     time not known (0), one before EARLIEST or ahead of this computer (AHEAD), or two newest at
     the same time. One answer for the page, the command line and the removal."""
     if dumps is None:
         return None
-    latest = (now if now is not None else datetime.now().timestamp()) + AHEAD.total_seconds()
+    latest = datetime.now().timestamp() + AHEAD.total_seconds()
     if any(not when or when < EARLIEST or when > latest for _path, _size, when in dumps):
         return None
     ordered = sorted(dumps, key=lambda d: d[2], reverse=True)
@@ -78,12 +78,12 @@ def by_age(dumps: list[Dump] | None, now: float | None = None) -> list[Dump] | N
     return ordered
 
 
-def older_dumps(dumps: list[Dump] | None, now: float | None = None) -> list[Dump] | None:
+def older_dumps(dumps: list[Dump] | None) -> list[Dump] | None:
     """The dumps but the newest, the newest first; None: not known (by_age). One dump alone
     is the newest whatever its time."""
     if dumps is not None and len(dumps) <= 1:
         return []
-    ordered = by_age(dumps, now)
+    ordered = by_age(dumps)
     return None if ordered is None else ordered[1:]
 
 
@@ -91,14 +91,14 @@ def copy_split(older: list[Dump]) -> tuple[list[Dump], list[Dump]]:
     """Which of `older` are copied before they are removed (the newest first while they fit
     within REMOVED_LIMIT) and which are not, as the copies would not fit: removed without a
     copy."""
-    copied, too_large, room = [], [], REMOVED_LIMIT
+    copied, without_copy, room = [], [], REMOVED_LIMIT
     for dump in sorted(older, key=lambda d: d[2], reverse=True):
         if dump[1] <= room:
             copied.append(dump)
             room -= dump[1]
         else:
-            too_large.append(dump)
-    return copied, too_large
+            without_copy.append(dump)
+    return copied, without_copy
 
 
 @dataclass(frozen=True)
@@ -110,20 +110,16 @@ class DumpPlan:
     newest: Dump
     older: tuple[Dump, ...]
     copied: tuple[Dump, ...]
-    too_large: tuple[Dump, ...]
-
-    @property
-    def size(self) -> int:
-        return sum(size for _path, size, _when in self.older)
+    without_copy: tuple[Dump, ...]
 
 
-def dump_plan(dumps: list[Dump] | None, now: float | None = None) -> DumpPlan | None:
+def dump_plan(dumps: list[Dump] | None) -> DumpPlan | None:
     """The removal of the older dumps (by_age, copy_split); None: not known, or no dump."""
-    ordered = by_age(dumps, now)
+    ordered = by_age(dumps)
     if not ordered:
         return None
-    copied, too_large = copy_split(ordered[1:])
-    return DumpPlan(ordered[0], tuple(ordered[1:]), tuple(copied), tuple(too_large))
+    copied, without_copy = copy_split(ordered[1:])
+    return DumpPlan(ordered[0], tuple(ordered[1:]), tuple(copied), tuple(without_copy))
 
 
 # Never removed, though an update's: map support files and satellite data.
@@ -289,7 +285,7 @@ def _remove(storage: Storage, path: str, size: int, freed: Freed) -> None:
     freed.removed.append((path, size))
 
 
-def _check_gone(storage: Storage, still_there: set[str], freed: Freed) -> None:
+def _check_gone(still_there: set[str], freed: Freed) -> None:
     """The files the device says it removed but still shows: kept, not removed."""
     kept = [(p, s) for p, s in freed.removed if p in still_there]
     for path, size in kept:
@@ -300,7 +296,7 @@ def _check_gone(storage: Storage, still_there: set[str], freed: Freed) -> None:
 def remove_dumps(storage: Storage, unit_id: int, asked: DumpPlan, progress=None,
                  freed: Freed | None = None) -> Freed:
     """Remove the older dumps as the question named them (`asked`, dump_plan): under the lock
-    of the device's records (history.device_locked: another removal, the device log and Forget
+    of the device's records (history.records_locked: another removal, the device log and Forget
     Device wait), the device listed again, and only when it holds exactly the dumps of the
     question (the same newest, the same older ones with their sizes and times) are they
     removed, with the question's split: those to copy copied first (removed_folder), a dump
@@ -315,36 +311,35 @@ def remove_dumps(storage: Storage, unit_id: int, asked: DumpPlan, progress=None,
     copies: dict[str, Path] = {}
     where = None
     try:
-        with history.device_locked(unit_id):
+        with history.records_locked():
             now = [(path, e.size, e.mtime) for path, e in diagnostics.dump_files(storage)]
             if dump_plan(now) != asked:
                 log.info("freeing: the memory dumps changed since the question, nothing "
                          "removed")
                 raise _changed()
-            copied, too_large = list(asked.copied), list(asked.too_large)
+            copied, without_copy = list(asked.copied), list(asked.without_copy)
             if copied:
                 where = _new_removal_folder(unit_id, test_drive)
             try:
                 if copied:
                     copied = _copy(storage, copied, where, freed, progress, copies)
-                going = copied + too_large
+                going = copied + without_copy
                 # TRANSLATORS: a step of removing the memory dumps ("… · 1 of 3")
                 head = _("Removing memory dumps")
                 for n, (path, size, _when) in enumerate(going, 1):
                     say_to(progress)(Step(head, n, len(going)))
                     _remove(storage, path, size, freed)
                 if going:
-                    _check_gone(storage, {path for path, _e in diagnostics.dump_files(storage)},
-                                freed)
+                    _check_gone({path for path, _e in diagnostics.dump_files(storage)}, freed)
             finally:
-                # Those removed without a copy: of the too large, only those that went.
+                # Those removed without a copy: only those that went.
                 gone = {path for path, _size in freed.removed}
-                freed.not_copied = [(path, size) for path, size, _when in too_large
+                freed.not_copied = [(path, size) for path, size, _when in without_copy
                                     if path in gone]
                 # A copy of a dump still on the device (kept, refused, not reached, also when
                 # the copying itself stopped) is not its only one: dropped, so that it never
                 # pushes out a copy that is.
-                _drop_copies_of_kept(freed, copies, where)
+                _drop_copies_of_kept(freed, copies)
                 if where is not None and any(where.iterdir()):
                     _keep_within_limit(unit_id, test_drive, where)
                 elif where is not None:
@@ -358,7 +353,7 @@ def remove_dumps(storage: Storage, unit_id: int, asked: DumpPlan, progress=None,
     return freed
 
 
-def _drop_copies_of_kept(freed: Freed, copies: dict[str, Path], where: Path | None) -> None:
+def _drop_copies_of_kept(freed: Freed, copies: dict[str, Path]) -> None:
     """The copies of the dumps that stay on the device dropped (not their only copy); those
     of dumps removed, or gone from it meanwhile, kept."""
     gone = {path for path, _size in freed.removed} | set(freed.gone)
@@ -385,7 +380,7 @@ def remove_update(storage: Storage, u, client, device, freed: Freed | None = Non
     again (the same size and time) and the update server asked anew (it still offers the
     update and the device has not installed it): else ListChanged and nothing removed. What
     was freed is the size of the file removed. The file is looked at and removed under the lock
-    of the device's records (history.device_locked), after the server's answer, so that a
+    of the device's records (history.records_locked), after the server's answer, so that a
     removal by another process (the window and the command line) never counts it twice.
     `freed`: the caller's, filled while it goes."""
     from openexpress import history
@@ -398,7 +393,7 @@ def remove_update(storage: Storage, u, client, device, freed: Freed | None = Non
     if why is not None:
         raise UserFacingError(why)
     still = any(f.device_path.casefold() == u.device_path.casefold() for f in found)
-    with history.device_locked(getattr(device, "unit_id", None)):
+    with history.records_locked():
         now = listed_file(storage, u)
         if now is None or now != getattr(u, "listed_file", None) or not still:
             log.info("freeing: the update file changed since the question, not removed")
@@ -407,7 +402,7 @@ def remove_update(storage: Storage, u, client, device, freed: Freed | None = Non
         try:
             _remove(storage, real, now[0], freed)
             if freed.removed and storage.resolve(u.device_path) is not None:
-                _check_gone(storage, {real}, freed)
+                _check_gone({real}, freed)
         finally:
             log.info("freeing: an update file %s (%s)",
                      "removed" if freed.removed else "not removed", applog.size(now[0]))
@@ -484,8 +479,8 @@ class Plan:
         return list(self.dumps_plan.copied) if self.dumps_plan is not None else []
 
     @property
-    def too_large(self) -> list[Dump]:
-        return list(self.dumps_plan.too_large) if self.dumps_plan is not None else []
+    def without_copy(self) -> list[Dump]:
+        return list(self.dumps_plan.without_copy) if self.dumps_plan is not None else []
 
     @property
     def size(self) -> int:

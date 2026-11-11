@@ -363,12 +363,12 @@ def _print_free_space(plan) -> None:
             # to this computer before it removes them
             print("    " + _("to copy before the removal: {dumps}").format(
                 dumps=_count_size(plan.copied)))
-        if plan.too_large:
+        if plan.without_copy:
             # TRANSLATORS: under "older memory dumps: …" in a dry run: what --apply would
             # remove without a copy; {limit} is the most the copies may take, "100 MB"
             print("    " + _("to remove without a copy, as the copies would not fit in "
                              "{limit}: {dumps}").format(limit=freeing.limit_words(),
-                                                        dumps=_count_size(plan.too_large)))
+                                                        dumps=_count_size(plan.without_copy)))
     for u in plan.updates:
         print("  " + _("update file not installed by the device: {name} {version} ({size})")
               .format(name=u.name, version=u.version, size=human_size(u.size)))
@@ -1641,49 +1641,40 @@ class _Status:
     that fills in place on a terminal, only its first line elsewhere. Any other message: a
     line of its own. `close` ends a line left open."""
 
-    def __init__(self, err=None, out=None):
-        self._err, self._out = err, out
+    def __init__(self):
         self.open = False
         self.head = None
-
-    @property
-    def err(self):
-        return self._err or sys.stderr
-
-    @property
-    def out(self):
-        return self._out or sys.stdout
 
     def __call__(self, message: str) -> None:
         from openexpress.progress import Step, TimedWait
 
         if isinstance(message, TimedWait):
             self.head = None
-            if not self.err.isatty():
+            if not sys.stderr.isatty():
                 if message.done == 0:
-                    print("  " + plain_spaces(message), file=self.out)
+                    print("  " + plain_spaces(message), file=sys.stdout)
                 return
             print(f"\r  {plain_spaces(message)} {int(message.done * 100):3d}%", end="",
-                  file=self.err, flush=True)
+                  file=sys.stderr, flush=True)
             self.open = message.done < 1
             if not self.open:
-                print(file=self.err)
+                print(file=sys.stderr)
             return
         if isinstance(message, Step):
-            if self.err.isatty():
-                print(f"\r\x1b[K  {plain_spaces(message)}", end="", file=self.err, flush=True)
+            if sys.stderr.isatty():
+                print(f"\r\x1b[K  {plain_spaces(message)}", end="", file=sys.stderr, flush=True)
                 self.open = True
             elif message.head != self.head:
-                print("  " + plain_spaces(message.head), file=self.out)
+                print("  " + plain_spaces(message.head), file=sys.stdout)
             self.head = message.head
             return
         self.close()
         self.head = None
-        print("  " + plain_spaces(message), file=self.out)
+        print("  " + plain_spaces(message), file=sys.stdout)
 
     def close(self) -> None:
         if self.open:
-            print(file=self.err)
+            print(file=sys.stderr)
             self.open = False
 
 
@@ -3201,7 +3192,7 @@ def cmd_install_desktop(args) -> int:
         return 1
     if args.apply:
         _build_translations()
-    written, removed = desktop.install(dry_run=not args.apply)
+    written = desktop.install(dry_run=not args.apply)
     for p in written:
         # TRANSLATORS: CLI install-desktop: a file of the launcher, icon or service that was
         # written ({path})
@@ -3209,9 +3200,6 @@ def cmd_install_desktop(args) -> int:
                # TRANSLATORS: CLI install-desktop, dry run: a file of the launcher, icon or
                # service that would be written ({path})
                else _("Would write {path}")).format(path=p))
-    for p in removed:
-        print((_("Removed old file {path}") if args.apply
-               else _("Would remove old file {path}")).format(path=p))
     if not args.apply:
         print(_("Dry run: nothing was changed. Add --apply."))
         return 0

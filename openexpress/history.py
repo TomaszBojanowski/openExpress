@@ -396,7 +396,7 @@ LOCK = "records.lock"
 
 
 @contextmanager
-def device_locked(unit_id: int):
+def records_locked():
     """The lock of the records of the devices on this computer, in any process: the device log
     (note_connection, note_counted), a removal from the device with the copies it keeps
     (freeing.remove_dumps) and Forget Device (forget._delete) take it, one at a time. A lock
@@ -409,7 +409,7 @@ def device_locked(unit_id: int):
 
 
 def forgotten(unit_id: int) -> None:
-    """Forget Device deleted what this computer kept of the device (under device_locked): a
+    """Forget Device deleted what this computer kept of the device (under records_locked): a
     write begun before it (the reading of a device just unplugged, a count after a removal)
     does not make its records again, and its next connection is noted anew."""
     _forgotten[unit_id] = time.monotonic()
@@ -480,7 +480,7 @@ def _last_key(where: Path) -> str | None:
 
 def _append(where: Path, line: dict, unit_id: int, began: Began) -> bool:
     text = json.dumps(line, ensure_ascii=False, sort_keys=True) + "\n"
-    with device_locked(unit_id):
+    with records_locked():
         if forgotten_since(unit_id, began):
             log.info("history: the device was forgotten meanwhile, no line written")
             return False
@@ -585,7 +585,7 @@ class NotCounted(DeviceError):
 def note_counted(device: GarminDevice, storage: Storage,
                  now: datetime | None = None, after_removal_of: dict | None = None
                  ) -> tuple[dict[str, int], int | None, int | None, list | None]:
-    """After files were removed from the device (freeing): its storage by kind, its space and
+    """After the device was written to (files removed too): its storage by kind, its space and
     its memory dumps counted again and put in the line of this connection, in place (the number
     of connections stays), with when ("counted"), so that what the records tell is true without
     connecting it again. A log whose last line is of another connection (its line not written)
@@ -615,7 +615,7 @@ def note_counted(device: GarminDevice, storage: Storage,
     key = _key(device, storage, via)
     where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
     later = []
-    with device_locked(device.unit_id):
+    with records_locked():
         if forgotten_since(device.unit_id, began):
             log.info("history: the device was forgotten meanwhile, its line not put right")
             return kinds, capacity, free, dumps
@@ -726,7 +726,7 @@ def note_removed(device: GarminDevice, storage: Storage, removed: list[tuple[str
                              "bytes": max(0, line["dumps"]["bytes"] - size)}
 
     try:
-        with device_locked(device.unit_id):
+        with records_locked():
             if forgotten_since(device.unit_id, began):
                 return False
             done = _put_right(where, key, fix)

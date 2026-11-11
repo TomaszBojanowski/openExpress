@@ -326,7 +326,7 @@ def copy_crash_logs(r, monkeypatch, s) -> None:
     """Copy Crash Logs, its boot log holding a crash the error logs do not (made up)."""
     from openexpress import diagnostics
     from openexpress.diagnostics import Copied
-    from openexpress.gui import device_page
+    from openexpress.gui import status_page
 
     def copied(device, storage, progress=None):
         where = diagnostics.folder(device.unit_id)
@@ -342,7 +342,7 @@ def copy_crash_logs(r, monkeypatch, s) -> None:
 
     monkeypatch.setattr(diagnostics, "copy_crash_logs", copied)
     facts = r.win.status_facts
-    device_page.copy_crash_logs(r.win)
+    status_page.copy_crash_logs(r.win)
     sec = r.win.sections["status"]
     wait(lambda: r.win.status_facts is not facts and not r.win.busy
          and sec.stack.get_visible_child_name() == "content", "the page after Copy Crash Logs")
@@ -651,7 +651,7 @@ def test_the_page_device_status_through_its_states(review, shape, width, languag
 
             plan = freeing.dump_plan(r.win.status_facts.dumps)
             answer(r, _("Older Memory Dumps"))
-            if any(size <= COPY_LIMIT for _p, size, _t in plan.too_large):
+            if any(size <= COPY_LIMIT for _p, size, _t in plan.without_copy):
                 # One fits the limit alone, not the room the others left: the question says
                 # the copies would not fit in it.
                 assert freeing.limit_words() in r.asked[-1].get_body(), r.asked[-1].get_body()

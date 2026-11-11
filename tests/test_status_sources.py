@@ -652,7 +652,7 @@ def test_two_like_entries_of_one_file_are_two_crashes(tmp_path, clock):
     found = diagnostics.read_errors(st)
     assert len(crashes.history(None, found)) == 2
     history.note_connection(dev, st, found=diagnostics.AtOpen(
-        entries=found, crash=None, hidden_logs=False, dumps=[]))
+        entries=found, hidden_logs=False, dumps=[]))
     kept_copy("files", {"GARMIN/Debug/err_log.txt": (root / "GARMIN/Debug/err_log.txt")
                         .read_bytes()})
     assert len(crashes.history(UNIT, found)) == 2
@@ -680,7 +680,7 @@ def test_no_diagnostic_data_means_the_same_connected_and_from_the_records(tmp_pa
     page of the device connected and the page from its records both say No Diagnostic Data."""
     root = make_root(tmp_path, err=[])
     st, dev = opened(root)
-    found = diagnostics.AtOpen(entries=[], crash=None, hidden_logs=True, dumps=[])
+    found = diagnostics.AtOpen(entries=[], hidden_logs=True, dumps=[])
     history.note_connection(dev, st, found=found)
     where = diagnostics.folder(UNIT)
     where.mkdir(parents=True, exist_ok=True)
@@ -794,7 +794,7 @@ def test_a_count_after_a_removal_waits_for_the_lock_of_the_records(tmp_path, clo
     st, dev = opened(root)
     assert history.note_connection(dev, st)
     done = []
-    with history.device_locked(UNIT):
+    with history.records_locked():
         counting = threading.Thread(target=lambda: done.append(history.note_counted(dev, st)))
         counting.start()
         counting.join(0.3)
@@ -913,7 +913,7 @@ def test_the_page_of_a_connection_without_its_line_does_not_show_another_connect
                                  "via": "mtp", "software": "23.39",
                                  "categories": {"music": 3_000_000}, "free": 1,
                                  "capacity": 10_000_000, "counted": old}) + "\n")
-    found = diagnostics.AtOpen([], None, [], False)
+    found = diagnostics.AtOpen([], [], False)
     s = types.SimpleNamespace(device=dev, storage=st, diagnostics=found,
                               diagnostics_reading=None, space=(None, None), client=None)
     made = status.read(s)
@@ -1429,20 +1429,20 @@ def test_a_removal_put_right_after_forget_device_leaves_the_records_alone(tmp_pa
     st, dev = opened(root)
     assert history.note_connection(dev, st)
     later = history.read(UNIT).lines
-    real_lock = history.device_locked
+    real_lock = history.records_locked
     waits = threading.Event()
 
     @contextmanager
-    def lock_asked(unit_id):
+    def lock_asked():
         waits.set()
-        with real_lock(unit_id):
+        with real_lock():
             yield
 
-    monkeypatch.setattr(history, "device_locked", lock_asked)
+    monkeypatch.setattr(history, "records_locked", lock_asked)
     put_right = []
     removal = threading.Thread(target=lambda: put_right.append(history.note_removed(
         dev, st, [("GARMIN/Debug/dump/RAM_bak1.zip", 200)], "logs")))
-    with real_lock(UNIT):  # Forget Device
+    with real_lock():  # Forget Device
         removal.start()
         assert waits.wait(10), "the removal never asked for the lock of the records"
         shutil.rmtree(paths.device_dir(UNIT))

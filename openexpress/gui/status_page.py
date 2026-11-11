@@ -31,9 +31,6 @@ from openexpress.device.storage import DeviceNotResponding  # noqa: E402
 from openexpress.gui import words  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
     Section,
-    copy_crash_logs,
-    copy_dumps,
-    device_error_details,
     read_diagnostics,
     status_changed,
 )
@@ -73,6 +70,79 @@ PALETTE = {"maps": "#3584e4", "activities": "#33d17a", "music": "#9141ac", "apps
            "used": "#9a9996"}
 # The kinds of file with a page of their own (the key of its section).
 PAGES = ("maps", "activities", "music", "apps", "courses")
+
+
+def device_error_details(entry) -> str:
+    """What else the device logged with the error (its number, where, on which screen)."""
+    parts = []
+    if entry.error:
+        # TRANSLATORS: the number of an error the device logged, e.g. "error 0x003"
+        parts.append(_("error {number}").format(number=entry.error))
+    if entry.program_counter:
+        # TRANSLATORS: where in its software the device stopped (a program counter)
+        parts.append(_("at {address}").format(address=entry.program_counter))
+    if entry.screen:
+        # TRANSLATORS: the number of the screen the device showed when the error came
+        parts.append(_("screen {number}").format(number=entry.screen))
+    return caption(*parts)
+
+
+def copy_crash_logs(win, button=None) -> None:
+    """Copy Crash Logs: one read-only session of our own (the device leaves the file manager
+    for a moment); none found: the button is not offered again."""
+    s = win.session
+    if s is None:
+        return
+
+    def work():
+        # Its boot log is among the copies then: the row, the page and the report count the
+        # crashes from them anew (status.told, report).
+        return diagnostics.copy_crash_logs(s.device, s.storage, progress=win.progress)
+
+    def done(copied):
+        if win.session is not s:
+            return
+        if copied.saved:
+            win.toast(_("Crash logs copied to this computer"))
+            status_changed(win)  # the crashes of its boot log, the copies kept
+            return
+        win.toast(_("The device has no hidden crash logs"))
+        if s.diagnostics is not None:
+            s.diagnostics.hidden_logs = False
+        status_changed(win)
+
+    win.run_task(_("Copying the Crash Logs…"), work, done, button=button)
+
+
+def copy_dumps(win, button=None) -> None:
+    """Copy Memory Dumps: through the ordinary connection, the newest first while they fit
+    within the limit of the copies."""
+    s = win.session
+    if s is None:
+        return
+
+    def work():
+        return diagnostics.copy_dumps(s.device, s.storage, progress=win.progress)
+
+    def done(copied):
+        if win.session is not s:
+            return
+        copied_count = copied.new + copied.unchanged
+        text = ngettext("{count} memory dump copied to this computer",
+                        "{count} memory dumps copied to this computer",
+                        copied_count).format(count=copied_count)
+        if copied.not_copied:
+            # TRANSLATORS: after the files copied to this computer: those left out as they did
+            # not fit in the room the copies may take ({size}: "50 MB")
+            text = caption(text, ngettext(
+                "{count} file skipped: did not fit in {size}",
+                "{count} files skipped: did not fit in {size}",
+                len(copied.not_copied)).format(count=len(copied.not_copied),
+                                               size=human_size(diagnostics.LIMIT)))
+        win.toast(text)
+        status_changed(win)  # the copies kept
+
+    win.run_task(_("Copying the Memory Dumps…"), work, done, button=button)
 
 
 def kind_names() -> dict[str, str]:
@@ -565,10 +635,10 @@ def _dumps_question(plan: freeing.DumpPlan) -> str:
     """The question before the older dumps are removed: how many, the space, which are copied
     first and which are not (their copies would not fit within the limit); the newest
     stays."""
-    copied, too_large, older = plan.copied, plan.too_large, plan.older
+    copied, without_copy, older = plan.copied, plan.without_copy, plan.older
     count, size = len(older), human_size(sum(s for _p, s, _t in older))
     limit = freeing.limit_words()
-    if not too_large:
+    if not without_copy:
         text = ngettext("{count} memory dump ({size}) will be copied to this computer and then "
                         "removed from the device.",
                         "{count} memory dumps ({size}) will be copied to this computer and then "
@@ -592,7 +662,7 @@ def _dumps_question(plan: freeing.DumpPlan) -> str:
         first = ngettext("{count} ({size}) after a copy on this computer",
                          "{count} ({size}) after a copy on this computer", n).format(
             count=n, size=room)
-        n, room = len(too_large), human_size(sum(s for _p, s, _t in too_large))
+        n, room = len(without_copy), human_size(sum(s for _p, s, _t in without_copy))
         # TRANSLATORS: a part of the question: how many dumps are removed without a copy
         # TRANSLATORS: {limit} is the most the copies of removed dumps may take, "100 MB"
         second = ngettext("{count} ({size}) without a copy, as the copies would not fit in "
