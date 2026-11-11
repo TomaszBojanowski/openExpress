@@ -99,18 +99,17 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
-    <release version="0.10.0" date="2026-11-10">
+    <release version="0.10.0" date="2026-11-11">
       <description translate="no">
         <ul>
           <li>A new page, Device Status, tells what needs attention on a device and what takes its
           space: a summary (crashes in the last 30 days, little free space), the storage by kind
           of file, the crashes and software updates, each crash once with its details, and the
           diagnostic files, which can be copied from there.</li>
-          <li>Free Up Space on that page removes, after a question, the memory dumps but the
-          newest and the files of updates the device took in but did not install. The memory
-          dumps are copied to this computer first where they fit (up to 100 MB per device).
-          Activities, maps, music, courses and settings are never removed. On the command line:
-          openexpress diagnostics --free-space, a dry run until --apply.</li>
+          <li>Free Up Space removes older memory dumps (the newest one stays) and update files
+          the device did not install, after asking first. The dumps are copied to this computer
+          before they are removed (up to 100 MB per device). Activities, maps, music, courses and
+          settings are never removed. CLI: openexpress diagnostics --free-space.</li>
           <li>A remembered device that is not connected has the row Device Status in its view:
           the same page from what this computer keeps of it, as of its last connection.</li>
           <li>openExpress keeps a short log of each connection of a device on this computer: the
