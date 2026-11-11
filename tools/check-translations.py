@@ -25,6 +25,19 @@ def known(ref: str) -> bool:
                           capture_output=True).returncode == 0
 
 
+def by_hand(merge: str, parents: list[str]) -> list[str]:
+    """The files a merge has otherwise than git merges its two parents by itself (a conflict
+    resolved, or anything changed in it): a clean merge of Weblate's branch has none."""
+    if len(parents) != 2:
+        return git("diff-tree", "--cc", "--name-only", "--no-commit-id", merge).split()
+    done = subprocess.run(["git", "merge-tree", "--write-tree", *parents],
+                          capture_output=True, text=True, check=False)
+    tree = done.stdout.split("\n", 1)[0].strip()
+    if done.returncode not in (0, 1) or not tree:
+        return git("diff-tree", "--cc", "--name-only", "--no-commit-id", merge).split()
+    return git("diff", "--name-only", tree, merge).split()
+
+
 def other_languages(files: list[str]) -> list[str]:
     return [f for f in files if f.startswith("po/") and f.endswith(".po") and f != "po/pl.po"]
 
@@ -37,8 +50,8 @@ def refused(local: str, remote: str) -> list[tuple[str, list[str]]]:
     found = []
     for commit in git("rev-list", local, f"^{RULE_FROM}", *since).split():
         parents = git("rev-list", "--parents", "-n", "1", commit).split()[1:]
-        if len(parents) > 1:  # a merge: only what it changed itself, against every parent
-            files = git("diff-tree", "--cc", "--name-only", "--no-commit-id", commit).split()
+        if len(parents) > 1:  # a merge: only what was changed in it by hand
+            files = by_hand(commit, parents)
         elif git("show", "-s", "--format=%ce", commit).strip().endswith(WEBLATE):
             continue
         else:

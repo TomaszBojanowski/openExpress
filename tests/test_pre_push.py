@@ -130,3 +130,21 @@ def test_a_merge_of_weblate_s_branch_passes_unless_a_language_was_changed_in_it(
     by_hand = git(repo, "rev-parse", "HEAD")
     done = push(repo, repo, "refs/heads/main", by_hand)
     assert done.returncode == 1 and "po/cs.po" in done.stderr
+
+
+def test_a_clean_merge_of_weblate_s_branch_passes_also_where_both_sides_changed_the_file(clone):
+    """Weblate's add-on changes a language's file that a commit of ours changed before the rule
+    (other lines): git merges them by itself, and the merge changed nothing by hand."""
+    repo, _site = clone
+    lines = [f"line {n}" for n in range(30)]
+    commit_file(repo, "po/de.po", "\n".join(lines) + "\n")
+    git(repo, "checkout", "-q", "-b", "weblate")
+    theirs, ours = list(lines), list(lines)
+    theirs[5], ours[8] = "line 5, Weblate's", "line 8, ours"  # near: in git's combined diff
+    commit_file(repo, "po/de.po", "\n".join(theirs) + "\n", weblate=True)
+    git(repo, "checkout", "-q", "main")
+    commit_file(repo, "po/de.po", "\n".join(ours) + "\n")
+    git(repo, "tag", "v0.10.0")
+    git(repo, "merge", "-q", "--no-ff", "--no-edit", "weblate")
+    done = push(repo, repo, "refs/heads/main", git(repo, "rev-parse", "HEAD"))
+    assert done.returncode == 0, done.stderr
