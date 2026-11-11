@@ -8002,7 +8002,7 @@ msgstr[1] "{count} Dateien; das neueste Abbild wird nicht mitgezählt"
 #. TRANSLATORS: the title of the row of an update file in "Free Up Space": the update's
 #. name and version, e.g. "GPS software 6.20"; what became of it is the subtitle
 #: openexpress/gui/status_page.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{name} {version}"
 msgstr "{name} {version}"
 
