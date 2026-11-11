@@ -1174,7 +1174,7 @@ def test_only_a_garmin_drive_is_mass_storage(tmp_path):
     st = cli.open_storage(types.SimpleNamespace(path=str(tmp_path), device_uri=None))
     assert type(st) is storage.LocalStorage
     assert st.mass_storage is False and st.label == str(tmp_path)
-    assert not any(hasattr(st, name) for name in ("usb", "usb_id", "device_uri"))
+    assert (st.usb, st.usb_id, st.device_uri, st.volume_name) == (None, None, None, None)
     assert storage.Storage.mass_storage is False
     assert gio_storage.GioStorage(NUMERIC).mass_storage is False
 

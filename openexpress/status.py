@@ -246,7 +246,7 @@ def latest_count(session) -> tuple[int | None, int | None, dict[str, int], datet
     unit = getattr(device, "unit_id", None)
     line = history.connection_line(device, storage) if unit and storage is not None else None
     free, capacity = getattr(session, "space", None) or (None, None)
-    space_at = getattr(session, "space_at", None)  # None: read at the opening
+    space_at = session.space_at  # None: read at the opening
     counted = getattr(session, "recount", None)
     line_counted = (history.counted_time(line) if line is not None and "counted" in line
                     else None)

@@ -7,7 +7,7 @@ import types
 from datetime import datetime
 
 import pytest
-from fakes import record_sync
+from fakes import device_session, record_sync
 from fakes import window as stand_in
 
 from openexpress import i18n, sync
@@ -34,7 +34,7 @@ def _page(device=None, **session):
                   account_devices=None, mass_storage=False, space=(None, None),
                   client=types.SimpleNamespace(auth=types.SimpleNamespace(display="x")))
     fields.update(session)
-    win.session = types.SimpleNamespace(**fields)
+    win.session = device_session(**fields)
     win._account, win.update_state, win.update_count, win.map_state = None, None, 0, None
     win._update_check_session, win.went = None, []
     for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
@@ -230,7 +230,7 @@ def test_a_backup_made_says_so_at_once(backups):
     said = []
     win = stand_in(backup_row=types.SimpleNamespace(
         set_subtitle=said.append, set_tooltip_text=lambda text: None),
-        session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT)))
+        session=device_session(device=types.SimpleNamespace(unit_id=UNIT)))
     _backup(backups, "2026-10-12 (17.37.37)")
     show_backups(win)
     assert said[-1].endswith(f"{NB}· 1 backup")
@@ -295,7 +295,7 @@ def _maps_page(map_update_type):
     from openexpress.gui.app import MainWindow
 
     win, section = page_window("maps")
-    win.session = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT))
+    win.session = device_session(device=types.SimpleNamespace(unit_id=UNIT))
     win._set_map_state = lambda result, no_maps=False: None
     win.show_own_maps = lambda own: None
     MainWindow.show_maps(win, None, None, map_update_type=map_update_type)

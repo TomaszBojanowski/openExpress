@@ -7,7 +7,7 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, device_session
 from fakes import window as stand_in
 from test_ciq_music import FACE, PRELOADED, STORE_ID, iq_device, library  # noqa: F401
 from test_in_bin_writes import Breaking
@@ -186,7 +186,7 @@ def _window(monkeypatch, session=None):
 
     def fails(*args, **kwargs):
         if win.unplug:
-            win.session = types.SimpleNamespace()  # another device opened meanwhile
+            win.session = device_session()  # another device opened meanwhile
         raise DeviceError(GONE)
 
     win.run_task, win.fails = run_task, fails

@@ -94,6 +94,11 @@ class Storage(ABC):
     """Common interface: a local directory (UMS, tests) or MTP via gvfs."""
 
     label = "storage"
+    # The device on USB (gio_storage.GarminUsb), its address (mtp://…) and the name of its
+    # volume, where the storage has them; a folder (tests, --path) has none.
+    usb = None
+    device_uri: str | None = None
+    volume_name: str | None = None
     # A Garmin device in mass storage mode that the program found itself (UmsStorage).
     mass_storage = False
     # A USB drive taken for a Garmin drive for testing (UmsStorage.test_drive).
@@ -125,8 +130,7 @@ class Storage(ABC):
     @property
     def usb_id(self) -> str | None:
         """The USB ID of the storage's device, "vendor:product" (never its serial number), as
-        its `usb` (gio_storage.GarminUsb) says it; None when that is not known. A storage that
-        is not on USB (a folder) has no `usb`, and so no usb_id either (AttributeError)."""
+        its `usb` (gio_storage.GarminUsb) says it; None when that is not known (a folder)."""
         usb = self.usb
         return usb.usb_id if usb is not None else None
 

@@ -7,7 +7,7 @@ import threading
 
 import pytest
 import requests
-from fakes import RunNow, window_methods
+from fakes import RunNow, device_session, window_methods
 from fakes import window as stand_in
 
 from openexpress import applog, download, maps, updates
@@ -1138,7 +1138,7 @@ def _real_maps_page(answers, device_root, unit_info=UNIVERSAL, datatypes=("NMaps
         asked.append(raw)
         return answers[min(len(asked), len(answers)) - 1]
 
-    win.session = types.SimpleNamespace(
+    win.session = device_session(
         client=types.SimpleNamespace(
             universal_maps=universal_maps,
             unit_info=unit_info if callable(unit_info) else (

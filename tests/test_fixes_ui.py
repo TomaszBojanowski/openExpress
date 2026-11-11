@@ -5,7 +5,14 @@ from pathlib import Path
 
 import pytest
 import requests
-from fakes import page_window, replace_in_window, software_update, step_words, window_methods
+from fakes import (
+    device_session,
+    page_window,
+    replace_in_window,
+    software_update,
+    step_words,
+    window_methods,
+)
 from fakes import window as stand_in
 
 from openexpress import cli, desktop, service
@@ -583,10 +590,10 @@ class _Widget:
         pass
 
 
-def _busy_window(session):
+def _busy_window(plugged=True):
 
     win = stand_in(
-        session=session, busy=False, action_bar=_Widget(), progress_label=_Widget(),
+        session=device_session() if plugged else None, busy=False, action_bar=_Widget(), progress_label=_Widget(),
         progress_bar=_Widget(), unplug_label=_Widget(), banner=_Widget(), _action_buttons=[],
         _update_actions=lambda: None, _run_pending_refresh=lambda: None, toasts=[], shown=[],
         _waiting=0, busy_spinner=_Widget())
@@ -614,7 +621,7 @@ def _run_now(monkeypatch):
 
 def test_window_says_not_to_unplug_while_a_task_works_with_the_device(monkeypatch):
     _run_now(monkeypatch)
-    win = _busy_window(session="watch")
+    win = _busy_window()
     during = []
     win.run_task("Syncing…", lambda: during.append((win.busy, win.unplug_label.visible,
                                                     win.action_bar.visible)))
@@ -624,7 +631,7 @@ def test_window_says_not_to_unplug_while_a_task_works_with_the_device(monkeypatc
 
 def test_warning_goes_away_after_a_failed_task_too(monkeypatch):
     _run_now(monkeypatch)
-    win = _busy_window(session="watch")
+    win = _busy_window()
     seen = []
 
     def fail():
@@ -635,10 +642,10 @@ def test_warning_goes_away_after_a_failed_task_too(monkeypatch):
     assert seen == [True] and win.unplug_label.visible is False and win.busy is False
 
 
-@pytest.mark.parametrize("session, device", [("watch", False), (None, True)])
-def test_no_warning_for_a_task_that_does_not_touch_a_device(monkeypatch, session, device):
+@pytest.mark.parametrize("plugged, device", [(True, False), (False, True)])
+def test_no_warning_for_a_task_that_does_not_touch_a_device(monkeypatch, plugged, device):
     _run_now(monkeypatch)
-    win = _busy_window(session=session)  # e.g. logging in, or no device is open
+    win = _busy_window(plugged)  # e.g. logging in, or no device is open
     during = []
     win.run_task("Signing In…", lambda: during.append(win.unplug_label.visible), device=device)
     assert during == [False] and win.action_bar.visible is False
@@ -754,7 +761,7 @@ def test_window_collects_cycles_itself_on_the_gtk_thread(monkeypatch):
     _run_now(monkeypatch)
     where = []
     monkeypatch.setattr(gc, "collect", lambda: where.append(threading.current_thread()))
-    win = _busy_window(session="watch")
+    win = _busy_window()
     win.run_task("Syncing…", lambda: None)
     win.run_task("Syncing…", lambda: 1 / 0, on_error=lambda e: True)
     assert where == [threading.main_thread()] * 2

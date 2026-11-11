@@ -7,7 +7,7 @@ import time
 import types
 
 import pytest
-from fakes import descendants, page_window
+from fakes import descendants, device_session, page_window
 from test_update_chips import _tile
 from test_updates_system import beta_answer
 
@@ -41,9 +41,9 @@ def _device_page():
     device = types.SimpleNamespace(description="fēnix 8 - 47mm, Solar",
                                    software_version_str="23.39", part_number="006-B4532-00",
                                    unit_id=None)
-    win.session = types.SimpleNamespace(device=device, storage=None, logged_in=False,
-                                        ownership_error=None, account_devices=None,
-                                        mass_storage=False, space=(None, None))
+    win.session = device_session(device=device, storage=None, logged_in=False,
+                                 ownership_error=None, account_devices=None,
+                                 mass_storage=False, space=(None, None))
     win._account, win.update_state, win.update_count, win.map_state = None, None, 0, None
     win._update_check_session = None
     for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",

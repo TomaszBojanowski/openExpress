@@ -229,8 +229,8 @@ def wait_for_the_count(session) -> None:
     """Any work of the device waits, in its thread, until the device's count after a write
     (count_again, in the background) is done: one thing asks the device at a time (Copy Crash
     Logs leaves the file manager for a moment), and a count begun before a removal never ends
-    after it."""
-    counting = getattr(session, "counting", None)
+    after it. No device open (`session` None): nothing to wait for."""
+    counting = session.counting if session is not None else None
     if counting is None or counting.is_set():
         return
     log.info("task: waits until the device is counted again")

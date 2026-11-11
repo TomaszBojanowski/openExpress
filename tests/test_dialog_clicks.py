@@ -7,7 +7,7 @@ import types
 import uuid
 
 import pytest
-from fakes import RunNow, software_update
+from fakes import RunNow, device_session, software_update
 from fakes import window as stand_in
 from test_forget_window import _button_labelled, _turn_until
 
@@ -276,8 +276,8 @@ def test_open_on_github_keeps_the_report_open_only_with_the_log(click, device_ro
     from openexpress.gui.app import MainWindow
 
     storage = LocalStorage(device_root)
-    session = types.SimpleNamespace(device=parse(storage.read("GARMIN/GarminDevice.xml")),
-                                    storage=storage, logged_in=False, space=(None, None))
+    session = device_session(device=parse(storage.read("GARMIN/GarminDevice.xml")),
+                             storage=storage, logged_in=False, space=(None, None))
     opened = []
     win = _window(session=session, _report_view=MainWindow._report_view,
                   _open_report_form=lambda *a: opened.append(a) or attached,

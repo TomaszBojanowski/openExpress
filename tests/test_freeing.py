@@ -13,6 +13,7 @@ from datetime import timedelta
 
 import pytest
 from conftest import DEVICE_XML
+from fakes import device_session
 
 from openexpress import diagnostics, freeing, known_devices, paths
 from openexpress.device.storage import DeviceError, DeviceNotResponding, LocalStorage
@@ -463,8 +464,7 @@ def test_the_page_and_the_command_line_list_the_same_files(tmp_path, clock, smal
              update("GARMIN/GUPDATE.GSP", size=10)]
     monkeypatch.setattr(freeing, "updates_not_installed",
                         lambda client, storage, device, fresh=False: (found, None))
-    session = types.SimpleNamespace(device=dev, storage=st, client=object(), diagnostics=None,
-                                    space=None)
+    session = device_session(device=dev, storage=st, client=object())
     made = status.read(session)
     assert [u.device_path for u in made.not_installed] == [u.device_path for u in found]
     assert [p for p, _s, _t in made.older_dumps()] == [p for p, _s, _t in DUMPS[1:]]
@@ -1298,7 +1298,7 @@ def test_a_device_without_a_unit_id_has_no_dumps_removed(tmp_path, clock, small_
     dev = parse(st.read("GARMIN/GarminDevice.xml"))
     assert not dev.unit_id
     assert freeing.plan(st, dev, client=None).dumps_plan is None
-    s = types.SimpleNamespace(device=dev, storage=st, diagnostics=None, space=None, client=None)
+    s = device_session(device=dev, storage=st)
     assert status.read(s).dumps_removable is False
     with pytest.raises(ValueError):
         freeing.remove_dumps(st, dev.unit_id, asked(st))

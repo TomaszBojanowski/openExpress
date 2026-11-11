@@ -76,6 +76,13 @@ class DeviceSession:
     # removed files from it (status.recount): the page Device Status shows them instead of the
     # count of the connection; None: not counted again yet.
     recount: object | None = None
+    # When `space` was read (status.space_read); None: at the opening.
+    space_at: object | None = None
+    # Set once the count after a write is done (window_tasks.count_again); None: no count yet.
+    counting: threading.Event | None = field(default=None, repr=False)
+    # The page Device Status waits to be read again (status_page): the device page's row
+    # Device Status follows it.
+    page_waits: bool = False
     # Set to stop the wait of TrueUp (the window's Stop Waiting, the background service
     # quitting); cleared before each wait.
     stop_waiting: threading.Event = field(default_factory=threading.Event, repr=False)

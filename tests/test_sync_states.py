@@ -6,7 +6,7 @@ account's list. All devices and files are made up."""
 import types
 
 import pytest
-from fakes import record_sync, window_methods
+from fakes import device_session, record_sync, window_methods
 from fakes import window as stand_in
 
 from openexpress import i18n, service, sync
@@ -64,8 +64,8 @@ def _last_sync_row(to_sync=None, ownership_error=None):
 
     win = stand_in(
         last_sync_row=Adw.ExpanderRow(title="Last Sync"), _last_sync_children=[],
-        session=types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT),
-                                      ownership_error=ownership_error, to_sync=to_sync))
+        session=device_session(device=types.SimpleNamespace(unit_id=UNIT),
+                               ownership_error=ownership_error, to_sync=to_sync))
     MainWindow._show_last_sync(win)
     return win
 
@@ -237,7 +237,7 @@ def test_the_open_device_is_counted_once_without_the_start_page():
     from openexpress.gui.device_page import count_open_activities
 
     asked = []
-    s = types.SimpleNamespace(
+    s = device_session(
         device=types.SimpleNamespace(unit_id=UNIT), storage=types.SimpleNamespace(),
         mass_storage=False, ownership_error=None, logged_in=True, to_sync_asked=False)
     win = stand_in(session=s,
@@ -259,7 +259,7 @@ def test_a_drive_not_synced_one_not_logged_in_or_off_the_account_is_not_counted(
     values = dict(device=types.SimpleNamespace(unit_id=UNIT), storage=types.SimpleNamespace(),
                   mass_storage=False, ownership_error=None, logged_in=True, to_sync_asked=False)
     values.update(fields)
-    win = stand_in(session=types.SimpleNamespace(**values),
+    win = stand_in(session=device_session(**values),
                    in_background=lambda work, done, failed=None: asked.append(work))
     count_open_activities(win)
     assert asked == []

@@ -1,6 +1,6 @@
 import pytest
+from fakes import device_session, window_methods
 from fakes import window as stand_in
-from fakes import window_methods
 
 from openexpress import report
 from openexpress.device.storage import LocalStorage
@@ -262,9 +262,9 @@ def _report_dialog(monkeypatch, device_root, connected=True):
 
     st = LocalStorage(device_root)
     # The space as the window's session holds it: read when the device was opened.
-    session = types.SimpleNamespace(device=parse(st.read("GARMIN/GarminDevice.xml")),
-                                    storage=st, logged_in=True,
-                                    space=(st.free_space(), st.capacity()))
+    session = device_session(device=parse(st.read("GARMIN/GarminDevice.xml")),
+                             storage=st, logged_in=True,
+                             space=(st.free_space(), st.capacity()))
     opened, copied, said, asked = [], [], [], []
 
     class Launcher:

@@ -22,6 +22,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from conftest import DEVICE_XML
+from fakes import device_session
 
 from openexpress import (
     crashes,
@@ -91,8 +92,7 @@ def opened(root, **kw):
 
 def session_of(st, dev, found):
     """A session as the window leaves it once its reading of the error logs is done."""
-    return types.SimpleNamespace(device=dev, storage=st, diagnostics=found,
-                                 diagnostics_reading=None, space=None, client=None)
+    return device_session(device=dev, storage=st, diagnostics=found)
 
 
 @pytest.fixture(autouse=True)
@@ -914,8 +914,7 @@ def test_the_page_of_a_connection_without_its_line_does_not_show_another_connect
                                  "categories": {"music": 3_000_000}, "free": 1,
                                  "capacity": 10_000_000, "counted": old}) + "\n")
     found = diagnostics.AtOpen([], [], False)
-    s = types.SimpleNamespace(device=dev, storage=st, diagnostics=found,
-                              diagnostics_reading=None, space=(None, None), client=None)
+    s = device_session(device=dev, storage=st, diagnostics=found, space=(None, None))
     made = status.read(s)
     assert history.connection_line(dev, st) is None
     assert made.categories == {} and made.free is None, (
@@ -978,8 +977,7 @@ def test_the_report_after_a_removal_whose_dumps_could_not_be_listed(tmp_path, cl
     st, dev = opened(root)
     found = diagnostics.at_open(dev, st)
     history.note_connection(dev, st, found=found)
-    s = types.SimpleNamespace(device=dev, storage=st, diagnostics=found, recount=None,
-                              space=(4_000_000, 10_000_000))
+    s = device_session(device=dev, storage=st, diagnostics=found, space=(4_000_000, 10_000_000))
     plan = freeing.dump_plan([(p, e.size, e.mtime) for p, e in diagnostics.dump_files(st)])
     freed = freeing.remove_dumps(st, UNIT, plan)
     assert len(freed.removed) == 2

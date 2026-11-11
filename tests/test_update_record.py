@@ -7,7 +7,7 @@ import time
 import types
 
 import pytest
-from fakes import page_window
+from fakes import device_session, page_window
 from fakes import window as stand_in
 from test_updates_system import _entry
 
@@ -138,7 +138,7 @@ def _page(device_root, answer, software="23.39"):
         asked.append(raw)
         return lower_keys(answer)
 
-    win.session = types.SimpleNamespace(
+    win.session = device_session(
         device=device, storage=LocalStorage(device_root), logged_in=False, ownership_error=None,
         account_devices=None, mass_storage=False, space=(None, None),
         client=types.SimpleNamespace(software_updates=software_updates))
@@ -289,7 +289,7 @@ def test_after_an_install_the_next_opening_shows_the_copy_waiting_until_the_chec
     items = updates.mark_present(LocalStorage(device_root),
                                  updates.parse_updates(lower_keys(_answer(_component()))))
     win = stand_in(
-        session=types.SimpleNamespace(device=types.SimpleNamespace(
+        session=device_session(device=types.SimpleNamespace(
             description="fēnix 8 - 47mm, Solar", software_version_str="23.39", unit_id=UNIT),
             mass_storage=False),
         sections={"updates": _Section()}, busy=False, _action_buttons=[],

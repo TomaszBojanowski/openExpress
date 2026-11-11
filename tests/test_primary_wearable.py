@@ -7,7 +7,7 @@ up."""
 import types
 
 import pytest
-from fakes import descendants
+from fakes import descendants, device_session
 
 from openexpress import i18n
 
@@ -104,10 +104,10 @@ def _page(unit=FENIX, account=None, **session):
                                    unit_id=unit)
     fields = dict(device=device, storage=None, logged_in=True, ownership_error=None,
                   account_devices=_account() if account is None else account,
-                  mass_storage=False, space=(None, None),
+                  mass_storage=False, space=(None, None), to_sync_asked=True,
                   client=types.SimpleNamespace(auth=types.SimpleNamespace(display="x")))
     fields.update(session)
-    win.session = types.SimpleNamespace(**fields)
+    win.session = device_session(**fields)
     win._account, win.update_state, win.update_count, win.map_state = None, None, 0, None
     win._update_check_session = None
     for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",

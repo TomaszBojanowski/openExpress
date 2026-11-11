@@ -395,7 +395,7 @@ def remove_update(storage: Storage, u, client, device, freed: Freed | None = Non
     still = any(f.device_path.casefold() == u.device_path.casefold() for f in found)
     with history.records_locked():
         now = listed_file(storage, u)
-        if now is None or now != getattr(u, "listed_file", None) or not still:
+        if now is None or now != u.listed_file or not still:
             log.info("freeing: the update file changed since the question, not removed")
             raise _changed()
         real = storage.resolve(u.device_path)

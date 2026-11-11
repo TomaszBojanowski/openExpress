@@ -246,7 +246,7 @@ def status_changed(win) -> None:
     sec = sections.get("status") if isinstance(sections, dict) else None
     if sec is None:
         return
-    waited = bool(getattr(win.session, "page_waits", False))
+    waited = win.session is not None and win.session.page_waits  # None: unplugged
     if not (waited or sec.loaded):
         return
     pages = getattr(win, "pages", None)

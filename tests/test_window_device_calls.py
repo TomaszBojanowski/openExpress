@@ -7,7 +7,7 @@ import threading
 import types
 
 import pytest
-from fakes import RunNow, window_methods
+from fakes import RunNow, device_session, window_methods
 from fakes import window as stand_in
 
 from openexpress.device.storage import LocalStorage
@@ -94,10 +94,10 @@ def map_window(device_root, monkeypatch):
         maps_cache=[m], run_task=tasks, tasks=tasks, errors=[],
         error=lambda title, body: win.errors.append(title),
         progress=lambda text: None, fraction=lambda done, total: None,
-        session=types.SimpleNamespace(storage=storage, device=types.SimpleNamespace(raw=b""),
-                                      client=types.SimpleNamespace(
-                                          http=None,
-                                          consumer=types.SimpleNamespace(url_salt="salt"))))
+        session=device_session(storage=storage, device=types.SimpleNamespace(raw=b""),
+                               client=types.SimpleNamespace(
+                                   http=None,
+                                   consumer=types.SimpleNamespace(url_salt="salt"))))
     win._ask_install_map = types.MethodType(app.MainWindow._ask_install_map, win) \
         if hasattr(app.MainWindow, "_ask_install_map") else None
     return win, m, storage
@@ -325,7 +325,7 @@ def test_the_question_of_the_order_asks_the_device_nothing(order_device, monkeyp
     copy = ciq.load_app_list_copy(dev, "03.04.05")
     plan = ciq.plan_order(ciq.read_installed(dev, st), copy.state)
     storage = Counting(st.root)
-    win = stand_in(session=types.SimpleNamespace(device=dev, storage=storage),
+    win = stand_in(session=device_session(device=dev, storage=storage),
                    _order_summary=app.MainWindow._order_summary,
                    restore_order=lambda copy: None)
     app.MainWindow.confirm_order(win, copy, plan, NOTE)
@@ -372,7 +372,7 @@ def test_the_choice_of_a_copy_passes_the_note_on(order_device, monkeypatch):
     storage = Counting(st.root)
     asked = []
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=storage), run_task=tasks_in_a_thread(),
+        session=device_session(device=dev, storage=storage), run_task=tasks_in_a_thread(),
         error=lambda title, text: pytest.fail(text), _order_blocked=lambda state: None,
         _order_rows=app.MainWindow._order_rows,
         confirm_order=lambda copy, plan, note=None: asked.append(note))
@@ -440,7 +440,7 @@ def test_the_music_page_reads_the_free_space_with_the_music(iq_device):
     st, dev = iq_device
     win, section = page_window("music")
     storage = Counting(st.root)
-    win.session = types.SimpleNamespace(device=dev, storage=storage)
+    win.session = device_session(device=dev, storage=storage)
     win.run_task = tasks_in_a_thread()
     win.toast = lambda text: None
     win.choose_music = win.choose_playlist = win.remove_music = lambda *a, **kw: None
@@ -500,8 +500,8 @@ def _overview_window(storage, dev, space=NOT_READ):
     from openexpress.gui.app import MainWindow
 
     win, section = page_window("watch")
-    s = types.SimpleNamespace(device=dev, storage=storage, logged_in=False, ownership_error=None,
-                              account_devices=None, mass_storage=True)
+    s = device_session(device=dev, storage=storage, logged_in=False, ownership_error=None,
+                       account_devices=None, mass_storage=True)
     if space is not NOT_READ:
         s.space = space
     win.session, win.update_state, win.map_state, win.errors = s, None, None, []
@@ -649,7 +649,7 @@ def test_the_detection_and_the_choice_read_the_space_in_their_thread(iq_device, 
 
     st, dev = iq_device
     storage = Space(st.root)
-    session = types.SimpleNamespace(device=dev, storage=storage)
+    session = device_session(device=dev, storage=storage)
     works = []
     win = stand_in(
         busy=False, session=None, _asked=None, sections={"watch": types.SimpleNamespace(
@@ -729,7 +729,7 @@ def _report_of(monkeypatch, storage, dev, space=NOT_READ) -> str:
 
     Question.asked = []
     monkeypatch.setattr(Adw, "AlertDialog", Question)
-    s = types.SimpleNamespace(device=dev, storage=storage, logged_in=False)
+    s = device_session(device=dev, storage=storage, logged_in=False)
     if space is not NOT_READ:
         s.space = space
     shown = []
@@ -872,7 +872,7 @@ def test_restore_order_spins_its_button(order_device, monkeypatch, delay, text_s
     real = ciq.order_choices
     monkeypatch.setattr(ciq, "order_choices", lambda device, state: (
         time.sleep(delay), real(device, state))[1])
-    win = _task_window(session=types.SimpleNamespace(device=dev, storage=st),
+    win = _task_window(session=device_session(device=dev, storage=st),
                        _order_blocked=lambda state: None,
                        _order_rows=app.MainWindow._order_rows)
     button = Gtk.Button(label="Restore…")
@@ -944,8 +944,8 @@ def test_set_as_primary_spins_its_button(monkeypatch, delay, text_shown):
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
     monkeypatch.setattr(service, "set_primary_training",
                         lambda client, device, apply: time.sleep(delay))
-    s = types.SimpleNamespace(device=types.SimpleNamespace(description="Test watch"),
-                              logged_in=True, ownership_error=None, client=None)
+    s = device_session(device=types.SimpleNamespace(description="Test watch"),
+                       logged_in=True, ownership_error=None, client=None)
     overviews = []
     win = _task_window(session=s, show_overview=lambda: overviews.append(True),
                        _primary_training_text=app.MainWindow._primary_training_text)
@@ -968,8 +968,8 @@ def test_cancel_leaves_set_as_primary_as_it_was(monkeypatch):
 
     questions = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
-    s = types.SimpleNamespace(device=types.SimpleNamespace(description="Test watch"),
-                              logged_in=True, ownership_error=None, client=None)
+    s = device_session(device=types.SimpleNamespace(description="Test watch"),
+                       logged_in=True, ownership_error=None, client=None)
     win = _task_window(session=s, _primary_training_text=app.MainWindow._primary_training_text)
     win.set_primary_training = lambda button=None: pytest.fail("set without Set")
     button = Gtk.Button(label="Set as Primary")
@@ -991,7 +991,7 @@ def test_set_as_primary_hands_its_own_button_on(monkeypatch):
                         lambda client, device, listed: PRIMARY)
     started = []
     win = stand_in(
-        session=types.SimpleNamespace(client=None, device=None, account_devices=None),
+        session=device_session(client=None, device=None, account_devices=None),
         busy=False, _action_buttons=[],
         in_background=lambda work, done, failed=None: done(work()),
         _primary_training_text=app.MainWindow._primary_training_text,
@@ -1019,7 +1019,7 @@ def test_eject_spins_its_button(monkeypatch, delay, text_shown, in_the_window):
     dialogs = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: dialogs.append(self))
     in_the_window("eject", lambda storage, **told: time.sleep(delay))
-    s = types.SimpleNamespace(storage=object())
+    s = device_session(storage=object())
     win = _task_window(session=s)
     button = Gtk.Button(label="Eject")
     app.MainWindow.eject_device(win, s, button=button)
@@ -1044,7 +1044,7 @@ def test_a_refused_eject_gives_the_button_back(monkeypatch, in_the_window):
         raise DeviceError("The device is busy")
 
     in_the_window("eject", refused)
-    s = types.SimpleNamespace(storage=object())
+    s = device_session(storage=object())
     win = _task_window(session=s)
     button = Gtk.Button(label="Eject")
     app.MainWindow.eject_device(win, s, button=button)

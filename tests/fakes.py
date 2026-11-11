@@ -14,6 +14,25 @@ from dataclasses import dataclass
 Call =namedtuple("Call", "title fn done failed device in_page button")
 
 
+def device_session(**fields):
+    """A stand-in of service.DeviceSession: every field of the real one at its default (storage,
+    device, settings and client None) unless given; other names (such as the real one's
+    properties, mass_storage, logged_in) as given."""
+    import dataclasses
+
+    from openexpress import service
+
+    values = {}
+    for f in dataclasses.fields(service.DeviceSession):
+        if f.default is not dataclasses.MISSING:
+            values[f.name] = f.default
+        elif f.default_factory is not dataclasses.MISSING:
+            values[f.name] = f.default_factory()
+        else:
+            values[f.name] = None
+    return types.SimpleNamespace(**{**values, **fields})
+
+
 class Waits:
     """A stand-in of the Event that stops a wait (TrueUp's `stop`): each step of the wait
     (wait(seconds)) noted and never stopped; `then`: raised at the first step instead (e.g.
@@ -528,7 +547,7 @@ def stalled_session(usb, name, stalled=False):
     None: not known), whether it stalled, and its device's name."""
     storage = types.SimpleNamespace(usb=usb, device_uri=f"mtp://Made_Up_{len(name)}/",
                                     stalled=stalled)
-    return types.SimpleNamespace(storage=storage, device=types.SimpleNamespace(description=name))
+    return device_session(storage=storage, device=types.SimpleNamespace(description=name))
 
 
 def tells_stalls(win, monkeypatch, connected=()):

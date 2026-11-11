@@ -136,6 +136,9 @@ class SoftwareUpdate:
     # The device was seen unplugged after openExpress copied it (mark_copied: the device's
     # unplugged_at after copied_at): it had its chance to install it.
     unplugged_since_copy: bool = False
+    # The size and time of its file on the device when Free Up Space listed it
+    # (freeing.updates_not_installed); None: not listed.
+    listed_file: tuple | None = None
 
     @property
     def key(self) -> str:

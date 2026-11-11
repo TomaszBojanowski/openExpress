@@ -10,8 +10,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
+from fakes import device_session, window_methods
 from fakes import window as stand_in
-from fakes import window_methods
 from test_updates_system import (
     BUNDLE_ENTRY,
     FONT_ENTRY,
@@ -109,7 +109,7 @@ def _storage_row(space):
     from openexpress.gui.window_tasks import render_space
 
     win = stand_in(storage_row=Adw.ActionRow(), storage_bar=Gtk.LevelBar(),
-                   session=types.SimpleNamespace(space=space))
+                   session=device_session(space=space))
     render_space(win)
     return win.storage_row.get_subtitle()
 
@@ -129,7 +129,7 @@ def test_the_music_page_says_the_space_in_the_same_words(free, said):
 
     win, section = page_window("music")
     dev = types.SimpleNamespace(targets=lambda datatype: [], unit_id=None)
-    win.session = types.SimpleNamespace(device=dev, storage=None)
+    win.session = device_session(device=dev, storage=None)
     win.choose_music = win.choose_playlist = win.remove_music = lambda *a, **kw: None
     window_methods(win, ["show_music"])
     win.show_music(([], []), free=free)
@@ -157,7 +157,7 @@ def test_the_question_before_a_map_says_the_space_in_the_same_words(monkeypatch)
 
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = stand_in(session=types.SimpleNamespace(), run_task=None)
+    win = stand_in(session=device_session(), run_task=None)
     m = types.SimpleNamespace(size=1_500_000, files=["a"], eula_urls=[], installed=False,
                               name="Test Map")
     app.MainWindow._ask_install_map(win, m, 1_500_000, 1_500_000, None, [])
@@ -223,10 +223,10 @@ def _device_page(**session):
                                    software_version_str="23.39", part_number="006-B4532-00",
                                    unit_id=None)
     fields = dict(device=device, storage=None, logged_in=False, ownership_error=None,
-                  account_devices=None, mass_storage=False, space=(None, None),
+                  account_devices=None, mass_storage=False, space=(None, None), to_sync_asked=True,
                   client=types.SimpleNamespace(auth=types.SimpleNamespace(display="x")))
     fields.update(session)
-    win.session = types.SimpleNamespace(**fields)
+    win.session = device_session(**fields)
     win._account, win.update_state, win.update_count, win.map_state = None, None, 0, None
     win._update_check_session = None
     for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
@@ -275,8 +275,8 @@ def test_the_device_page_of_a_drive_says_usb_drive():
 def test_the_sync_button_and_the_notice_of_a_drive_say_usb_drive():
     from openexpress.gui.app import MainWindow
 
-    win = stand_in(session=types.SimpleNamespace(mass_storage=True,
-                                                 drive_refusal=("no-upload-types", "")))
+    win = stand_in(session=device_session(mass_storage=True,
+                                          drive_refusal=("no-upload-types", "")))
     assert MainWindow._sync_blocked(win) == "USB Drive"
 
 

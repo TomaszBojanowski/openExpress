@@ -14,6 +14,7 @@ import pytest
 from fakes import (
     Waits,
     descendants,
+    device_session,
     gpx_file,
     gpx_route,
     gpx_track,
@@ -57,9 +58,9 @@ def _session(device, drive=False):
     # (in Polish its title is long).
     account = [{"unitid": device.unit_id, "primaryactivitytrackersettingcapable": True,
                 "primaryactivitytrackerindicator": True}]
-    return types.SimpleNamespace(device=device, storage=storage, client=client, logged_in=True,
-                                 ownership_error=None, account_devices=account,
-                                 mass_storage=drive, diagnostics=_device_errors())
+    return device_session(device=device, storage=storage, client=client, logged_in=True,
+                          ownership_error=None, account_devices=account,
+                          mass_storage=drive, diagnostics=_device_errors())
 
 
 def _device_errors():
@@ -1249,8 +1250,8 @@ def test_the_report_dialog_fits_the_narrowest_window(narrow_window, device_root,
     storage = LocalStorage(device_root)
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
-    win.session = types.SimpleNamespace(device=parse(storage.read("GARMIN/GarminDevice.xml")),
-                                        storage=storage, logged_in=False, space=(None, None))
+    win.session = device_session(device=parse(storage.read("GARMIN/GarminDevice.xml")),
+                                 storage=storage, logged_in=False, space=(None, None))
     _iterate(0.3)
     win.show_report()
     _iterate(0.3)

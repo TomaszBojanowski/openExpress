@@ -792,7 +792,7 @@ def confirm_update(win, u, button=None) -> None:
             _("The device took in {name} {version} ({size}) but did not install it. The file "
               "will be removed from the device; the Updates page will offer the update "
               "again.").format(name=u.name, version=u.version, size=human_size(
-                  u.listed_file[0] if getattr(u, "listed_file", None) else u.size or 0)),
+                  u.listed_file[0] if u.listed_file else u.size or 0)),
             Answer("ok", _("Remove"), _for_the_question(win, s, remove), look="destructive"))
 
 

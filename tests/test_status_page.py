@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from conftest import DEVICE_XML
+from fakes import device_session
 
 from openexpress import diagnostics, freeing, history, status
 from openexpress.crashes import Crash
@@ -98,9 +99,8 @@ def test_the_first_connection_is_read_from_the_devices_remembered(monkeypatch):
                         lambda unit_id, test_drive=False: types.SimpleNamespace(lines=lines))
 
     def session(test_drive: bool):
-        return types.SimpleNamespace(
-            device=types.SimpleNamespace(unit_id=unit), diagnostics=None,
-            storage=types.SimpleNamespace(test_drive=test_drive), space=None)
+        return device_session(device=types.SimpleNamespace(unit_id=unit),
+                              storage=types.SimpleNamespace(test_drive=test_drive))
 
     (first,) = [e for e in status.read(session(False)).events if e.kind == "first"]
     assert (first.at, first.software) == (datetime.fromtimestamp(FIRST_SEEN), "21.05")
@@ -224,7 +224,7 @@ def page(made=None, collapsed=False, **session):
     win, section = page_window("status")
     win.sections.update({key: object() for key in ("maps", "music", "apps", "courses",
                                                    "activities")})
-    win.session = types.SimpleNamespace(device=None, storage=None, **session)
+    win.session = device_session(device=None, storage=None, **session)
     win.split = types.SimpleNamespace(get_collapsed=lambda: collapsed)
     win.chosen = []
     win.select_section = win.chosen.append
@@ -637,8 +637,8 @@ def drive_page(clock, in_the_window, tmp_path):
     # What the window read of it when it opened it: no error log, the dumps listed.
     at_open = diagnostics.AtOpen(entries=[], hidden_logs=False, dumps=[
         (f"GARMIN/Debug/dump/{p.name}", p.stat().st_size) for p in dump.iterdir()])
-    session = types.SimpleNamespace(device=device, storage=storage, diagnostics=at_open,
-                                    space=None)
+    session = device_session(device=device, storage=storage, diagnostics=at_open,
+                             space=None)
     asked = questions(in_the_window)
     win, section = page(status.read(session))
     win.session = session
@@ -894,8 +894,8 @@ def test_the_device_page_leads_to_the_page_with_its_summary(clock):
                for c in facts().crashes]
     found = types.SimpleNamespace(entries=entries, errors_known=True, dumps=[], dumps_known=True,
                                   hidden_logs=False)
-    win = window(session=types.SimpleNamespace(diagnostics=found, device=None, storage=None,
-                                               space=(12_400 * MB, 31_100 * MB)),
+    win = window(session=device_session(diagnostics=found, device=None, storage=None,
+                                        space=(12_400 * MB, 31_100 * MB)),
                  select_section=chosen.append)
     group = Adw.PreferencesGroup()
     status_row(win, group)
@@ -991,8 +991,8 @@ def test_the_reading_is_in_the_session_before_anyone_learns_it_is_done(monkeypat
 
     monkeypatch.setattr(diagnostics, "at_open", at_open)
     for n in range(20):
-        s = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=3_000_000_000 + n),
-                                  storage=None, space=None)
+        s = device_session(device=types.SimpleNamespace(unit_id=3_000_000_000 + n),
+                           storage=None, space=None)
         win = window(session=s, in_background=TaskRunner.in_background)
         device_page.read_diagnostics(win)
         seen = []
@@ -1049,10 +1049,10 @@ def test_after_copy_crash_logs_the_row_and_the_page_count_the_boot_logs_crashes(
     from openexpress.gui import status_page
 
     unit = 3_000_000_321
-    s = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit), storage=None,
-                              space=None, client=None,
-                              diagnostics=AtOpen(entries=[], dumps=[],
-                                                 hidden_logs=True))
+    s = device_session(device=types.SimpleNamespace(unit_id=unit), storage=None,
+                       space=None, client=None,
+                       diagnostics=AtOpen(entries=[], dumps=[],
+                                          hidden_logs=True))
 
     def copy_crash_logs(device, storage, progress=None):
         where = diagnostics.folder(unit)
@@ -1090,7 +1090,7 @@ def test_after_another_write_the_page_is_read_again(monkeypatch, in_the_window):
     in_the_window("read_space", lambda storage, capacity: (5, 10))
     in_the_window("render_space", lambda win: None)
     reloads = []
-    s = types.SimpleNamespace(space=(9, 10), storage=None)
+    s = device_session(space=(9, 10), storage=None)
     win = window(session=s, sections={"status": types.SimpleNamespace(loaded=True)},
                  load_section=lambda key, force=False: reloads.append(key))
     window_tasks.refresh_space(win, s)
@@ -1114,7 +1114,7 @@ def test_after_another_write_the_device_is_counted_again(monkeypatch, in_the_win
     monkeypatch.setattr(status, "recount", lambda device, storage: counted)
     in_the_window("render_space", lambda win: None)
     reloads = []
-    s = types.SimpleNamespace(space=(9, 10), storage=None, device=None, diagnostics=None)
+    s = device_session(space=(9, 10), storage=None, device=None, diagnostics=None)
     win = window(session=s, sections={"status": types.SimpleNamespace(loaded=True)},
                  load_section=lambda key, force=False: reloads.append(key))
     window_tasks.count_again(win, s)
@@ -1129,7 +1129,7 @@ def test_a_removal_cut_short_is_told_with_what_it_did(monkeypatch):
     from openexpress.device.storage import DeviceError, DeviceNotResponding
     from openexpress.gui import status_page
 
-    s = types.SimpleNamespace(device=object(), storage=object())
+    s = device_session(device=object(), storage=object())
 
     def full(device, storage, removed=None):
         raise OSError(28, "No space left on device")
@@ -1271,7 +1271,7 @@ def test_a_removal_that_ends_after_the_device_went_is_told_and_reads_nothing(clo
     win.toast = win.toasts.append
     win.load_section = lambda key, force=False: win.reloads.append(key)
     old = win.session
-    win.session = types.SimpleNamespace(device=None, storage=None)
+    win.session = device_session(device=None, storage=None)
     status_page._freed(win, old, freeing.Freed(removed=[("GARMIN/Debug/dump/a.zip", 1)],
                                                kept=[("GARMIN/Debug/dump/b.zip", "kept")]),
                        "1 removed")
@@ -1332,14 +1332,14 @@ def test_a_page_that_waited_is_not_read_for_another_device(clock):
     from openexpress.gui.device_page import status_changed
 
     win, section = page()
-    win.session = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=None),
-                                        storage=None, diagnostics=None,
-                                        diagnostics_reading=threading.Event())
+    win.session = device_session(device=types.SimpleNamespace(unit_id=None),
+                                 storage=None, diagnostics=None,
+                                 diagnostics_reading=threading.Event())
     MainWindow.load_status(win)
     assert win.session.page_waits
     done = threading.Event()
     done.set()
-    win.session = types.SimpleNamespace(  # unplugged; another device, its page never chosen
+    win.session = device_session(  # unplugged; another device, its page never chosen
         device=types.SimpleNamespace(unit_id=None), storage=None, diagnostics_reading=done,
         diagnostics=AtOpen(entries=[], dumps=[], hidden_logs=False))
     section.loaded = False
@@ -1421,10 +1421,10 @@ class _Watch:
         found = diagnostics.AtOpen(entries=[], hidden_logs=False, dumps=[
             (p, e.size) for p, e in diagnostics.dump_files(st)])
         history.note_connection(dev, st, found=found)
-        return types.SimpleNamespace(device=dev, storage=st, diagnostics=found,
-                                     diagnostics_reading=None, space=(st.free_space(),
-                                                                      st.capacity()),
-                                     client=None, recount=None)
+        return device_session(device=dev, storage=st, diagnostics=found,
+                              diagnostics_reading=None, space=(st.free_space(),
+                                                               st.capacity()),
+                              client=None, recount=None)
 
     @staticmethod
     def window(s):
@@ -1460,6 +1460,28 @@ def test_a_question_answered_after_the_device_came_back_removes_nothing(clock, i
     asked[0].answers[0].run()
     assert len(list((root / "GARMIN/Debug/dump").iterdir())) == 3
     assert told == ["Nothing Removed"] and win.reloads == ["status"]
+
+
+@pytest.mark.needs_display
+def test_a_question_answered_after_the_device_was_unplugged_removes_nothing(clock, in_the_window,
+                                                                           tmp_path):
+    """Unplugged while the question was open: the answer removes nothing and says why."""
+    from openexpress import freeing
+    from openexpress.gui import status_page
+
+    asked = questions(in_the_window)
+    told = []
+    in_the_window("inform", lambda parent, name, heading, body, **kw: told.append(heading))
+    root = tmp_path / "watch"
+    _Watch.lay_out(root)
+    s = _Watch.session(_Watch.storage(root, address=5))
+    win = _Watch.window(s)
+    status_page.confirm_dumps(win, freeing.dump_plan(freeing.plan(s.storage, s.device,
+                                                                  None).dumps))
+    win.session = None
+    asked[0].answers[0].run()
+    assert len(list((root / "GARMIN/Debug/dump").iterdir())) == 3
+    assert told == ["Nothing Removed"]
 
 
 @pytest.mark.needs_display
@@ -1534,7 +1556,7 @@ def test_after_a_write_the_device_is_counted_once_and_tasks_wait_for_it(monkeypa
     later = []
     monkeypatch.setattr(TaskRunner, "in_background",
                         staticmethod(lambda work, done, failed=None: later.append(work)))
-    s = types.SimpleNamespace(device=None, storage=None)
+    s = device_session(device=None, storage=None)
     window_tasks.count_again(types.SimpleNamespace(session=s), s)
     assert not s.counting.is_set()
     counted = status.Recount({"maps": 4}, 5, 10, NOW, dumps=[])
@@ -1552,7 +1574,7 @@ def test_a_copy_that_failed_is_not_said_to_be_the_device_s_refusal(clock, in_the
     told = []
     in_the_window("inform", lambda parent, name, heading, body, **kw: told.append(
         (heading, body)))
-    s = types.SimpleNamespace(device=None, storage=None)
+    s = device_session(device=None, storage=None)
     win = _Watch.window(s)
     status_page._freed(win, s, freeing.Freed(copy_failed=["GARMIN/Debug/dump/RAM_bak1.zip"]),
                        "0 memory dumps removed, 0 B freed")
@@ -1604,8 +1626,8 @@ def test_a_page_that_waited_is_read_when_chosen_not_while_another_is_shown(clock
     from openexpress.gui.device_page import status_changed
 
     win, _section = page_window("status")
-    s = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=None), storage=None,
-                              diagnostics=None, diagnostics_reading=threading.Event())
+    s = device_session(device=types.SimpleNamespace(unit_id=None), storage=None,
+                       diagnostics=None, diagnostics_reading=threading.Event())
     win.session = s
     MainWindow.load_status(win)
     assert s.page_waits
@@ -1677,8 +1699,8 @@ def removing_window(st, dev, in_the_window):
                   answers[0].run())
     in_the_window("inform", lambda *a, **kw: None)
     in_the_window("refresh_space", lambda win, s: None)
-    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None, space=None,
-                                    client=None)
+    session = device_session(device=dev, storage=st, diagnostics=None, space=None,
+                             client=None)
     return window(session=session, run_task=RunNow(), toast=lambda text: None, progress=None)
 
 
@@ -1755,9 +1777,9 @@ def test_a_removal_from_the_page_counts_the_device_once(clock, in_the_window, mo
     monkeypatch.setattr(freeing, "remove_dumps", remove_dumps)
     in_the_window("confirm", lambda parent, name, heading, body, *answers, **kw:
                   answers[0].run())
-    session = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=UNIT),
-                                    storage=types.SimpleNamespace(test_drive=False),
-                                    space=(1_000, 10_000), diagnostics=None)
+    session = device_session(device=types.SimpleNamespace(unit_id=UNIT),
+                             storage=types.SimpleNamespace(test_drive=False),
+                             space=(1_000, 10_000), diagnostics=None)
     win = task_window(session, monkeypatch, toast=lambda text: None,
                       progress=None)
     status_page.confirm_dumps(win, freeing.dump_plan([
@@ -1780,7 +1802,7 @@ def test_after_a_write_that_cannot_be_counted_again_the_free_space_is_read_again
 
     monkeypatch.setattr(status, "recount", fails)
     in_the_window("read_space", lambda storage, capacity: (5, 10))
-    session = types.SimpleNamespace(space=(9, 10), storage=None, device=None, diagnostics=None)
+    session = device_session(space=(9, 10), storage=None, device=None, diagnostics=None)
     win = task_window(session, monkeypatch)
     win.run_task("Copying…", writes_to_device(lambda: None))
     assert session.space == (5, 10)
@@ -1799,7 +1821,7 @@ def test_the_question_names_the_size_of_the_file_on_the_device(in_the_window):
                   asked.append(body))
     gps = made_up_update("GARMIN/RemoteSW/006-D0000-00.GCD", size=4_100_000)
     gps.listed_file = (3_900_000, 1_700_000_000.0)
-    status_page.confirm_update(window(session=types.SimpleNamespace()), gps)
+    status_page.confirm_update(window(session=device_session()), gps)
     (body,) = asked
     assert "GPS software 6.20 (3.9 MB)" in body
 
@@ -1857,9 +1879,9 @@ def test_the_row_and_the_page_tell_the_same_summary_when_the_free_space_was_not_
     st, dev = make_free_watch(tmp_path, free=100 * MB)  # under 500 MB of 10 GB: little
     found = diagnostics.at_open(dev, st)
     history.note_connection(dev, st, found=found)
-    s = types.SimpleNamespace(device=dev, storage=st, diagnostics=found,
-                              diagnostics_reading=None, space=(None, 10_000_000_000),
-                              client=None)
+    s = device_session(device=dev, storage=st, diagnostics=found,
+                       diagnostics_reading=None, space=(None, 10_000_000_000),
+                       client=None)
     made = status.read(s)
     page_title = words.status_summary(made.crashes, made.errors_known, made.free,
                                       made.capacity, datetime.now())[1]
@@ -1888,9 +1910,9 @@ def test_after_a_failed_reading_the_row_tells_what_the_page_tells(tmp_path, cloc
                      "screen": None}]}) + "\n")
     done = threading.Event()
     done.set()
-    s = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
-                              diagnostics_reading=done, space=(4_000_000, 10_000_000_000),
-                              client=None)
+    s = device_session(device=dev, storage=st, diagnostics=None,
+                       diagnostics_reading=done, space=(4_000_000, 10_000_000_000),
+                       client=None)
     made = status.read(s)
     page_title = words.status_summary(made.crashes, made.errors_known, made.free,
                                       made.capacity, datetime.now())[1]
@@ -1909,9 +1931,9 @@ def test_the_row_of_a_device_without_diagnostic_data_says_what_its_page_says(tmp
     st.device_uri = ""  # no hidden crash logs to copy (a bike computer that shows them)
     found = diagnostics.at_open(dev, st)
     history.note_connection(dev, st, found=found)
-    s = types.SimpleNamespace(device=dev, storage=st, diagnostics=found,
-                              diagnostics_reading=None, space=(free, 10_000_000_000),
-                              client=None)
+    s = device_session(device=dev, storage=st, diagnostics=found,
+                       diagnostics_reading=None, space=(free, 10_000_000_000),
+                       client=None)
     made = status.read(s)
     assert made.has_diagnostics is False  # the page: No Diagnostic Data
     row = row_subtitle_for(s)
@@ -1924,9 +1946,9 @@ def test_the_page_takes_a_count_newer_than_the_sessions(tmp_path, clock):
     st, dev = make_free_watch(tmp_path)
     history.note_connection(dev, st)
     t1 = clock.current
-    s = types.SimpleNamespace(device=dev, storage=st, diagnostics=diagnostics.AtOpen(
-        [], [], False), diagnostics_reading=None, space=(4_000_000, 10_000_000_000),
-        client=None, recount=status.Recount({"logs": 5}, 4_000_000, 10_000_000_000, t1, []))
+    s = device_session(device=dev, storage=st, diagnostics=diagnostics.AtOpen([], [], False),
+                       space=(4_000_000, 10_000_000_000),
+                       recount=status.Recount({"logs": 5}, 4_000_000, 10_000_000_000, t1, []))
     clock.current += timedelta(minutes=5)
     st.free = 9_000_000  # the command line removed a file
     history.note_counted(dev, st, clock.current)  # as the command line puts the line right
@@ -1948,8 +1970,8 @@ def test_a_removal_that_ended_and_was_counted_is_not_told_as_not_finished(clock,
 
     told, toasts = [], []
     in_the_window("inform", lambda parent, name, heading, body, **kw: told.append(heading))
-    old = types.SimpleNamespace(device=None, storage=None)
-    win = window(session=types.SimpleNamespace(device=None, storage=None), toast=toasts.append)
+    old = device_session(device=None, storage=None)
+    win = window(session=device_session(device=None, storage=None), toast=toasts.append)
     counted = status.Recount({}, 9_000, 10_000, clock.current, dumps=[])
     status_page._freed(win, old, freeing.Freed(removed=[("GARMIN/Debug/dump/a.zip", 1)]),
                        "1 memory dump removed, 1 B freed", counted)
@@ -1965,8 +1987,8 @@ def test_a_task_that_waited_for_the_count_finds_it_in_the_session(tmp_path, cloc
 
     st, dev = make_free_watch(tmp_path)
     history.note_connection(dev, st)
-    s = types.SimpleNamespace(device=dev, storage=st, recount=None, space=(1, 10),
-                              diagnostics=None)
+    s = device_session(device=dev, storage=st, recount=None, space=(1, 10),
+                       diagnostics=None)
     win = window(session=s, storage_row=None, storage_bar=None, sections={})
     window_tasks.count_again(win, s)
     window_tasks.wait_for_the_count(s)
@@ -1983,7 +2005,7 @@ def test_a_removal_that_removed_nothing_says_so(clock, in_the_window):
 
     told, toasts = [], []
     in_the_window("inform", lambda parent, name, heading, body, **kw: told.append(heading))
-    s = types.SimpleNamespace(device=None, storage=None)
+    s = device_session(device=None, storage=None)
     win = window(session=s, toast=toasts.append, sections={})
     status_page._freed(win, s, freeing.Freed(), "Update file removed, 0 B freed", None)
     assert told or toasts, "nothing told after the removal"
@@ -1997,7 +2019,7 @@ def test_a_removal_not_counted_reads_the_page_once(clock, in_the_window, monkeyp
     from openexpress.gui import device_page, status_page, window_tasks
 
     reads = []
-    s = types.SimpleNamespace(device=None, storage=types.SimpleNamespace(
+    s = device_session(device=None, storage=types.SimpleNamespace(
         free_space=lambda: 5, capacity=lambda: 10), space=(1, 10))
     win = window(session=s, toast=lambda text: None, storage_row=None, storage_bar=None,
                  sections={"status": types.SimpleNamespace(loaded=True)},
@@ -2065,7 +2087,7 @@ def test_a_task_started_as_a_write_ends_waits_for_the_count(monkeypatch, in_the_
 
     monkeypatch.setattr(status, "recount", recount)
     in_the_window("render_space", lambda win: None)
-    s = types.SimpleNamespace(device=None, storage=None, diagnostics=None, space=(9, 10))
+    s = device_session(device=None, storage=None, diagnostics=None, space=(9, 10))
     win = window(session=s, _run_pending_refresh=lambda: None, sections={},
                  toast=lambda *a: None)
     win.set_busy = lambda busy, *a, **kw: setattr(win, "busy", busy)
@@ -2100,7 +2122,7 @@ def test_with_real_threads_the_page_task_waits_for_the_count(monkeypatch, in_the
     in_the_window("render_space", lambda win: None)
     overlapped = []
     for _n in range(10):
-        s = types.SimpleNamespace(device=None, storage=None, diagnostics=None, space=(9, 10))
+        s = device_session(device=None, storage=None, diagnostics=None, space=(9, 10))
         win = window(session=s, _run_pending_refresh=lambda: None, sections={},
                      toast=lambda *a: None)
         win.set_busy = lambda busy, *a, w=win, **kw: setattr(w, "busy", busy)
@@ -2173,7 +2195,7 @@ def test_an_answer_while_another_task_runs_is_said_in_the_log(monkeypatch, in_th
                               ("GARMIN/Debug/dump/RAM_bak1.zip", 8, 1_700_000_200.0)])
     in_the_window("confirm", lambda parent, name, heading, body, *answers, **kw:
                   answers[0].run())
-    s = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=1234), storage=None)
+    s = device_session(device=types.SimpleNamespace(unit_id=1234), storage=None)
     toasts = []
     win = window(session=s, busy=True, toast=toasts.append, progress=None)
     win = window_methods(win, ["run_task"])
@@ -2233,7 +2255,7 @@ def test_the_tasks_waiting_for_the_count_go_on_only_once_it_is_in_the_session(mo
     later = []
     monkeypatch.setattr(TaskRunner, "in_background",
                         staticmethod(lambda work, done, failed=None: later.append(work)))
-    s = types.SimpleNamespace(device=None, storage=None)
+    s = device_session(device=None, storage=None)
     window_tasks.count_again(types.SimpleNamespace(session=s), s)
     counted = status.Recount({"maps": 4}, 5, 10, NOW, dumps=[])
     monkeypatch.setattr(status, "recount", lambda device, storage: counted)

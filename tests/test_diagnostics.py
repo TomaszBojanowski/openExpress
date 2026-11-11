@@ -13,7 +13,7 @@ from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import descendants
+from fakes import descendants, device_session
 from fakes import window as stand_in
 
 from openexpress import diagnostics, forget, paths, status
@@ -447,7 +447,7 @@ def test_the_opening_does_not_wait_for_them(device, monkeypatch):
 
     st, dev = device
     monkeypatch.setattr(diagnostics, "at_open", lambda *a: pytest.fail("read in the opening"))
-    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None)
+    session = device_session(device=dev, storage=st, diagnostics=None)
     assert with_space(session) is session and session.diagnostics is None
 
 
@@ -467,8 +467,7 @@ def test_they_are_read_in_the_background_once_the_page_is_shown(device, clock, i
 
     st, dev = device
     copy_on()
-    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
-                                    diagnostics_reading=None)
+    session = device_session(device=dev, storage=st)
     win, background, drawn = _reading_window(session, in_the_window)
     read_diagnostics(win)
     read_diagnostics(win)  # shown again: read once
@@ -487,8 +486,7 @@ def test_they_are_kept_but_not_drawn_for_a_device_no_longer_open(device, clock, 
     from openexpress.gui.device_page import read_diagnostics
 
     st, dev = device
-    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
-                                    diagnostics_reading=None)
+    session = device_session(device=dev, storage=st)
     win, background, drawn = _reading_window(session, in_the_window)
     read_diagnostics(win)
     win.session = None  # unplugged meanwhile
@@ -501,8 +499,7 @@ def test_a_failure_still_lets_the_tasks_go_on(device, in_the_window):
     from openexpress.gui.device_page import read_diagnostics
 
     st, dev = device
-    session = types.SimpleNamespace(device=dev, storage=st, diagnostics=None,
-                                    diagnostics_reading=None)
+    session = device_session(device=dev, storage=st)
     win, background, _drawn = _reading_window(session, in_the_window)
     in_the_window("diagnostics", types.SimpleNamespace(
         at_open=lambda device, storage: (_ for _ in ()).throw(OSError("gone"))))
@@ -528,7 +525,7 @@ def test_a_task_that_writes_waits_for_them(monkeypatch, in_the_window, writes):
     monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
     in_the_window("refresh_space", lambda win, session: None)
     reading = threading.Event()
-    session = types.SimpleNamespace(diagnostics_reading=reading)
+    session = device_session(diagnostics_reading=reading)
     order = []
     win = stand_in(busy=False, session=session, _task_lets_close=False,
                    set_busy=lambda busy, *a, **kw: None,
@@ -560,7 +557,7 @@ def test_any_task_of_the_device_waits_for_its_count_after_a_write(monkeypatch, i
 
     monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
     counting = threading.Event()
-    session = types.SimpleNamespace(diagnostics_reading=None, counting=counting)
+    session = device_session(counting=counting)
     order = []
     win = stand_in(busy=False, session=session, _task_lets_close=False,
                    set_busy=lambda busy, *a, **kw: None, _run_pending_refresh=lambda: None)
@@ -639,8 +636,8 @@ def _window(found, reading=None):
 
     toasts = []
     return stand_in(
-        session=types.SimpleNamespace(device=None, storage=None, diagnostics=found,
-                                      diagnostics_reading=reading),
+        session=device_session(device=None, storage=None, diagnostics=found,
+                               diagnostics_reading=reading),
         _button=lambda label, cb, style=None, with_button=False: _labelled(label),
         run_task=RunNow(), toast=toasts.append, toasts=toasts, progress=lambda message: None)
 
