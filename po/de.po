@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-10 19:56+0100\n"
+"POT-Creation-Date: 2026-11-11 21:15+0100\n"
 "PO-Revision-Date: 2026-11-07 18:00+0100\n"
 "Last-Translator: BeGiBue\n"
 "Language-Team: none\n"
@@ -1897,14 +1897,6 @@ msgstr "nicht in Ihrem Konto"
 msgid "account not known"
 msgstr "Konto unbekannt"
 
-#. TRANSLATORS: the subtitle of "Last Sync" after the files of the device were marked as
-#. uploaded without a sync (or synced by an old version)
-#: openexpress/cli.py openexpress/gui/words.py
-msgid "No record of the last sync; the next sync uploads new data only"
-msgstr ""
-"Keine Angabe zur letzten Synchronisierung; die nächste Synchronisierung lädt "
-"nur neue Daten hoch"
-
 #. TRANSLATORS: `openexpress status`: {text} gives the window's words for the device's last
 #. sync
 #: openexpress/cli.py
@@ -3467,16 +3459,6 @@ msgstr "{path} geschrieben"
 #, python-brace-format
 msgid "Would write {path}"
 msgstr "Würde {path} schreiben"
-
-#: openexpress/cli.py
-#, python-brace-format
-msgid "Removed old file {path}"
-msgstr "Alte Datei {path} entfernt"
-
-#: openexpress/cli.py
-#, python-brace-format
-msgid "Would remove old file {path}"
-msgstr "Würde alte Datei {path} entfernen"
 
 #: openexpress/cli.py
 msgid "To enable background sync, run:"
@@ -6359,24 +6341,6 @@ msgstr[1] "{count} Sicherungen"
 msgid "Backup Incomplete"
 msgstr "Sicherung unvollständig"
 
-#. TRANSLATORS: the number of an error the device logged, e.g. "error 0x003"
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "error {number}"
-msgstr "Fehler {number}"
-
-#. TRANSLATORS: where in its software the device stopped (a program counter)
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "at {address}"
-msgstr "bei {address}"
-
-#. TRANSLATORS: the number of the screen the device showed when the error came
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "screen {number}"
-msgstr "Bildschirm {number}"
-
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
 #: openexpress/gui/device_page.py openexpress/gui/start_window.py
@@ -6452,36 +6416,6 @@ msgid "Garmin Connect could not be asked for the picture. Try again later."
 msgstr ""
 "Garmin Connect konnte nicht nach dem Bild gefragt werden. Versuchen Sie es "
 "später erneut."
-
-#: openexpress/gui/device_page.py
-msgid "Crash logs copied to this computer"
-msgstr "Absturzprotokolle auf diesen Computer kopiert"
-
-#: openexpress/gui/device_page.py
-msgid "The device has no hidden crash logs"
-msgstr "Das Gerät hat keine verborgenen Absturzprotokolle"
-
-#: openexpress/gui/device_page.py
-msgid "Copying the Crash Logs…"
-msgstr "Absturzprotokolle werden kopiert…"
-
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "{count} memory dump copied to this computer"
-msgid_plural "{count} memory dumps copied to this computer"
-msgstr[0] "{count} Speicherabbild auf diesen Computer kopiert"
-msgstr[1] "{count} Speicherabbilder auf diesen Computer kopiert"
-
-#: openexpress/gui/device_page.py
-#, python-brace-format
-msgid "{count} file skipped: did not fit in {size}"
-msgid_plural "{count} files skipped: did not fit in {size}"
-msgstr[0] "{count} Datei übersprungen: passte nicht in {size}"
-msgstr[1] "{count} Dateien übersprungen: passten nicht in {size}"
-
-#: openexpress/gui/device_page.py
-msgid "Copying the Memory Dumps…"
-msgstr "Speicherabbilder werden kopiert…"
 
 #. TRANSLATORS: subtitle of "Primary Training Device" while not logged in
 #: openexpress/gui/device_page.py
@@ -7810,6 +7744,54 @@ msgstr ""
 "Mehrere Garmin-Geräte sind angeschlossen. Wählen Sie eines auf der Seite "
 "„Gerät“."
 
+#. TRANSLATORS: the number of an error the device logged, e.g. "error 0x003"
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "error {number}"
+msgstr "Fehler {number}"
+
+#. TRANSLATORS: where in its software the device stopped (a program counter)
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "at {address}"
+msgstr "bei {address}"
+
+#. TRANSLATORS: the number of the screen the device showed when the error came
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "screen {number}"
+msgstr "Bildschirm {number}"
+
+#: openexpress/gui/status_page.py
+msgid "Crash logs copied to this computer"
+msgstr "Absturzprotokolle auf diesen Computer kopiert"
+
+#: openexpress/gui/status_page.py
+msgid "The device has no hidden crash logs"
+msgstr "Das Gerät hat keine verborgenen Absturzprotokolle"
+
+#: openexpress/gui/status_page.py
+msgid "Copying the Crash Logs…"
+msgstr "Absturzprotokolle werden kopiert…"
+
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{count} memory dump copied to this computer"
+msgid_plural "{count} memory dumps copied to this computer"
+msgstr[0] "{count} Speicherabbild auf diesen Computer kopiert"
+msgstr[1] "{count} Speicherabbilder auf diesen Computer kopiert"
+
+#: openexpress/gui/status_page.py
+#, python-brace-format
+msgid "{count} file skipped: did not fit in {size}"
+msgid_plural "{count} files skipped: did not fit in {size}"
+msgstr[0] "{count} Datei übersprungen: passte nicht in {size}"
+msgstr[1] "{count} Dateien übersprungen: passten nicht in {size}"
+
+#: openexpress/gui/status_page.py
+msgid "Copying the Memory Dumps…"
+msgstr "Speicherabbilder werden kopiert…"
+
 #. TRANSLATORS: a kind of file in the storage of the page Device Status
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
@@ -7864,6 +7846,13 @@ msgstr "Belegt"
 msgctxt "storage kind"
 msgid "Free"
 msgstr "Frei"
+
+#. TRANSLATORS: banner on top of the page Device Status while another task (such as a
+#. sync) runs: freeing space and copying crash logs and memory dumps wait until it ends
+#: openexpress/gui/status_page.py
+msgid ""
+"Another task is running – free up space or copy diagnostic files when it ends"
+msgstr ""
 
 #. TRANSLATORS: group of the page Device Status
 #: openexpress/gui/status_page.py
@@ -8661,15 +8650,6 @@ msgid_plural "Updates ready: unplug the device to install them"
 msgstr[0] "Update bereit: Trennen Sie das Gerät, um es zu installieren"
 msgstr[1] "Updates bereit: Trennen Sie das Gerät, um sie zu installieren"
 
-#. TRANSLATORS: after "Update ready: unplug the device to install it": updates
-#. still to install besides the one copied already
-#: openexpress/gui/words.py
-#, python-brace-format
-msgid "{count} more available"
-msgid_plural "{count} more available"
-msgstr[0] "{count} weiteres verfügbar"
-msgstr[1] "{count} weitere verfügbar"
-
 #. TRANSLATORS: the state of the updates, without a full stop
 #: openexpress/gui/words.py
 msgid "Software is up to date"
@@ -8680,6 +8660,15 @@ msgstr "Software ist auf dem neuesten Stand"
 #: openexpress/gui/words.py
 msgid "Update copied, not installed by the device"
 msgstr "Update kopiert, vom Gerät nicht installiert"
+
+#. TRANSLATORS: after "Update ready: unplug the device to install it": updates
+#. still to install besides the one copied already
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{count} more available"
+msgid_plural "{count} more available"
+msgstr[0] "{count} weiteres verfügbar"
+msgstr[1] "{count} weitere verfügbar"
 
 #. TRANSLATORS: after the state of the updates of a device: when the check that said it
 #. was (e.g. "checked 3 days ago")
@@ -8704,6 +8693,14 @@ msgstr "Nie synchronisiert"
 #: openexpress/gui/words.py
 msgid "Never synced by this installation of openExpress"
 msgstr "Von dieser Installation von openExpress nie synchronisiert"
+
+#. TRANSLATORS: the subtitle of "Last Sync" after the files of the device were marked as
+#. uploaded without a sync (or synced by an old version)
+#: openexpress/gui/words.py
+msgid "No record of the last sync; the next sync uploads new data only"
+msgstr ""
+"Keine Angabe zur letzten Synchronisierung; die nächste Synchronisierung lädt "
+"nur neue Daten hoch"
 
 #. TRANSLATORS: at the end of the subtitle of "Last Sync" of a connected device (and of
 #. `openexpress status`), after what the last sync found ("nothing to upload")
