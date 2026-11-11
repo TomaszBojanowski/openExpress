@@ -85,13 +85,11 @@ msgid "Hiking"
 msgstr "Turistika"
 
 #: openexpress/activities.py
-#, ignore-same
 msgctxt "sport"
 msgid "Multisport"
 msgstr "Multisport"
 
 #: openexpress/activities.py
-#, ignore-reused
 msgctxt "sport"
 msgid "Paddling"
 msgstr "Pádlování"
@@ -117,13 +115,11 @@ msgid "Snowshoeing"
 msgstr "Chůze na sněžnicích"
 
 #: openexpress/activities.py
-#, ignore-multiple-capital
 msgctxt "sport"
 msgid "Stand-up paddleboarding"
 msgstr "Paddleboarding"
 
 #: openexpress/activities.py
-#, ignore-reused
 msgctxt "sport"
 msgid "Kayaking"
 msgstr "Jízda na kajaku"
@@ -195,7 +191,6 @@ msgid "3. Paste the URL: "
 msgstr "3. Vložte adresu URL: "
 
 #: openexpress/auth/sso.py
-#, ignore-end-stop
 msgid "The given URL has no ticket=ST-... parameter"
 msgstr "Zadaná adresa URL neobsahuje parametr ticket=ST-..."
 
@@ -271,14 +266,12 @@ msgstr "Mapy"
 #. TRANSLATORS: a part of the cache in `openexpress cache` and the preferences: downloaded
 #. device software
 #: openexpress/cache.py
-#, ignore-reused
 msgid "Software updates"
 msgstr "Aktualizace softwaru"
 
 #. TRANSLATORS: a part of the cache in `openexpress cache` and the preferences: downloaded
 #. pictures of devices and icons of apps
 #: openexpress/cache.py
-#, ignore-reused
 msgid "Pictures and icons"
 msgstr "Obrázky a ikony"
 
@@ -291,14 +284,12 @@ msgstr "Odpovědi serverů Garmin"
 #. TRANSLATORS: a part of the cache in `openexpress cache` and the preferences:
 #. OpenStreetMap tiles under the maps of activities
 #: openexpress/cache.py
-#, ignore-reused
 msgid "Activity map tiles"
 msgstr "Mapové dlaždice aktivit"
 
 #. TRANSLATORS: a part of the cache in `openexpress cache` and the preferences: files on
 #. their way to the device
 #: openexpress/cache.py
-#, ignore-reused
 msgid "Temporary files"
 msgstr "Dočasné soubory"
 
@@ -916,7 +907,7 @@ msgid "{position}: {new} (now: {old})"
 msgstr "{position}: {new} (nyní: {old})"
 
 #: openexpress/ciq.py openexpress/cli.py openexpress/gui/music_page.py
-#, ignore-same, ignore-same-plurals, python-brace-format
+#, python-brace-format
 msgid "… and {count} more"
 msgid_plural "… and {count} more"
 msgstr[0] "… a ještě {count}"
@@ -1094,7 +1085,6 @@ msgid "USB drive ({name})"
 msgstr "Jednotka USB ({name})"
 
 #: openexpress/cli.py
-#, ignore-reused
 msgid "USB drive"
 msgstr "Jednotka USB"
 
@@ -1153,7 +1143,8 @@ msgstr[2] "max. {count} aplikací, {size}"
 #. TRANSLATORS: before the hints of `openexpress report` when no device could be opened
 #: openexpress/cli.py
 msgid "No device was opened: the report says what is connected over USB."
-msgstr "Nebylo otevřeno žádné zařízení: zpráva uvádí, co je připojeno přes USB."
+msgstr ""
+"Nebylo otevřeno žádné zařízení: zpráva uvádí, co je připojeno přes USB."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -1305,7 +1296,6 @@ msgstr[1] "Zapsal by se {path} ({count} body)"
 msgstr[2] "Zapsal by se {path} ({count} bodů)"
 
 #: openexpress/cli.py
-#, ignore-same, ignore-same-plurals
 msgid "Dry run: nothing was written. Add --apply to write it."
 msgid_plural "Dry run: nothing was written. Add --apply to write them."
 msgstr[0] "Zkušební režim: nic nebylo zapsáno. Pro zápis přidejte --apply."
@@ -1743,9 +1733,12 @@ msgstr[2] "Smaže se také {count} jeho záloh v {path}."
 msgid "{count} backup of it stays in {path} (add --backups to delete it too)."
 msgid_plural ""
 "{count} backups of it stay in {path} (add --backups to delete them too)."
-msgstr[0] "V {path} zůstane {count} jeho záloha (pro smazání přidejte --backups)."
-msgstr[1] "V {path} zůstanou {count} jeho zálohy (pro smazání přidejte --backups)."
-msgstr[2] "V {path} zůstane {count} jeho záloh (pro smazání přidejte --backups)."
+msgstr[0] ""
+"V {path} zůstane {count} jeho záloha (pro smazání přidejte --backups)."
+msgstr[1] ""
+"V {path} zůstanou {count} jeho zálohy (pro smazání přidejte --backups)."
+msgstr[2] ""
+"V {path} zůstane {count} jeho záloh (pro smazání přidejte --backups)."
 
 #: openexpress/cli.py
 msgid "Dry run: nothing was forgotten. Add --apply to forget it."
@@ -1780,7 +1773,7 @@ msgstr[2] "Smazáno {count} záloh."
 
 #. TRANSLATORS: a date and an hour, e.g. 2026-10-14 23:41
 #: openexpress/cli.py openexpress/i18n.py openexpress/netstatus.py
-#, ignore-reused, python-brace-format
+#, python-brace-format
 msgctxt "date and hour"
 msgid "{date} {time}"
 msgstr "{date} {time}"
@@ -1943,11 +1936,11 @@ msgstr[0] ""
 "Zkušební režim: {count} soubor by byl označen jako již nahraný. Přidejte --"
 "apply."
 msgstr[1] ""
-"Zkušební režim: {count} soubory by byly označeny jako již nahrané. "
-"Přidejte --apply."
+"Zkušební režim: {count} soubory by byly označeny jako již nahrané. Přidejte "
+"--apply."
 msgstr[2] ""
-"Zkušební režim: {count} souborů by bylo označeno jako již nahrané. "
-"Přidejte --apply."
+"Zkušební režim: {count} souborů by bylo označeno jako již nahrané. Přidejte "
+"--apply."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -2032,7 +2025,6 @@ msgid "Update copied, waiting for the device to install it:"
 msgstr "Aktualizace byla zkopírována; čeká se na její instalaci zařízením:"
 
 #: openexpress/cli.py
-#, ignore-reused
 msgid "Ejecting the device…"
 msgstr "Bezpečně se odpojuje zařízení…"
 
@@ -2930,8 +2922,10 @@ msgid "{count} GPX file waiting; unplug the device so it can import it:"
 msgid_plural ""
 "{count} GPX files waiting; unplug the device so it can import them:"
 msgstr[0] "Čeká {count} soubor GPX; odpojte zařízení, aby ho mohlo importovat:"
-msgstr[1] "Čekají {count} soubory GPX; odpojte zařízení, aby je mohlo importovat:"
-msgstr[2] "Čeká {count} souborů GPX; odpojte zařízení, aby je mohlo importovat:"
+msgstr[1] ""
+"Čekají {count} soubory GPX; odpojte zařízení, aby je mohlo importovat:"
+msgstr[2] ""
+"Čeká {count} souborů GPX; odpojte zařízení, aby je mohlo importovat:"
 
 #: openexpress/cli.py
 msgid "The saved locations could not be counted."
@@ -2943,7 +2937,7 @@ msgid "Saved locations on the device: {count}"
 msgstr "Uložené polohy v zařízení: {count}"
 
 #: openexpress/cli.py
-#, ignore-same-plurals, python-brace-format
+#, python-brace-format
 msgid "Course: {names}"
 msgid_plural "Courses: {names}"
 msgstr[0] "Trasa: {names}"
@@ -3127,9 +3121,12 @@ msgstr "Seznam skladeb: {path}"
 #, python-brace-format
 msgid "Playlist “{name}”: {count} track, {to_copy} to copy ({size})"
 msgid_plural "Playlist “{name}”: {count} tracks, {to_copy} to copy ({size})"
-msgstr[0] "Playlist „{name}“: {count} skladba, ke kopírování {to_copy} ({size})"
-msgstr[1] "Playlist „{name}“: {count} skladby, ke kopírování {to_copy} ({size})"
-msgstr[2] "Playlist „{name}“: {count} skladeb, ke kopírování {to_copy} ({size})"
+msgstr[0] ""
+"Playlist „{name}“: {count} skladba, ke kopírování {to_copy} ({size})"
+msgstr[1] ""
+"Playlist „{name}“: {count} skladby, ke kopírování {to_copy} ({size})"
+msgstr[2] ""
+"Playlist „{name}“: {count} skladeb, ke kopírování {to_copy} ({size})"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -3920,9 +3917,9 @@ msgid ""
 "gi gir1.2-gtk-4.0 gir1.2-adw-1), then run the command again."
 msgstr ""
 "openExpress vyžaduje PyGObject s GTK 4 a libadwaita. Nainstalujte je "
-"(Fedora: sudo dnf install python3-gobject gtk4 libadwaita; Arch: sudo "
-"pacman -S python-gobject gtk4 libadwaita; Debian a Ubuntu: sudo apt install "
-"python3-gi gir1.2-gtk-4.0 gir1.2-adw-1) a příkaz spusťte znovu."
+"(Fedora: sudo dnf install python3-gobject gtk4 libadwaita; Arch: sudo pacman "
+"-S python-gobject gtk4 libadwaita; Debian a Ubuntu: sudo apt install python3-"
+"gi gir1.2-gtk-4.0 gir1.2-adw-1) a příkaz spusťte znovu."
 
 #. TRANSLATORS: CLI error from a Garmin server ({error}: the request's name and what went
 #. wrong)
@@ -4062,7 +4059,6 @@ msgstr "Umístění účtu"
 #. TRANSLATORS: the name of a request to Garmin's server, shown before its error
 #. ("Primary training device: network error (…)")
 #: openexpress/connect.py openexpress/service.py
-#, ignore-reused
 msgctxt "server request"
 msgid "Primary training device"
 msgstr "Primární tréninkové zařízení"
@@ -4070,7 +4066,6 @@ msgstr "Primární tréninkové zařízení"
 #. TRANSLATORS: the name of a request to Garmin's server, shown before its error
 #. ("Primary wearable: network error (…)")
 #: openexpress/connect.py
-#, ignore-reused
 msgctxt "server request"
 msgid "Primary wearable"
 msgstr "Primární nositelné zařízení"
@@ -4476,8 +4471,8 @@ msgid ""
 msgstr ""
 "openExpress podporuje zařízení připojená jako multimediální zařízení (MTP) "
 "nebo jednotka USB. Toto zařízení používá jiný způsob připojení. Připojeno: "
-"{name} (USB {id}). Chcete-li problém nahlásit, zvolte v hlavní nabídce „"
-"{item}“."
+"{name} (USB {id}). Chcete-li problém nahlásit, zvolte v hlavní nabídce "
+"„{item}“."
 
 #: openexpress/device/gio_storage.py openexpress/gui/app.py
 msgid "Report a Device or Problem…"
@@ -4595,7 +4590,6 @@ msgid "The device is starting. Try again in a moment."
 msgstr "Zařízení se spouští. Zkuste to za chvíli znovu."
 
 #: openexpress/device/gio_storage.py
-#, ignore-reused
 msgid "The device is starting…"
 msgstr "Zařízení se spouští…"
 
@@ -4883,8 +4877,10 @@ msgid ""
 msgid_plural ""
 "{count} files of this device have not been uploaded yet and would be lost."
 msgstr[0] "{count} soubor tohoto zařízení ještě nebyl nahrán a ztratil by se."
-msgstr[1] "{count} soubory tohoto zařízení ještě nebyly nahrány a ztratily by se."
-msgstr[2] "{count} souborů tohoto zařízení ještě nebylo nahráno a ztratily by se."
+msgstr[1] ""
+"{count} soubory tohoto zařízení ještě nebyly nahrány a ztratily by se."
+msgstr[2] ""
+"{count} souborů tohoto zařízení ještě nebylo nahráno a ztratily by se."
 
 #: openexpress/gpx.py
 msgid "This activity has no GPS positions, so it cannot be exported as GPX."
@@ -4943,13 +4939,12 @@ msgid "This device does not keep activities"
 msgstr "Toto zařízení neukládá aktivity"
 
 #: openexpress/gui/activities_page.py openexpress/gui/app.py
-#, ignore-reused
 msgid "Reading Activities…"
 msgstr "Načítání aktivit…"
 
 #. TRANSLATORS: button below the rows of the Activities page: read the next ones
 #: openexpress/gui/activities_page.py
-#, ignore-same, ignore-same-plurals, python-brace-format
+#, python-brace-format
 msgid "Show {count} More"
 msgid_plural "Show {count} More"
 msgstr[0] "Zobrazit ještě {count}"
@@ -5245,7 +5240,6 @@ msgstr "Připojte zařízení"
 #. TRANSLATORS: a device connected as a USB drive, not over MTP
 #: openexpress/gui/app.py openexpress/gui/detection.py
 #: openexpress/gui/device_page.py
-#, ignore-reused
 msgid "USB Drive"
 msgstr "Jednotka USB"
 
@@ -5764,7 +5758,6 @@ msgstr "Zkopírovat trasové body do zařízení?"
 
 #. TRANSLATORS: heading of the question before a GPX file is copied to the device
 #: openexpress/gui/courses_page.py
-#, ignore-same-plurals
 msgid "Copy the Course to the Device?"
 msgid_plural "Copy the Courses to the Device?"
 msgstr[0] "Zkopírovat trasu do zařízení?"
@@ -5937,7 +5930,6 @@ msgid "This takes a moment after the cable is plugged in."
 msgstr "Po připojení kabelu to chvíli trvá."
 
 #: openexpress/gui/detection.py
-#, ignore-reused
 msgid "Device Starting…"
 msgstr "Zařízení se spouští…"
 
@@ -6058,7 +6050,6 @@ msgstr "Protokol chyb zařízení"
 #. TRANSLATORS: Garmin Connect's name of the setting (in Polish "Podstawowe urządzenie typu
 #. wearable")
 #: openexpress/gui/device_page.py openexpress/gui/start_window.py
-#, ignore-reused
 msgid "Primary Wearable"
 msgstr "Primární nositelné zařízení"
 
@@ -6191,8 +6182,8 @@ msgid ""
 "The device is connected in mass storage mode (as a USB drive): apps, maps "
 "and music are not supported in this mode"
 msgstr ""
-"Zařízení je připojeno v režimu velkokapacitního úložiště (jako jednotka USB)"
-": aplikace, mapy ani hudba nejsou v tomto režimu podporovány"
+"Zařízení je připojeno v režimu velkokapacitního úložiště (jako jednotka "
+"USB): aplikace, mapy ani hudba nejsou v tomto režimu podporovány"
 
 #: openexpress/gui/device_page.py
 msgid "Something Went Wrong"
@@ -6281,7 +6272,6 @@ msgstr "Odhlásit se"
 #. TRANSLATORS: title of the row with the Garmin account's primary training
 #. device (the main source of performance and training data)
 #: openexpress/gui/device_page.py
-#, ignore-reused
 msgid "Primary Training Device"
 msgstr "Primární tréninkové zařízení"
 
@@ -6951,27 +6941,23 @@ msgstr ""
 
 #. TRANSLATORS: row of the cache in the preferences: downloaded device software
 #: openexpress/gui/preferences.py
-#, ignore-reused
 msgid "Software Updates"
 msgstr "Aktualizace softwaru"
 
 #. TRANSLATORS: row of the cache in the preferences: downloaded pictures of devices and icons
 #. of apps
 #: openexpress/gui/preferences.py
-#, ignore-reused
 msgid "Pictures and Icons"
 msgstr "Obrázky a ikony"
 
 #. TRANSLATORS: row of the cache in the preferences: OpenStreetMap tiles under the maps of
 #. activities
 #: openexpress/gui/preferences.py
-#, ignore-reused
 msgid "Activity Map Tiles"
 msgstr "Mapové dlaždice aktivit"
 
 #. TRANSLATORS: row of the cache in the preferences: files on their way to the device
 #: openexpress/gui/preferences.py
-#, ignore-reused
 msgid "Temporary Files"
 msgstr "Dočasné soubory"
 
@@ -7068,7 +7054,6 @@ msgstr "Pro změnu jazyka restartujte aplikaci"
 #. TRANSLATORS: a noun: group in the preferences with the Garmin Express installer the
 #. application key is read from
 #: openexpress/gui/preferences.py
-#, ignore-reused
 msgid "Setup"
 msgstr "Nastavení"
 
@@ -7350,7 +7335,6 @@ msgstr "K synchronizaci"
 
 #. TRANSLATORS: a chip on the tile of a device in mass storage mode
 #: openexpress/gui/start.py
-#, ignore-reused
 msgctxt "chip"
 msgid "USB drive"
 msgstr "Jednotka USB"
@@ -7579,8 +7563,10 @@ msgid "{count} component already on the device; useful for troubleshooting"
 msgid_plural ""
 "{count} components already on the device; useful for troubleshooting"
 msgstr[0] "{count} součást již v zařízení je; může pomoci při řešení problémů"
-msgstr[1] "{count} součásti již v zařízení jsou; mohou pomoci při řešení problémů"
-msgstr[2] "{count} součástí již v zařízení je; mohou pomoci při řešení problémů"
+msgstr[1] ""
+"{count} součásti již v zařízení jsou; mohou pomoci při řešení problémů"
+msgstr[2] ""
+"{count} součástí již v zařízení je; mohou pomoci při řešení problémů"
 
 #. TRANSLATORS: marks a beta version of the device software
 #: openexpress/gui/updates_page.py
@@ -7600,7 +7586,6 @@ msgstr "Bezpečně odebrat"
 #. TRANSLATORS: title of the Updates page: updates openExpress copied are on the
 #. device, which was unplugged since and has not installed them
 #: openexpress/gui/updates_page.py
-#, ignore-same-plurals
 msgid "Update Not Installed by the Device"
 msgid_plural "Updates Not Installed by the Device"
 msgstr[0] "Aktualizace nebyla zařízením nainstalována"
@@ -7666,7 +7651,6 @@ msgid "Device Not Ejected"
 msgstr "Zařízení nebylo bezpečně odebráno"
 
 #: openexpress/gui/updates_page.py
-#, ignore-reused
 msgid "Ejecting the Device…"
 msgstr "Bezpečné odebírání zařízení…"
 
@@ -7745,8 +7729,8 @@ msgid ""
 "Copied {when}. The device was unplugged since and still reports version "
 "{old}; the file is still on it, unchanged."
 msgstr ""
-"Zkopírováno {when}. Zařízení bylo mezitím odpojeno a stále hlásí verzi {old}"
-"; soubor na něm zůstává beze změny."
+"Zkopírováno {when}. Zařízení bylo mezitím odpojeno a stále hlásí verzi "
+"{old}; soubor na něm zůstává beze změny."
 
 #: openexpress/gui/words.py
 #, python-brace-format
@@ -7768,17 +7752,16 @@ msgstr ""
 "bezpečné odebrání nepomůže; zpráva o zařízení může objasnit příčinu."
 
 #: openexpress/gui/words.py
-#, ignore-same-plurals
 msgid "Update ready: eject the device to install it"
 msgid_plural "Updates ready: eject the device to install them"
-msgstr[0] "Aktualizace je připravena: bezpečně odeberte zařízení a nainstaluje se"
+msgstr[0] ""
+"Aktualizace je připravena: bezpečně odeberte zařízení a nainstaluje se"
 msgstr[1] ""
 "Aktualizace jsou připraveny: bezpečně odeberte zařízení a nainstalují se"
 msgstr[2] ""
 "Aktualizace jsou připraveny: bezpečně odeberte zařízení a nainstalují se"
 
 #: openexpress/gui/words.py
-#, ignore-same-plurals
 msgid "Update ready: unplug the device to install it"
 msgid_plural "Updates ready: unplug the device to install them"
 msgstr[0] "Aktualizace je připravena: odpojte zařízení a nainstaluje se"
@@ -7913,13 +7896,13 @@ msgstr "Volné místo po kopírování: {free}"
 
 #. TRANSLATORS: the time of an activity in hours and minutes ("1 h 02 min")
 #: openexpress/gui/words.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{hours} h {minutes} min"
 msgstr "{hours} h {minutes} min"
 
 #. TRANSLATORS: a length of time in minutes
 #: openexpress/gui/words.py openexpress/i18n.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{minutes} min"
 msgstr "{minutes} min"
 
@@ -7988,7 +7971,6 @@ msgid "This activity has no summary"
 msgstr "Tato aktivita nemá souhrn"
 
 #: openexpress/gui/words.py
-#, ignore-reused
 msgid "Reading the Activity…"
 msgstr "Načítání aktivity…"
 
@@ -8058,13 +8040,13 @@ msgstr "{metres} m"
 #. TRANSLATORS: a heart rate in beats a minute ("148 bpm"), in Garmin Connect's unit
 #. (Polish keeps "bpm")
 #: openexpress/gui/words.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{rate} bpm"
 msgstr "{rate} tepů/min"
 
 #. TRANSLATORS: the calories of an activity ("520 kcal")
 #: openexpress/gui/words.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{calories} kcal"
 msgstr "{calories} kcal"
 
@@ -8183,7 +8165,6 @@ msgid "Steps"
 msgstr "Kroky"
 
 #: openexpress/gui/words.py
-#, ignore-reused
 msgctxt "activity detail"
 msgid "Heart Rate"
 msgstr "Tepová frekvence"
@@ -8241,19 +8222,19 @@ msgstr "{average} °C ({low}–{high} °C)"
 
 #. TRANSLATORS: a respiration rate, breaths a minute ("24 brpm")
 #: openexpress/gui/words.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{rate} brpm"
 msgstr "{rate} dechů/min"
 
 #. TRANSLATORS: the average respiration rate and its range ("24 brpm (15–38)")
 #: openexpress/gui/words.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{average} brpm ({low}–{high})"
 msgstr "{average} dechů/min ({low}–{high})"
 
 #. TRANSLATORS: the heart rates of a zone (made up: "118–140 bpm")
 #: openexpress/gui/words.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{low}–{high} bpm"
 msgstr "{low}–{high} tepů/min"
 
@@ -8427,7 +8408,6 @@ msgstr "Barvy"
 
 #. TRANSLATORS: the switch above the chart of an activity
 #: openexpress/gui/words.py
-#, ignore-reused
 msgctxt "activity chart"
 msgid "Heart rate"
 msgstr "Tepová frekvence"
@@ -8449,7 +8429,6 @@ msgstr "Rychlost"
 
 #. TRANSLATORS: the unit on top of the axis of the chart of an activity
 #: openexpress/gui/words.py
-#, ignore-same
 msgctxt "chart unit"
 msgid "bpm"
 msgstr "tepů/min"
@@ -8506,7 +8485,7 @@ msgstr "právě teď"
 
 #. TRANSLATORS: how long ago, in minutes
 #: openexpress/i18n.py
-#, ignore-same, ignore-same-plurals, python-brace-format
+#, python-brace-format
 msgid "{n} min ago"
 msgid_plural "{n} min ago"
 msgstr[0] "před {n} minutou"
@@ -8515,7 +8494,7 @@ msgstr[2] "před {n} minutami"
 
 #. TRANSLATORS: how long ago, in hours
 #: openexpress/i18n.py
-#, ignore-same, ignore-same-plurals, python-brace-format
+#, python-brace-format
 msgid "{n} h ago"
 msgid_plural "{n} h ago"
 msgstr[0] "před {n} hodinou"
@@ -8566,7 +8545,7 @@ msgstr ","
 
 #. TRANSLATORS: a length of time in minutes and seconds
 #: openexpress/i18n.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "{minutes} min {seconds} s"
 msgstr "{minutes} min {seconds} s"
 
@@ -8708,8 +8687,8 @@ msgid ""
 "Map “{name}” cannot be installed: Garmin does not offer it in your account's "
 "country ({country})."
 msgstr ""
-"Mapu „{name}“ nelze nainstalovat: Garmin ji nenabízí v zemi vašeho účtu ("
-"{country})."
+"Mapu „{name}“ nelze nainstalovat: Garmin ji nenabízí v zemi vašeho účtu "
+"({country})."
 
 #: openexpress/maps.py
 #, python-brace-format
@@ -8912,7 +8891,6 @@ msgstr "Nesprávný čas počítače"
 
 #. TRANSLATORS: the parts of Garmin's servers, in the popover of the server state button
 #: openexpress/netstatus.py
-#, ignore-same
 msgid "Garmin Connect"
 msgstr "Garmin Connect"
 
@@ -8936,7 +8914,7 @@ msgstr "v {time}"
 
 #. TRANSLATORS: the time of an answer on another day: "answered at 2026-10-14 23:41"
 #: openexpress/netstatus.py
-#, ignore-reused, python-brace-format
+#, python-brace-format
 msgid "at {date} {time}"
 msgstr "dne {date} v {time}"
 
@@ -9221,7 +9199,8 @@ msgstr ""
 #: openexpress/service.py
 msgid ""
 "Several Garmin devices are connected as USB drives. Connect only one of them."
-msgstr "Je připojeno více zařízení Garmin jako USB disky. Připojte pouze jedno."
+msgstr ""
+"Je připojeno více zařízení Garmin jako USB disky. Připojte pouze jedno."
 
 #: openexpress/service.py
 #, python-brace-format
@@ -9229,8 +9208,8 @@ msgid ""
 "Could not check whether this device belongs to your Garmin account "
 "({error}). Nothing was synced."
 msgstr ""
-"Nepodařilo se ověřit, zda toto zařízení patří k vašemu účtu Garmin ({error})"
-". Nic se nesynchronizovalo."
+"Nepodařilo se ověřit, zda toto zařízení patří k vašemu účtu Garmin "
+"({error}). Nic se nesynchronizovalo."
 
 #: openexpress/service.py
 msgid ""
@@ -9808,7 +9787,8 @@ msgstr "{name}: zapsáno, ale Garmin Connect nebyl informován (zkusí se znovu)
 #: openexpress/settings.py
 #, python-brace-format
 msgid "The settings file {path} is damaged ({error}); fix or delete it."
-msgstr "Soubor nastavení {path} je poškozený ({error}); opravte ho nebo smažte."
+msgstr ""
+"Soubor nastavení {path} je poškozený ({error}); opravte ho nebo smažte."
 
 #: openexpress/settings.py
 #, python-brace-format
@@ -9926,7 +9906,7 @@ msgstr ""
 #. Connect, beside its filling bar and "Stop Waiting": as short as it can be, it has to fit
 #. the narrowest window whole ("TrueUp: 4 min 59 s…"; the whole sentence is its tooltip)
 #: openexpress/trueup.py
-#, ignore-same, python-brace-format
+#, python-brace-format
 msgid "TrueUp: {time}…"
 msgstr "TrueUp: {time}…"
 
@@ -9935,7 +9915,6 @@ msgid "TrueUp: waiting for Garmin Connect…"
 msgstr "TrueUp: čekání na Garmin Connect…"
 
 #: openexpress/updates.py
-#, ignore-newline-count
 msgid ""
 "\n"
 "To finish the installation:\n"
@@ -10039,7 +10018,6 @@ msgstr "Software"
 
 #. TRANSLATORS: kind of update
 #: openexpress/updates.py
-#, ignore-reused
 msgid "Configuration"
 msgstr "Konfigurace"
 
