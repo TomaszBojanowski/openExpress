@@ -12,7 +12,6 @@ from a device, the network or the program's folders (the tests run in folders of
 import html
 import os
 import re
-import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -70,9 +69,11 @@ def main() -> int:
               file=sys.stderr)
         return 2
     folder = Path(sys.argv[1]).expanduser().resolve()
-    if folder.exists():
-        shutil.rmtree(folder)
-    folder.mkdir(parents=True)
+    folder.mkdir(parents=True, exist_ok=True)
+    # Only the review's own files go: the folder may hold other work that has no other copy.
+    for old in [*(p for p in folder.glob("*.png") if NAME.fullmatch(p.name)),
+                folder / "index.html"]:
+        old.unlink(missing_ok=True)
     env = dict(os.environ, OPENEXPRESS_REVIEW_SHOTS=str(folder))
     run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
                           "tests/test_status_review.py"], cwd=ROOT, env=env,
