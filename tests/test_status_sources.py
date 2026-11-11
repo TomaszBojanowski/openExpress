@@ -262,7 +262,7 @@ def test_the_log_line_of_the_page_says_the_error_logs_were_not_read(caplog):
 
     facts = types.SimpleNamespace(
         crashes=[crashes.Crash(clock_now())], errors_known=False, free=5, capacity=10,
-        has_diagnostics=True, older_dumps=list, not_installed=[], updates_why=None,
+        has_diagnostics=True, dumps=[], not_installed=[], updates_why=None,
         connected=True, device_busy=False)
     with caplog.at_level("INFO"):
         status_page._log_shown(facts, clock_now())
@@ -411,7 +411,7 @@ def test_the_free_space_line_matches_the_page(tmp_path, clock, capsys, monkeypat
         cli.main(["--lang", "en", "diagnostics", "--path", str(root), "--free-space"])
     found = diagnostics.at_open(dev, st)
     facts = status.read(session_of(st, dev, found))
-    assert f"older memory dumps: {len(facts.older_dumps())} " in out.getvalue()
+    assert f"older memory dumps: {len(facts.dumps_plan.older)} " in out.getvalue()
 
 
 # --- the device log written again, and what it tells after a removal --------------------------

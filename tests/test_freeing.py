@@ -467,7 +467,7 @@ def test_the_page_and_the_command_line_list_the_same_files(tmp_path, clock, smal
     session = device_session(device=dev, storage=st, client=object())
     made = status.read(session)
     assert [u.device_path for u in made.not_installed] == [u.device_path for u in found]
-    assert [p for p, _s, _t in made.older_dumps()] == [p for p, _s, _t in DUMPS[1:]]
+    assert [p for p, _s, _t in made.dumps_plan.older] == [p for p, _s, _t in DUMPS[1:]]
     code, out = run_cli(st, "--free-space", capsys=capsys)
     assert "  update file not installed by the device: GPS software 6.20 (60 B)" in out
     assert "  waiting to be installed, not removed: GPS software 6.20 (GUPDATE.GSP)" in out
@@ -1299,7 +1299,7 @@ def test_a_device_without_a_unit_id_has_no_dumps_removed(tmp_path, clock, small_
     assert not dev.unit_id
     assert freeing.plan(st, dev, client=None).dumps_plan is None
     s = device_session(device=dev, storage=st)
-    assert status.read(s).dumps_removable is False
+    assert status.read(s).dumps_plan is None
     with pytest.raises(ValueError):
         freeing.remove_dumps(st, dev.unit_id, asked(st))
     assert not list((paths.data_dir() / "devices").rglob("*.zip"))

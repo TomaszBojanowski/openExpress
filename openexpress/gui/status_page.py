@@ -272,7 +272,7 @@ def _log_shown(facts: status.Facts, now: datetime) -> None:
     look = words.status_summary(facts.crashes, facts.errors_known, facts.free, facts.capacity,
                                 now)[0] if facts.has_diagnostics else "no diagnostic data"
     why = " (error logs not read)" if facts.has_diagnostics and not facts.errors_known else ""
-    older = facts.older_dumps()
+    older = freeing.older_dumps(facts.dumps)
     dumps = ("older dumps not known" if older is None else
              f"{len(older)} older dumps ({applog.size(sum(s for _p, s, _t in older))})")
     files = [u for u in facts.not_installed if not freeing.waits_to_install(u)]
@@ -614,8 +614,8 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
     """What the device no longer needs, with its size and a button that removes it after a
     question (freeing.py); an update file in the main folder only shown, as waiting to be
     installed."""
-    older = facts.older_dumps()
-    plan = freeing.dump_plan(facts.dumps) if facts.dumps_removable else None
+    older = freeing.older_dumps(facts.dumps)
+    plan = facts.dumps_plan
     if older == [] and not facts.not_installed:
         return
     # TRANSLATORS: group of the page Device Status: files the device no longer needs, each

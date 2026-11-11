@@ -57,6 +57,10 @@ def facts(**changes) -> status.Facts:
         has_diagnostics=True)
     for name, value in changes.items():
         setattr(made, name, value)
+    if "dumps_plan" not in changes:  # as freeing.plan makes it from the dumps
+        from openexpress import freeing
+
+        made.dumps_plan = freeing.dump_plan(made.dumps)
     return made
 
 
@@ -163,14 +167,6 @@ def test_the_events_are_the_crashes_the_updates_and_the_first_connection():
                      ("crash", None, None, 0), ("update", "21.12", "21.18", 0),
                      ("update", "21.05", "21.12", 0), ("first", None, "21.05", 0)]
     assert [e.at for e in made.events] == sorted((e.at for e in made.events), reverse=True)
-
-
-def test_the_older_dumps_are_all_but_the_newest():
-    older = facts().older_dumps()
-    assert [path.rsplit("/", 1)[1] for path, _size, _time in older] == ["RAM_bak1.zip",
-                                                                         "RAM_bak2.zip"]
-    assert facts(dumps=None).older_dumps() is None  # not known
-    assert facts(dumps=[]).older_dumps() == []
 
 
 # --- the summary ------------------------------------------------------------------------------
@@ -2292,7 +2288,7 @@ def test_files_the_device_refused_are_told_also_when_it_then_stopped(clock, in_t
 def test_older_dumps_that_may_not_be_removed_have_no_button(clock):
     """A device whose older dumps may not be removed (no unit ID: their copies would have no
     folder of the device): the row tells them, with no button that removes them."""
-    _win, section = page(facts(dumps_removable=False))
+    _win, section = page(facts(dumps_plan=None))
     older = titled(section, "Older Memory Dumps")
     assert older.get_subtitle() == ("2 files; the newest dump is not counted · "
                                     "18.0 MB")

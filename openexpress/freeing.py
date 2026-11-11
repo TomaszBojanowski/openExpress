@@ -451,12 +451,6 @@ def dumps_removable(device) -> bool:
     return bool(getattr(device, "unit_id", None))
 
 
-def device_dump_plan(device, dumps: list[Dump] | None) -> DumpPlan | None:
-    """The removal of this device's older dumps as a question names it (dump_plan); None also
-    when they may not be removed (dumps_removable)."""
-    return dump_plan(dumps) if dumps_removable(device) else None
-
-
 @dataclass
 class Plan:
     """What can be freed on a device: its dumps (None: not listed), their removal as a question
@@ -485,7 +479,7 @@ class Plan:
     @property
     def size(self) -> int:
         """What the removal would free: the older dumps only when they may be removed."""
-        dumps = self.older or () if self.dumps_plan is not None else ()
+        dumps = self.dumps_plan.older if self.dumps_plan is not None else ()
         return sum(size for _p, size, _t in dumps) + sum(u.size or 0 for u in self.updates)
 
 
@@ -499,6 +493,6 @@ def plan(storage: Storage, device, client, fresh: bool = False) -> Plan:
     except DeviceError:
         dumps = None
     found, why = updates_not_installed(client, storage, device, fresh=fresh)
-    return Plan(dumps=dumps, dumps_plan=device_dump_plan(device, dumps),
+    return Plan(dumps=dumps, dumps_plan=dump_plan(dumps) if dumps_removable(device) else None,
                 updates=[u for u in found if removable_update(u)],
                 waiting=[u for u in found if waits_to_install(u)], why=why)

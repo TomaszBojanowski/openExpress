@@ -112,17 +112,12 @@ class Facts:
     recounted: bool = False  # categories and space counted again after a write (recount)
     updates_why: str | None = None  # why the update files were not checked (freeing.Plan.why)
     connected: bool = True  # False: a device not connected, from its records (read_kept)
-    dumps_removable: bool = True  # its older dumps may be removed (freeing.dumps_removable)
+    # The removal of its older dumps as the question names it (freeing.Plan.dumps_plan); None:
+    # not known, none, or they may not be removed (freeing.dumps_removable).
+    dumps_plan: object | None = None
     dumps_at_last: tuple[int, int] | None = None  # not connected: (count, bytes) at the last
     # connection; None: not known
     device_busy: bool = False  # read while another task ran: what needs the device left out
-
-    def older_dumps(self) -> list[tuple[str, int, float]] | None:
-        """The memory dumps but the newest (which always stays); None: not known
-        (freeing.older_dumps)."""
-        from openexpress import freeing
-
-        return freeing.older_dumps(self.dumps)
 
 
 @dataclass
@@ -280,7 +275,7 @@ def read(session, ask_device: bool = True) -> Facts:
         not_installed=[*plan.updates, *plan.waiting] if plan is not None else [],
         has_diagnostics=t.has_diagnostics, recounted=t.recounted,
         updates_why=plan.why if plan is not None else None,
-        dumps_removable=freeing.dumps_removable(device), device_busy=not ask_device)
+        dumps_plan=plan.dumps_plan if plan is not None else None, device_busy=not ask_device)
 
 
 def read_kept(unit_id: int) -> Facts | None:

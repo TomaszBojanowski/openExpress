@@ -564,10 +564,10 @@ def check_kept(r, state: str) -> None:
 
 def agree(r, s) -> None:
     """The window, the command line and the device log tell the same numbers."""
-    from openexpress import cli, history
+    from openexpress import cli, freeing, history
 
     facts = r.win.status_facts
-    older = facts.older_dumps() or []
+    older = freeing.older_dumps(facts.dumps) or []
     files = [u for u in facts.not_installed]
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
@@ -646,10 +646,10 @@ def test_the_page_device_status_through_its_states(review, shape, width, languag
         check(r, said, "after-refresh-on-the-page", r.win.status_facts)
         agree(r, s)
 
-        if r.win.status_facts.older_dumps():
+        plan = r.win.status_facts.dumps_plan
+        if plan is not None and plan.older:
             from openexpress import freeing
 
-            plan = freeing.dump_plan(r.win.status_facts.dumps)
             answer(r, _("Older Memory Dumps"))
             if any(size <= COPY_LIMIT for _p, size, _t in plan.without_copy):
                 # One fits the limit alone, not the room the others left: the question says
