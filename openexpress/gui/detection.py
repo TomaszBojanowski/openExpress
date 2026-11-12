@@ -413,11 +413,9 @@ def decided(win, cause: Cause, before: Seen, after: Seen):
 
 def visible_view(win) -> View:
     """The page shown, for navigation (the remembered device by its unit ID, in memory)."""
-    page = win.navigation.get_visible_page()
-    if page is win.start.page:
+    if win.navigation.get_visible_page() is win.start.page:
         return View(Page.START)
-    kept = win.kept_status
-    if page is win.remembered.page or (kept is not None and page is kept.page):
+    if win._on_remembered_page():
         # Its page Device Status above it is the same view: the device plugged in brings its
         # own view in their place.
         return View(Page.REMEMBERED, win._remembered_unit,

@@ -951,7 +951,7 @@ def test_a_device_without_records_has_no_status_row(clock):
 def test_the_status_of_a_device_not_connected_counts_as_its_view_for_navigation():
     """Plugged in while its page is shown, the device's view takes its place as from the
     remembered view (navigation): the page is not the device view."""
-    from fakes import window
+    from fakes import window, window_methods
 
     from openexpress.gui.detection import visible_view
     from openexpress.gui.navigation import Page
@@ -962,8 +962,28 @@ def test_the_status_of_a_device_not_connected_counts_as_its_view_for_navigation(
                  navigation=types.SimpleNamespace(get_visible_page=lambda: kept),
                  _remembered_unit=1234567890, _remembered_from_account=False)
     win.kept_status = types.SimpleNamespace(page=kept)
+    window_methods(win, ["_on_remembered_page"])
     view = visible_view(win)
     assert (view.page, view.shown_unit_id) == (Page.REMEMBERED, 1234567890)
+
+
+def test_the_view_for_navigation_is_the_remembered_one_where_the_window_says_so():
+    """Which pages are the view of a remembered device is said in one place
+    (_on_remembered_page): the view for navigation takes its answer."""
+    from fakes import window
+
+    from openexpress.gui.detection import visible_view
+    from openexpress.gui.navigation import Page
+
+    win = window(start=types.SimpleNamespace(page=object()),
+                 remembered=types.SimpleNamespace(page=object()),
+                 navigation=types.SimpleNamespace(get_visible_page=object),
+                 _remembered_unit=1234567890, _remembered_from_account=False)
+    seen = []
+    for answer in (True, False):
+        win._on_remembered_page = lambda answer=answer: answer
+        seen.append(visible_view(win).page)
+    assert seen == [Page.REMEMBERED, Page.DEVICE]
 
 
 # --- the reading of the error logs at the opening, and the page ------------------------------
