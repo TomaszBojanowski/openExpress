@@ -989,6 +989,48 @@ def chart_cursor_text(seconds: float, kind: str, value: float | None) -> str:
     return caption(activity_clock(seconds), shown)
 
 
+def satellite_reason(reason: str | None) -> str:
+    """Why the satellite data was not updated (satellite.Result.reason), after "not updated: "."""
+    from openexpress import satellite
+
+    if reason == satellite.FORMAT:
+        # TRANSLATORS: why the satellite data was not updated, after "not updated: "
+        return _("Garmin's file is not in the format the device has")
+    if reason == satellite.WRITE:
+        # TRANSLATORS: why the satellite data was not updated, after "not updated: "
+        return _("the file could not be written to the device")
+    if reason and reason.startswith(satellite.NETWORK):
+        return reason[len(satellite.NETWORK):]  # the network error, as the log tells it
+    return reason or ""
+
+
+def satellite_subtitle(state, now: datetime) -> str:
+    """The subtitle of the row Satellite Data of the device page (satellite.State): off, on
+    and what the last sync did, or turned off by the device's rejection of the file."""
+    if state.stopped and not state.on:
+        # TRANSLATORS: subtitle of the row Satellite Data: the watch renamed the file written to
+        # CPE_BAD.bin, so the switch was turned off
+        return _("Turned off: the device rejected the last file (CPE_BAD.bin)")
+    # TRANSLATORS: the first part of the subtitle of the row Satellite Data: the feature is
+    # experimental (in Polish plural, as "dane satelitarne")
+    first = pgettext("satellite data", "Experimental")
+    if not state.on:
+        # TRANSLATORS: in the subtitle of the row Satellite Data while its switch is off
+        return caption(first, _("when on, each sync updates it"))
+    if state.error:
+        # TRANSLATORS: in the subtitle of the row Satellite Data: the last sync did not update
+        # them; {reason} says why
+        return caption(first, pgettext("satellite data", "not updated: {reason}").format(
+            reason=satellite_reason(state.error)))
+    if state.written_at is None:
+        # TRANSLATORS: in the subtitle of the row Satellite Data: on, not written yet
+        return caption(first, _("the next sync updates it"))
+    when = relative_time(datetime.fromtimestamp(state.written_at), now)
+    # TRANSLATORS: in the subtitle of the row Satellite Data: when the last sync wrote them,
+    # e.g. "updated yesterday, 20:39"
+    return caption(first, pgettext("satellite data", "updated {when}").format(when=when))
+
+
 def crash_logs_not_copied() -> str:
     """Under the summary of the page Device Status while the device's hidden crash logs may hold
     crashes not counted (status.Facts.crash_logs_behind): the row Crash Logs below copies them."""

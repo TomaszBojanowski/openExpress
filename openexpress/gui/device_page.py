@@ -30,6 +30,7 @@ from openexpress import (  # noqa: E402
     known_devices,
     last_sync,
     paths,
+    satellite,
     service,
     status,
     sync,
@@ -37,6 +38,7 @@ from openexpress import (  # noqa: E402
 )
 from openexpress.connect import ApiError, NotAccountDevice, OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import DeviceSummary, FoundDevice  # noqa: E402
+from openexpress.device.storage import DeviceError, DeviceNotResponding  # noqa: E402
 from openexpress.gui import activity_page, pictures, start  # noqa: E402
 from openexpress.gui.add_to_account import (  # noqa: E402
     add_to_account_row,
@@ -81,6 +83,7 @@ from openexpress.gui.words import (  # noqa: E402
     last_sync_subtitle,
     never_synced_tooltip,
     primary_wearable_text,
+    satellite_subtitle,
     software_text,
     space_text,
     stalled_text,
@@ -479,18 +482,68 @@ def read_diagnostics(win) -> None:
             s.diagnostics = found
         finally:
             reading.set()  # also when it failed: the tasks go on
+        read_satellite(s)
 
     def done(_result) -> None:
         if win.session is s:
             status_changed(win)  # the row, and the page when it waits or is shown
+            show_satellite(win)
 
     def failed(_error) -> None:
         if win.session is s:
             status_changed(win)  # the row and the page as the records tell them
+            show_satellite(win)
 
     # Once the page is shown, not in the opening: on a watch it took 3.7-4.4 s of the
     # 4.5-5 s of an opening.
     win.in_background(work, done, failed)
+
+
+def read_satellite(s) -> None:
+    """Whether the open device has, or had, the satellite data file of the format known
+    (satellite.seen), into `s.satellite`; after the error logs, on the same thread. A failure is
+    a line in the log: the row stays hidden."""
+    try:
+        s.satellite = satellite.seen(s.device, s.storage)
+    except DeviceNotResponding:
+        raise
+    except (DeviceError, OSError) as e:
+        log.info("satellite data: not read (%s)", type(e).__name__)
+
+
+def satellite_row(win) -> Adw.SwitchRow:
+    """The row Satellite Data of the device page: hidden until the device is known to have the
+    satellite data file of the format known (show_satellite); its switch turns them on or off
+    for the device."""
+    # TRANSLATORS: row of the device page, with a switch: the GPS satellite data of a watch
+    # that keeps it as CPE.BIN, written with each sync while on
+    row = Adw.SwitchRow(title=_("Satellite Data"), visible=False)
+
+    def switched(r, _param) -> None:
+        s = win.session
+        state = getattr(s, "satellite", None)
+        if state is None or r.get_active() == state.on:
+            return
+        s.satellite = satellite.set_on(s.device.unit_id, r.get_active())
+        show_satellite(win)
+
+    row.connect("notify::active", switched)
+    return row
+
+
+def show_satellite(win) -> None:
+    """The row Satellite Data as the session knows it: shown only for a device that has, or
+    had, the file of the format known."""
+    row, s = win.satellite_row, win.session
+    if row is None:
+        return
+    state = getattr(s, "satellite", None)
+    row.set_visible(state is not None)
+    if state is None:
+        return
+    if row.get_active() != state.on:
+        row.set_active(state.on)  # the handler sees no change to make
+    row.set_subtitle(satellite_subtitle(state, datetime.now()))
 
 
 def primary_training_unknown(s) -> str:
@@ -1032,6 +1085,10 @@ class DevicePage:
             self._render_map_state()
             if self.map_state is None:
                 self._check_maps_quietly()
+        # Also on a USB drive: the watches that keep the file of the format known are drives.
+        self.satellite_row = satellite_row(self)
+        g.add(self.satellite_row)
+        show_satellite(self)
 
         if not mass_storage:
             # As "Maps": to their pages; how many only once those pages have read them
@@ -1517,9 +1574,12 @@ class DevicePage:
         def done(summary: service.SyncSummary):
             self.toast(_("Sync finished") if not summary.errors
                        else _("Sync finished with errors"))
+            if getattr(s, "satellite", None) is not None:  # what the sync did of them, as kept
+                s.satellite = satellite.load(s.device.unit_id) or s.satellite
+                show_satellite(self)
             self._show_last_sync()
             self._count_activities_again()
-            if getattr(s, "mass_storage", False) and summary.downloaded:
+            if getattr(s, "mass_storage", False) and summary.wrote_to_device:
                 self.ask_to_eject(s)
 
         def failed(e):

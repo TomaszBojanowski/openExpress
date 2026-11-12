@@ -1139,3 +1139,57 @@ def software_update(**fields):
                    device_path="Garmin/006-D0000-00.bin", url="https://example.com/file.bin",
                    md5="0" * 32, size=1, order=0)
     return SoftwareUpdate(**{**made_up, **fields})
+
+
+# --- satellite data -----------------------------------------------------------------------------
+
+
+def made_up_cpe(n: int = 1) -> bytes:
+    """A file of the satellite data format known (satellite.known_format): its size, its first
+    four bytes, the length of its data, zeros after it; the data made up (`n` tells two apart)."""
+    from openexpress import satellite
+
+    length = 1000 + n
+    return (satellite.START + length.to_bytes(4, "little") + bytes([n % 250 + 1]) * (length - 8)
+            + bytes(satellite.SIZE - length))
+
+
+class SatelliteServer:
+    """Garmin's address of the satellite data as a test answers it, each answer in turn (an
+    exception is raised); `asked`: how many requests came."""
+
+    def __init__(self, *answers):
+        self.answers, self.asked = list(answers), 0
+
+    def get(self, url, headers=None, timeout=None):
+        from openexpress import satellite
+
+        assert url == satellite.URL and headers == {"Accept": "application/octet-stream"}
+        self.asked += 1
+        answer = self.answers.pop(0)
+        if isinstance(answer, Exception):
+            raise answer
+        return answer
+
+
+def satellite_answer(content: bytes = b"", status: int = 200,
+                     kind: str = "application/octet-stream"):
+    """An answer of Garmin's address of the satellite data."""
+    import requests
+
+    from openexpress import satellite
+
+    r = requests.Response()
+    r.status_code, r._content, r.url = status, content, satellite.URL
+    r.reason = "OK" if status == 200 else "Not Found"
+    r.headers["content-type"] = kind
+    return r
+
+
+def satellite_server(monkeypatch, *answers) -> SatelliteServer:
+    """Garmin's address of the satellite data answered by a SatelliteServer (no network)."""
+    from openexpress import useragent
+
+    server = SatelliteServer(*answers)
+    monkeypatch.setattr(useragent, "session", lambda *a, **kw: server)
+    return server

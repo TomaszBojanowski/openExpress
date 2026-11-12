@@ -17,7 +17,7 @@ from urllib.parse import urlsplit
 
 import requests
 
-from openexpress import answers, applog, known_devices, paths, sync
+from openexpress import answers, applog, known_devices, paths, satellite, sync
 from openexpress.auth import store
 from openexpress.connect import (
     ApiError,
@@ -88,6 +88,9 @@ class DeviceSession:
     # asked once per session, and only when such a map is there.
     account_country_code: str | None = field(default=None, repr=False)
     account_country_asked: bool = False
+    # Its satellite data (satellite.State), read in the background once its page is shown
+    # (satellite.seen); None: not for this device, or not read yet.
+    satellite: satellite.State | None = None
 
     @property
     def logged_in(self) -> bool:
@@ -901,6 +904,16 @@ class SyncSummary:
     # The uploads Garmin Connect took without confirming that it processed them (the command
     # line warns of them). Not kept in last_sync.json.
     not_confirmed: list[str] = field(default_factory=list)
+    # What the sync did of the satellite data (satellite.update); None: not for this device, or
+    # off. Not kept in last_sync.json: the row of the device page tells it.
+    satellite: satellite.Result | None = None
+
+    @property
+    def wrote_to_device(self) -> bool:
+        """Whether it wrote files to the device: those of Garmin Connect's queue, or the
+        satellite data (a USB drive is then ejected)."""
+        return bool(self.downloaded) or (self.satellite is not None
+                                         and self.satellite.kind == "updated")
 
     def record(self, unit_id: int | None = None) -> dict:
         """This sync as last_sync.json keeps it (save_last_sync), to be put into words by
@@ -1392,6 +1405,9 @@ def run_sync(
     try:
         with sync_lock():
             summary = apply_sync(s, plan_sync(s, options, progress), progress)
+            # Written as the files of the queue are, after them; not when nothing is to be.
+            if options.downloads and not s.test_drive:
+                summary.satellite = satellite.update(s.device, s.storage)
     except OrdinaryStop as e:
         log.info("sync: %s", e.log_reason)  # the caller tells the user
         raise

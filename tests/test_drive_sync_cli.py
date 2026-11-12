@@ -18,6 +18,9 @@ from fakes import (
     DriveAccount,
     SyncAccount,
     drive_session,
+    made_up_cpe,
+    satellite_answer,
+    satellite_server,
 )
 
 from openexpress import cli, i18n, last_sync, service, sync
@@ -281,6 +284,55 @@ def test_a_device_not_a_drive_is_not_ejected(device_root, monkeypatch):
     asked = ejects(monkeypatch)
     assert cli.main(["sync", "--apply"]) == 0
     assert asked == []
+
+
+def test_a_drive_whose_satellite_data_are_on_gets_garmins_file_and_is_ejected(
+        device_root, monkeypatch, capsys):
+    """As a Forerunner 45 (a USB drive with CPE.BIN of the format known): nothing in the queue,
+    the satellite data written all the same, then the drive ejected so that the watch takes it."""
+    from openexpress import satellite
+
+    sync.SyncState(UNIT).save()
+    (device_root / "GARMIN" / "REMOTESW").mkdir(parents=True)
+    (device_root / "GARMIN" / "REMOTESW" / "CPE.BIN").write_bytes(made_up_cpe(1))
+    storage = drive_at(device_root, monkeypatch)
+    satellite.seen(storage_device(storage), storage)
+    satellite.set_on(UNIT, True)
+    account_for(monkeypatch, {"connectsupport": "Required"}, messages=[])
+    server = satellite_server(monkeypatch, satellite_answer(made_up_cpe(2)))
+    asked = ejects(monkeypatch)
+    assert cli.main(["sync"]) == 0  # the dry run: said, nothing written
+    assert "Satellite data: would be updated (63.5 kB)" in capsys.readouterr().out
+    assert (device_root / "GARMIN" / "REMOTESW" / "CPE.BIN").read_bytes() == made_up_cpe(1)
+    assert cli.main(["sync", "--apply"]) == 0
+    out = capsys.readouterr().out
+    assert "Satellite data updated (63.5 kB)" in out
+    assert (device_root / "GARMIN" / "REMOTESW" / "CPE.BIN").read_bytes() == made_up_cpe(2)
+    assert asked == [storage] and server.asked == 1
+
+
+@pytest.mark.parametrize("remotesw", [
+    {"CPE.bin": b"\xb5\x62\x13\x20" + bytes(310_296 - 4)},  # like a fēnix 8
+    {"GPES.bin": b"made up" * 100},  # like an Edge 1050
+], ids=["like-a-fenix", "like-an-edge"])
+def test_a_drive_without_the_satellite_data_file_gets_none_and_no_line(
+        device_root, monkeypatch, capsys, remotesw):
+    sync.SyncState(UNIT).save()
+    folder = device_root / "GARMIN" / "RemoteSW"
+    folder.mkdir(parents=True)
+    for name, data in remotesw.items():
+        (folder / name).write_bytes(data)
+    drive_at(device_root, monkeypatch)
+    account_for(monkeypatch, {"connectsupport": "Required"}, messages=[])
+    server = satellite_server(monkeypatch)
+    before = files(device_root)
+    assert cli.main(["sync", "--apply"]) == 0
+    assert "Satellite data" not in capsys.readouterr().out
+    assert files(device_root) == before and server.asked == 0
+
+
+def storage_device(storage):
+    return parse(storage.read("GARMIN/GarminDevice.xml"))
 
 
 def test_a_drive_the_system_does_not_eject_says_the_cable_must_stay_in(device_root,

@@ -255,7 +255,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         # The device page, made as it is shown (show_overview): its rows and what they say.
         self.device_title = self.device_image = self.device_picture = None
         self.software_label = self.update_chip = self.update_row = None
-        self.map_row = self.apps_row = self.music_row = None
+        self.map_row = self.apps_row = self.music_row = self.satellite_row = None
         self.storage_row = self.storage_bar = self.backup_row = None
         self.primary_row = self.last_sync_row = None
         self._banner_kind = ""

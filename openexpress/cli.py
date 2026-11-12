@@ -39,6 +39,7 @@ from openexpress.i18n import (
     ngettext,
     pgettext,
     plain_spaces,
+    relative_time,
 )
 from openexpress.progress import Reporter
 from openexpress.settings import (
@@ -1189,6 +1190,67 @@ def _print_status(s, entry, listed, client, now) -> None:
     # TRANSLATORS: `openexpress status`: {text} says whether an update of the device's software is
     # available
     print("  " + _("Device software: {text}").format(text=text))
+    line = _satellite_status(s.unit_id, now)
+    if line is not None:
+        print("  " + line)
+
+
+def _satellite_status(unit_id: int | None, now) -> str | None:
+    """The line of `openexpress status` for the satellite data of a device that has, or had,
+    the file of the format known (satellite.load), as its row on the device page says it; None
+    for any other device."""
+    from openexpress import satellite
+    from openexpress.gui import words
+
+    state = satellite.load(unit_id) if unit_id else None
+    if state is None:
+        return None
+    # TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned on
+    on = pgettext("satellite data", "on")
+    if state.stopped and not state.on:
+        text = caption(
+            # TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned
+            # off
+            pgettext("satellite data", "off"),
+            # TRANSLATORS: `openexpress status` and `sync`: the watch renamed the file written
+            # to CPE_BAD.bin
+            _("the device rejected the last file (CPE_BAD.bin)"))
+    elif not state.on:
+        # TRANSLATORS: `openexpress status`, after "Satellite data (experimental):"
+        text = pgettext("satellite data", "off (the switch is on the device page in the window)")
+    elif state.error:
+        text = caption(on, pgettext("satellite data", "not updated: {reason}").format(
+            reason=words.satellite_reason(state.error)))
+    elif state.written_at is None:
+        text = caption(on, _("the next sync updates it"))
+    else:
+        when = relative_time(datetime.fromtimestamp(state.written_at), now)
+        text = caption(on, pgettext("satellite data", "updated {when}").format(when=when))
+    # TRANSLATORS: `openexpress status`: the GPS satellite data of a watch that keeps it as
+    # CPE.BIN; {text} says whether it is on and what the last sync did
+    return _("Satellite data (experimental): {text}").format(text=text)
+
+
+def _satellite_result(result) -> str | None:
+    """What a sync did of the satellite data (satellite.Result), a line of `openexpress sync`;
+    None when they are not for the device or are off."""
+    from openexpress.gui import words
+
+    if result is None:
+        return None
+    if result.kind == "updated":
+        # TRANSLATORS: `openexpress sync --apply`: the satellite data written to the device
+        return _("Satellite data updated ({size})").format(size=human_size(result.size))
+    if result.kind == "would":
+        # TRANSLATORS: `openexpress sync` (the dry run)
+        return _("Satellite data: would be updated ({size})").format(size=human_size(result.size))
+    if result.kind == "current":
+        # TRANSLATORS: `openexpress sync`: the device has Garmin's current file already
+        return _("Satellite data already current")
+    reason = (_("the device rejected the last file (CPE_BAD.bin)") if result.kind == "stopped"
+              else words.satellite_reason(result.reason))
+    # TRANSLATORS: `openexpress sync`; {reason} says why
+    return _("Satellite data not updated: {reason}").format(reason=reason)
 
 
 def _update_words(state: str, count: int = 0, only=None) -> str:
@@ -1439,6 +1501,12 @@ def cmd_sync(args) -> int:
     if not args.apply:
         _print_sync_plan(service.plan_sync(session, dataclasses.replace(options, preview=True)),
                          client, drive=st.mass_storage, makers=service.queue_makers(session))
+        if options.downloads:
+            from openexpress import satellite
+
+            line = _satellite_result(satellite.update(dev, st, apply=False))
+            if line is not None:
+                print("\n" + line)
         print("\n" + _("Dry run: nothing was uploaded or written to the device. "
                        "Add --apply to run the sync."))
         return 0
@@ -1463,7 +1531,7 @@ def cmd_sync(args) -> int:
         raise
     code = _print_sync_result(summary, dev.unit_id)
     # A drive the sync wrote to is ejected, so that the watch takes the files.
-    if st.mass_storage and summary.downloaded and not _eject_drive(st, files=True):
+    if st.mass_storage and summary.wrote_to_device and not _eject_drive(st, files=True):
         return 1  # the cable must stay in
     return code
 
@@ -1597,6 +1665,9 @@ def _print_sync_result(summary, unit_id: int) -> int:
     its errors, then the numbers of the row as a sentence. 1 with errors, as the window
     says "Sync finished with errors"."""
     told = _print_sync_steps(summary, unit_id)
+    line = _satellite_result(summary.satellite)
+    if line is not None:
+        print(line)
     print("\n" + told.sentence)
     if summary.errors:
         print("\n" + ngettext("Done with {count} error.", "Done with {count} errors.",
