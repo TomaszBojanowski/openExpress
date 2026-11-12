@@ -6,6 +6,7 @@ from __future__ import annotations
 import math
 from dataclasses import replace
 from datetime import datetime
+from typing import NamedTuple
 
 from openexpress import known_devices, last_sync, service, sync
 from openexpress.i18n import (
@@ -988,38 +989,63 @@ def chart_cursor_text(seconds: float, kind: str, value: float | None) -> str:
     return caption(activity_clock(seconds), shown)
 
 
+class Summary(NamedTuple):
+    """The summary of the page Device Status."""
+    look: str  # "good", "warning", "unknown", or "none" without diagnostic data
+    title: str  # the title of the page's summary, header case
+    line: str  # the line under it
+    row: str  # the same as a sentence: the subtitle of the row that leads to the page
+
+
 def status_summary(found, errors_known: bool, free: int | None, capacity: int | None,
-                   now: datetime, has_diagnostics: bool = True) -> tuple[str, str, str]:
-    """The summary on top of the page Device Status, and the subtitle of its row on the device
-    page: (its look: "good", "warning", "unknown", or "none" without diagnostic data; its title;
-    its line). A device without diagnostic data: as its page, "No Diagnostic Data". Else crashes
-    of the last 30 days first (the error colour is never used: a crash is a fact to know, not an
-    alarm), then little free space (status.little_space), then error logs that were not read."""
+                   now: datetime, has_diagnostics: bool = True) -> Summary:
+    """The summary on top of the page Device Status, and the subtitle of the rows that lead to
+    it (the device page, the view of a remembered device). A device without diagnostic data: as
+    its page, "No Diagnostic Data". Else crashes of the last 30 days first (the error colour is
+    never used: a crash is a fact to know, not an alarm), then little free space
+    (status.little_space), then error logs that were not read."""
     from openexpress import crashes, status
 
     if not has_diagnostics:
-        return "none", _("No Diagnostic Data"), space_text(free, capacity)
+        # TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+        # "No Diagnostic Data", as a sentence
+        return Summary("none", _("No Diagnostic Data"), space_text(free, capacity),
+                       _("No diagnostic data"))
 
     lately = status.recent(found, now)
     if lately:
+        n = len(lately)
         # TRANSLATORS: title of the summary of the page Device Status
         title = ngettext("{count} Crash in the Last 30 Days", "{count} Crashes in the Last 30 Days",
-                         len(lately)).format(count=len(lately))
+                         n).format(count=n)
+        # TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+        # "{count} Crashes in the Last 30 Days", as a sentence
+        row = ngettext("{count} crash in the last 30 days", "{count} crashes in the last 30 days",
+                       n).format(count=n)
         # TRANSLATORS: in the summary of the page Device Status: the last crash, e.g. "Last one
         # 2 days ago"
         parts = [_("Last one {when}").format(when=relative_time(lately[0].at, now))]
-        if len(lately) > 1 and all(crashes.same_error(lately[0], c) for c in lately[1:]):
+        if n > 1 and all(crashes.same_error(lately[0], c) for c in lately[1:]):
             # TRANSLATORS: in the summary of the page Device Status, after "Last one …"
             parts.append(_("the same error each time"))
         if free is not None:
             parts.append(space_text(free))
-        return "warning", title, caption(*parts)
+        return Summary("warning", title, caption(*parts), row)
     if status.little_space(free, capacity):
+        # TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+        # "Little Free Space", as a sentence
+        row = _("Little free space")
         # TRANSLATORS: title of the summary of the page Device Status
-        return "warning", _("Little Free Space"), space_text(free, capacity)
+        return Summary("warning", _("Little Free Space"), space_text(free, capacity), row)
     if not errors_known:
+        # TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+        # "Error Logs Not Read", as a sentence
+        row = _("Error logs not read")
         # TRANSLATORS: title of the summary of the page Device Status: the device's error logs
         # could not be read, so whether it crashed is not known
-        return "unknown", _("Error Logs Not Read"), space_text(free, capacity)
+        return Summary("unknown", _("Error Logs Not Read"), space_text(free, capacity), row)
+    # TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary "No
+    # Problems Found", as a sentence
+    row = _("No problems found")
     # TRANSLATORS: title of the summary of the page Device Status
-    return "good", _("No Problems Found"), space_text(free, capacity)
+    return Summary("good", _("No Problems Found"), space_text(free, capacity), row)

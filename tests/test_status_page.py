@@ -181,20 +181,23 @@ def summary(made, **changes):
 
 
 def test_the_summary_of_crashes_of_the_same_error():
-    look, title, line_ = summary(facts())
-    assert (look, title) == ("warning", "3 Crashes in the Last 30 Days")
+    look, title, line_, row = summary(facts())
+    assert (look, title, row) == ("warning", "3 Crashes in the Last 30 Days",
+                                  "3 crashes in the last 30 days")
     assert line_ == "Last one 2 days ago\u00a0· the same error each time\u00a0· 12.4\u00a0GB free"
 
 
 def test_the_summary_of_one_crash_and_of_crashes_long_ago():
     one = summary(facts(), crashes=[crash(2)])
-    assert one[1:] == ("1 Crash in the Last 30 Days", "Last one 2 days ago\u00a0· 12.4\u00a0GB free")
-    assert summary(facts(), crashes=[crash(40)])[:2] == ("good", "No Problems Found")
+    assert one[1:] == ("1 Crash in the Last 30 Days", "Last one 2 days ago\u00a0· 12.4\u00a0GB free",
+                       "1 crash in the last 30 days")
+    good = summary(facts(), crashes=[crash(40)])
+    assert (good.look, good.title, good.row) == ("good", "No Problems Found", "No problems found")
 
 
 def test_the_summary_of_little_space_and_of_both():
     assert summary(facts(), crashes=[], free=400 * MB, capacity=32 * GB) == (
-        "warning", "Little Free Space", "400.0\u00a0MB free of 32.0\u00a0GB")
+        "warning", "Little Free Space", "400.0\u00a0MB free of 32.0\u00a0GB", "Little free space")
     both = summary(facts(), free=400 * MB, capacity=32 * GB)
     assert both[1] == "3 Crashes in the Last 30 Days" and both[2].endswith("400.0\u00a0MB free")
 
@@ -202,8 +205,9 @@ def test_the_summary_of_little_space_and_of_both():
 def test_the_summary_when_the_error_logs_were_not_read():
     """Not known is not none: crashes the copies keep still count; with none of them, the
     summary says the error logs were not read, not "No Problems Found"."""
-    assert summary(facts(), crashes=[], errors_known=False)[:2] == ("unknown",
-                                                                    "Error Logs Not Read")
+    unread = summary(facts(), crashes=[], errors_known=False)
+    assert (unread.look, unread.title, unread.row) == ("unknown", "Error Logs Not Read",
+                                                       "Error logs not read")
     assert summary(facts(), errors_known=False)[1] == "3 Crashes in the Last 30 Days"
 
 
@@ -896,7 +900,7 @@ def test_the_device_page_leads_to_the_page_with_its_summary(clock):
     status_row(win, group)
     row = win.status_row
     assert (row.get_title(), row.get_subtitle()) == ("Device Status",
-                                                     "3 Crashes in the Last 30 Days")
+                                                     "3 crashes in the last 30 days")
     row.emit("activated")
     assert chosen == ["status"]
 
@@ -925,7 +929,7 @@ def test_the_view_of_a_device_not_connected_leads_to_its_status_from_the_records
     win._show_remembered(known)
     row = win.remembered.status_row
     assert row.get_visible() and row.get_activatable()
-    assert row.get_subtitle() == "1 Crash in the Last 30 Days\u00a0· as of 2026-10-20 12:00"
+    assert row.get_subtitle() == "1 crash in the last 30 days\u00a0· as of 2026-10-20 12:00"
     row.emit("activated")
     shown = win.pushed[-1]
     assert shown.get_tag() == "kept-status" and win.kept_status.page is shown
@@ -1931,7 +1935,8 @@ def test_the_row_and_the_page_tell_the_same_summary_when_the_free_space_was_not_
     page_title = words.status_summary(made.crashes, made.errors_known, made.free,
                                       made.capacity, datetime.now())[1]
     row = row_subtitle_for(s)
-    assert (page_title, row) == ("Little Free Space", "Little Free Space"), (page_title, row)
+    # The same summary: the page's title, the row's sentence.
+    assert (page_title, row) == ("Little Free Space", "Little free space"), (page_title, row)
 
 
 @pytest.mark.needs_display
@@ -1959,11 +1964,11 @@ def test_after_a_failed_reading_the_row_tells_what_the_page_tells(tmp_path, cloc
                        diagnostics_reading=done, space=(4_000_000, 10_000_000_000),
                        client=None)
     made = status.read(s)
-    page_title = words.status_summary(made.crashes, made.errors_known, made.free,
-                                      made.capacity, datetime.now())[1]
+    summary = words.status_summary(made.crashes, made.errors_known, made.free,
+                                   made.capacity, datetime.now())
     row = row_subtitle_for(s)
-    assert page_title == "1 Crash in the Last 30 Days"
-    assert row == page_title, f"row says {row!r}, the page {page_title!r}"
+    assert summary.title == "1 Crash in the Last 30 Days"
+    assert row == summary.row == "1 crash in the last 30 days", f"row says {row!r}"
 
 
 @pytest.mark.needs_display
@@ -1982,7 +1987,7 @@ def test_the_row_of_a_device_without_diagnostic_data_says_what_its_page_says(tmp
     made = status.read(s)
     assert made.has_diagnostics is False  # the page: No Diagnostic Data
     row = row_subtitle_for(s)
-    assert row == "No Diagnostic Data", f"the row says {row!r}"
+    assert row == "No diagnostic data", f"the row says {row!r}"
 
 
 @pytest.mark.needs_display

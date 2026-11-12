@@ -488,21 +488,22 @@ def check_dots(page, where: str) -> None:
 
 def check_said(r, facts, page, where: str) -> None:
     """What the page says of the device: its error logs read (every made-up device's can be),
-    its summary the one of its facts, and the same in its row (the device page's, or the
-    remembered view's); no file that is no dump among its dumps."""
+    its summary the one of its facts, and the same summary in its row as a sentence (the device
+    page's, or the remembered view's); no file that is no dump among its dumps."""
     from gi.repository import GLib, Gtk
 
     from openexpress.gui import words
 
     assert facts.errors_known, f"{where}: the error logs said not read"
-    title = words.status_summary(facts.crashes, facts.errors_known, facts.free, facts.capacity,
-                                 datetime.now())[1]
+    summary = words.status_summary(facts.crashes, facts.errors_known, facts.free,
+                                   facts.capacity, datetime.now())
+    title = summary.title
     titles = [w.get_label() for w in descendants(page)
               if isinstance(w, Gtk.Label) and w.has_css_class("title-3")]
     assert title in titles, f"{where}: the summary {titles}, not {title!r}"
     row = r.win.status_row if facts.connected else r.win.remembered.status_row
     if row is not None and row.get_visible():
-        assert (row.get_subtitle() or "").startswith(GLib.markup_escape_text(title)), (
+        assert (row.get_subtitle() or "").startswith(GLib.markup_escape_text(summary.row)), (
             f"{where}: the row says {row.get_subtitle()!r}, the page {title!r}")
     foreign = FOREIGN[0].rsplit("/", 1)[1]
     assert not any(path.endswith(foreign) for path, _s, _t in facts.dumps or ()), (

@@ -270,7 +270,7 @@ def _log_shown(facts: status.Facts, now: datetime) -> None:
     known, the crashes, the space, what can be freed and whether the update files were checked
     (no file name, no title of the window)."""
     look = words.status_summary(facts.crashes, facts.errors_known, facts.free, facts.capacity,
-                                now)[0] if facts.has_diagnostics else "no diagnostic data"
+                                now).look if facts.has_diagnostics else "no diagnostic data"
     why = " (error logs not read)" if facts.has_diagnostics and not facts.errors_known else ""
     older = freeing.older_dumps(facts.dumps)
     dumps = ("older dumps not known" if older is None else
@@ -293,8 +293,8 @@ def _log_shown(facts: status.Facts, now: datetime) -> None:
 
 
 def _summary(sec, facts: status.Facts, now: datetime) -> None:
-    look, title, line = words.status_summary(facts.crashes, facts.errors_known, facts.free,
-                                             facts.capacity, now)
+    look, title, line, _row = words.status_summary(facts.crashes, facts.errors_known,
+                                                   facts.free, facts.capacity, now)
     box = Gtk.Box(spacing=16, css_classes=["card", "oe-status-summary"])
     box.append(Gtk.Image(icon_name=SUMMARY_ICONS[look], pixel_size=32, valign=Gtk.Align.CENTER,
                          css_classes=["oe-status-icon", look]))
@@ -1071,9 +1071,9 @@ def kept_status_row(win, unit_id: int) -> None:
             kept.facts = facts
         else:
             win.kept_status = KeptStatus(unit_id, facts)
-        title = words.status_summary(facts.crashes, facts.errors_known, facts.free,
-                                     facts.capacity, datetime.now(), facts.has_diagnostics)[1]
-        win.remembered.show_status_row(caption(title, _as_of(facts)))
+        row = words.status_summary(facts.crashes, facts.errors_known, facts.free,
+                                   facts.capacity, datetime.now(), facts.has_diagnostics).row
+        win.remembered.show_status_row(caption(row, _as_of(facts)))
 
     win.in_background(lambda: status.read_kept(unit_id), done)
 

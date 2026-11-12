@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-11 23:51+0100\n"
+"POT-Creation-Date: 2026-11-12 00:15+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -7705,6 +7705,8 @@ msgid "Not connected – connect it to free up space or copy diagnostic files"
 msgstr ""
 
 #. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
+#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+#. "No Diagnostic Data", as a sentence
 #: openexpress/gui/status_page.py openexpress/gui/words.py
 msgid "No Diagnostic Data"
 msgstr ""
@@ -8687,11 +8689,24 @@ msgstr ""
 msgid "no reading"
 msgstr ""
 
+#: openexpress/gui/words.py
+msgid "No diagnostic data"
+msgstr ""
+
 #. TRANSLATORS: title of the summary of the page Device Status
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "{count} Crash in the Last 30 Days"
 msgid_plural "{count} Crashes in the Last 30 Days"
+msgstr[0] ""
+msgstr[1] ""
+
+#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+#. "{count} Crashes in the Last 30 Days", as a sentence
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{count} crash in the last 30 days"
+msgid_plural "{count} crashes in the last 30 days"
 msgstr[0] ""
 msgstr[1] ""
 
@@ -8707,9 +8722,27 @@ msgstr ""
 msgid "the same error each time"
 msgstr ""
 
+#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+#. "Little Free Space", as a sentence
+#: openexpress/gui/words.py
+msgid "Little free space"
+msgstr ""
+
 #. TRANSLATORS: title of the summary of the page Device Status
 #: openexpress/gui/words.py
 msgid "Little Free Space"
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+#. "Error Logs Not Read", as a sentence
+#: openexpress/gui/words.py
+msgid "Error logs not read"
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary "No
+#. Problems Found", as a sentence
+#: openexpress/gui/words.py
+msgid "No problems found"
 msgstr ""
 
 #. TRANSLATORS: title of the summary of the page Device Status

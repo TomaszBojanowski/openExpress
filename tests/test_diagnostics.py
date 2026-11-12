@@ -668,7 +668,8 @@ def test_the_row_of_the_device_page_says_the_summary(clock):
 
     win = _window(_found())
     status_row(win, Adw.PreferencesGroup())
-    assert _row(win) == ("Device Status", "1 Crash in the Last 30 Days")
+    # A sentence under the row's title, not the title of the page's summary.
+    assert _row(win) == ("Device Status", "1 crash in the last 30 days")
 
 
 @pytest.mark.needs_display
@@ -681,13 +682,13 @@ def test_the_row_before_the_reading_and_after_it_failed(clock):
 
     win = _window(_found(entries=[]))
     status_row(win, Adw.PreferencesGroup())
-    assert _row(win) == ("Device Status", "No Problems Found")
+    assert _row(win) == ("Device Status", "No problems found")
     win = _window(None, reading=threading.Event())  # being read
     status_row(win, Adw.PreferencesGroup())
     assert _row(win) == ("Device Status", "Reading…")
     win.session.diagnostics_reading.set()  # done, and failed: as the page tells it
     status_row(win)
-    assert _row(win) == ("Device Status", "Error Logs Not Read")
+    assert _row(win) == ("Device Status", "Error logs not read")
 
 
 @pytest.mark.needs_display

@@ -214,7 +214,7 @@ def status_row(win, group=None) -> None:
     if getattr(s, "diagnostics", None) is not None or (reading is not None and reading.is_set()):
         t = status.told(s)  # as the page's summary (also when the reading failed)
         subtitle = status_summary(t.crashes, t.errors_known, t.free, t.capacity,
-                                  datetime.now(), t.has_diagnostics)[1]
+                                  datetime.now(), t.has_diagnostics).row
     else:
         subtitle = space_text(None, reading=True)
     row = Adw.ActionRow(title=pgettext("tab", "Device Status"),
