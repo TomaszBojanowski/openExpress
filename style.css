@@ -298,6 +298,23 @@ figcaption {
 .shot-row > .shot { flex: var(--ratio, 1.351) 1 0; min-width: 0; }   /* 1400 × 1036 */
 .shot-row > .narrow-shot { flex: 0.4866 1 0; }          /* 600 × 1233 */
 
+/* A picture of a row is a multiple of 4 px wide and high, which is a whole number of the
+   screen's pixels at the scales 1, 1.25, 1.5 and 2: a row that starts between two pixels is
+   then not drawn a pixel smaller than the others. Size and shape stay within 2 px (cover). */
+@media (min-width: 641px) {   /* side by side; one under the other below */
+  .shot-row > .shot { container-type: inline-size; }
+  .shot-row > .shot img {
+    width: round(nearest, 100cqw, 4px);
+    height: round(nearest, round(nearest, 100cqw, 4px) * 1036 / 1400, 4px);
+    margin-inline: auto;
+    object-fit: cover;
+  }
+  .shot-row > .narrow-shot img {
+    width: 100%;
+    height: round(nearest, 100cqw * 1233 / 600, 4px);  /* as high as the others */
+  }
+}
+
 /* Connect IQ apps: the picture and the text side by side. */
 .spotlight {
   display: grid;
@@ -518,12 +535,21 @@ dialog.lightbox::backdrop { background: transparent; }
   box-shadow: 0 10px 40px rgb(0 0 0 / 28%);
 }
 
+/* The picture takes what the caption's place leaves; that place is as high as the longest
+   caption of the page at this width, so that every picture of one shape has one size and
+   one place, and does not jump from one to the next. */
 .lightbox figcaption {
+  flex: none;
+  display: grid;
   margin: 0;
   max-width: 60ch;
   text-align: center;
   color: var(--lightbox-fg);
 }
+
+/* All the captions laid over each other, unseen, under the one shown at the top. */
+.lightbox figcaption > span { grid-area: 1 / 1; align-self: start; }
+.lightbox-sizer { visibility: hidden; }
 
 .lightbox button {
   position: fixed;

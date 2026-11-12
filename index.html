@@ -184,7 +184,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
             <img src="screenshots/light-update-confirm.webp" width="1400" height="1036" loading="lazy" alt="The confirmation dialog before an update of an Edge 1050 is installed: both versions, its size and where it goes on the device, that it is a beta, the license agreement and a warning about a system update">
           </picture>
         </a>
-        <figcaption>Before anything is written: the version, the size and where it goes on the device, with a warning for a&nbsp;beta</figcaption>
+        <figcaption>Before anything is written: the version, its size and where it goes</figcaption>
       </figure>
       <figure class="shot">
         <a class="zoom" href="screenshots/full/light-update-ready.webp" data-dark="screenshots/full/dark-update-ready.webp">
@@ -218,7 +218,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
             <img src="screenshots/light-status-history.webp" width="1400" height="1036" loading="lazy" alt="The Device Status page of an Edge 1050 bike computer: its software update from 33.20 to 33.21 and its first connection to this computer, its diagnostic files (two copies on this computer, one memory dump) and Report a Problem">
           </picture>
         </a>
-        <figcaption>Crashes and software updates in one list, on an Edge 1050 bike computer: here an update just installed</figcaption>
+        <figcaption>Crashes and software updates in one list, here on an Edge 1050</figcaption>
       </figure>
       <figure class="shot narrow-shot">
         <a class="zoom" href="screenshots/full/light-status-narrow.webp" data-dark="screenshots/full/dark-status-narrow.webp">
@@ -357,15 +357,31 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
     let index = 0;
     let opener = null;
 
+    function captionOf(link) {
+      const figure = link.closest("figure");
+      const below = figure ? figure.querySelector("figcaption") : null;
+      return link.dataset.caption || (below ? below.textContent : "");
+    }
+
+    // Every caption of the page, unseen, keeps the caption's place as high as the longest one.
+    const shown = document.createElement("span");
+    shown.className = "lightbox-text";
+    new Set([...document.querySelectorAll("a.zoom")].map(captionOf)).forEach((text) => {
+      const sizer = document.createElement("span");
+      sizer.className = "lightbox-sizer";
+      sizer.setAttribute("aria-hidden", "true");
+      sizer.textContent = text;
+      caption.append(sizer);
+    });
+    caption.append(shown);
+
     function show(at) {
       index = (at + group.length) % group.length;
       const link = group[index];
       const thumbnail = link.querySelector("img");
-      const figure = link.closest("figure");
-      const below = figure ? figure.querySelector("figcaption") : null;
       image.src = dark.matches && link.dataset.dark ? link.dataset.dark : link.getAttribute("href");
       image.alt = thumbnail ? thumbnail.alt : "";
-      caption.textContent = link.dataset.caption || (below ? below.textContent : "");
+      shown.textContent = captionOf(link);
       previous.hidden = next.hidden = group.length < 2;
     }
 
