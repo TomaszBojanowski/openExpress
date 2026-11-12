@@ -234,7 +234,7 @@ def _window(device, to_sync, other):
 
     session = types.SimpleNamespace(device=device, storage=Untouchable(), logged_in=True,
                                     mass_storage=False, ownership_error=None, to_sync=to_sync,
-                                    stop_waiting=threading.Event())
+                                    stop_waiting=threading.Event(), satellite=None)
     drawn = []
     return stand_in(
         session=session, run_task=RunNow(), progress=lambda *a: None, toast=lambda text: None,

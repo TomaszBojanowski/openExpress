@@ -521,7 +521,7 @@ def satellite_row(win) -> Adw.SwitchRow:
 
     def switched(r, _param) -> None:
         s = win.session
-        state = getattr(s, "satellite", None)
+        state = s.satellite if s is not None else None
         if state is None or r.get_active() == state.on:
             return
         s.satellite = satellite.set_on(s.device.unit_id, r.get_active())
@@ -537,7 +537,7 @@ def show_satellite(win) -> None:
     row, s = win.satellite_row, win.session
     if row is None:
         return
-    state = getattr(s, "satellite", None)
+    state = s.satellite if s is not None else None
     row.set_visible(state is not None)
     if state is None:
         return
@@ -1574,7 +1574,7 @@ class DevicePage:
         def done(summary: service.SyncSummary):
             self.toast(_("Sync finished") if not summary.errors
                        else _("Sync finished with errors"))
-            if getattr(s, "satellite", None) is not None:  # what the sync did of them, as kept
+            if s.satellite is not None:  # what the sync did of them, as kept
                 s.satellite = satellite.load(s.device.unit_id) or s.satellite
                 show_satellite(self)
             self._show_last_sync()
