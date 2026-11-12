@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 09:03+0100\n"
+"POT-Creation-Date: 2026-11-12 09:45+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5886,6 +5886,12 @@ msgstr ""
 msgid "Changing the Primary Wearable…"
 msgstr ""
 
+#. TRANSLATORS: heading of the error when the primary wearable could not be
+#. changed on the account
+#: openexpress/gui/device_page.py
+msgid "Primary Wearable Not Changed"
+msgstr ""
+
 #: openexpress/gui/device_page.py
 msgid "Device Picture"
 msgstr ""
@@ -6098,6 +6104,12 @@ msgstr ""
 msgid "Changing the Primary Training Device…"
 msgstr ""
 
+#. TRANSLATORS: heading of the error when the primary training device could
+#. not be changed on the account
+#: openexpress/gui/device_page.py
+msgid "Primary Training Device Not Changed"
+msgstr ""
+
 #: openexpress/gui/device_page.py openexpress/gui/words.py
 #, python-brace-format
 msgid "{count} update available"
@@ -6127,6 +6139,11 @@ msgstr ""
 msgid "Creating Backup…"
 msgstr ""
 
+#. TRANSLATORS: heading of the error when the backup of the device was not made
+#: openexpress/gui/device_page.py
+msgid "Backup Not Made"
+msgstr ""
+
 #: openexpress/gui/device_page.py
 msgid "Sync finished"
 msgstr ""
@@ -6137,6 +6154,12 @@ msgstr ""
 
 #: openexpress/gui/device_page.py
 msgid "Syncing…"
+msgstr ""
+
+#. TRANSLATORS: heading of the error when a sync stopped before its end
+#. (what it uploaded before stays uploaded)
+#: openexpress/gui/device_page.py
+msgid "Sync Not Finished"
 msgstr ""
 
 #. TRANSLATORS: heading of the confirmation before the first sync of a device
@@ -6928,6 +6951,12 @@ msgstr ""
 msgid "Reading the Installer…"
 msgstr ""
 
+#. TRANSLATORS: heading of the error when the application key could not
+#. be read from Garmin Express's installer
+#: openexpress/gui/preferences.py
+msgid "Installer Not Read"
+msgstr ""
+
 #: openexpress/gui/preferences.py
 msgid "Choose the Garmin Express Installer First"
 msgstr ""
@@ -6951,6 +6980,12 @@ msgstr ""
 
 #: openexpress/gui/preferences.py
 msgid "Signing In…"
+msgstr ""
+
+#. TRANSLATORS: heading of the error when signing in to Garmin
+#. Connect did not end
+#: openexpress/gui/preferences.py
+msgid "Sign-In Not Finished"
 msgstr ""
 
 #: openexpress/gui/preferences.py
@@ -7245,6 +7280,11 @@ msgstr ""
 msgid "Copying the Crash Logs…"
 msgstr ""
 
+#. TRANSLATORS: heading of the error when the crash logs could not be copied
+#: openexpress/gui/status_page.py
+msgid "Crash Logs Not Copied"
+msgstr ""
+
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "{count} memory dump copied to this computer"
@@ -7263,6 +7303,11 @@ msgstr[1] ""
 
 #: openexpress/gui/status_page.py
 msgid "Copying the Memory Dumps…"
+msgstr ""
+
+#. TRANSLATORS: heading of the error when the memory dumps could not be copied
+#: openexpress/gui/status_page.py
+msgid "Memory Dumps Not Copied"
 msgstr ""
 
 #. TRANSLATORS: a kind of file in the storage of the page Device Status
@@ -7571,6 +7616,11 @@ msgstr[1] ""
 msgid "Removing the Memory Dumps…"
 msgstr ""
 
+#. TRANSLATORS: heading of the error when the older memory dumps were not removed
+#: openexpress/gui/status_page.py
+msgid "Memory Dumps Not Removed"
+msgstr ""
+
 #. TRANSLATORS: heading of the confirmation before the older memory dumps are removed
 #: openexpress/gui/status_page.py
 msgid "Remove Older Memory Dumps?"
@@ -7585,6 +7635,12 @@ msgstr ""
 #. TRANSLATORS: while the file of an update the device did not install is removed
 #: openexpress/gui/status_page.py
 msgid "Removing the Update File…"
+msgstr ""
+
+#. TRANSLATORS: heading of the error when the file of an update the device
+#. did not install was not removed
+#: openexpress/gui/status_page.py
+msgid "Update File Not Removed"
 msgstr ""
 
 #. TRANSLATORS: heading of the confirmation before the file of an update the device

@@ -243,7 +243,8 @@ def clear_cache(win, names: list[str] | None, button) -> None:
             return True
         return False
 
-    win.run_task(_("Clearing the Cache…"), work, done, failed, device=False, button=button)
+    win.run_task(_("Clearing the Cache…"), work, done, failed, device=False, button=button,
+                 failed_title=_("Cache Not Cleared"))
 
 
 def cache_toast(win, text: str) -> None:
@@ -566,7 +567,10 @@ class Preferences:
                 self.toast(_("Application key saved"))
                 account_changed(self)
 
-            self.run_task(_("Reading the Installer…"), lambda: read(path), saved, device=False)
+            self.run_task(_("Reading the Installer…"), lambda: read(path), saved, device=False,
+                          # TRANSLATORS: heading of the error when the application key could not
+                          # be read from Garmin Express's installer
+                          failed_title=_("Installer Not Read"))
 
         dialog.open(self, None, chosen)
 
@@ -619,7 +623,10 @@ class Preferences:
             def start():
                 if self.busy:
                     return True  # the ticket expires only after minutes: wait for the task
-                self.run_task(_("Signing In…"), work, done, device=False)
+                self.run_task(_("Signing In…"), work, done, device=False,
+                              # TRANSLATORS: heading of the error when signing in to Garmin
+                              # Connect did not end
+                              failed_title=_("Sign-In Not Finished"))
                 return False
 
             def first():

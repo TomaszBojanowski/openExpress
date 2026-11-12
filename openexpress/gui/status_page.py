@@ -115,7 +115,9 @@ def copy_crash_logs(win, button=None) -> None:
             s.diagnostics.hidden_logs = False
         status_changed(win)
 
-    win.run_task(_("Copying the Crash Logs…"), work, done, button=button)
+    win.run_task(_("Copying the Crash Logs…"), work, done, button=button,
+                 # TRANSLATORS: heading of the error when the crash logs could not be copied
+                 failed_title=_("Crash Logs Not Copied"))
 
 
 def copy_dumps(win, button=None) -> None:
@@ -146,7 +148,9 @@ def copy_dumps(win, button=None) -> None:
         win.toast(text)
         status_changed(win)  # the copies kept
 
-    win.run_task(_("Copying the Memory Dumps…"), work, done, button=button)
+    win.run_task(_("Copying the Memory Dumps…"), work, done, button=button,
+                 # TRANSLATORS: heading of the error when the memory dumps could not be copied
+                 failed_title=_("Memory Dumps Not Copied"))
 
 
 def kind_names() -> dict[str, str]:
@@ -797,7 +801,9 @@ def confirm_dumps(win, plan: freeing.DumpPlan, button=None) -> None:
             _("Removing the Memory Dumps…"),
             writes_to_device(_then_counted(s, lambda freed: freeing.remove_dumps(
                 s.storage, s.device.unit_id, plan, progress=win.progress, freed=freed))),
-            done, read_again_after_failure(win, "status"), button=button)
+            done, read_again_after_failure(win, "status"), button=button,
+            # TRANSLATORS: heading of the error when the older memory dumps were not removed
+            failed_title=_("Memory Dumps Not Removed"))
 
     # TRANSLATORS: heading of the confirmation before the older memory dumps are removed
     confirm(win, "free-dumps", _("Remove Older Memory Dumps?"), _dumps_question(plan),
@@ -827,7 +833,10 @@ def confirm_remove_update(win, u, button=None) -> None:
                      writes_to_device(_then_counted(s, lambda freed: freeing.remove_update(
                          s.storage, u, getattr(s, "client", None), s.device, freed=freed),
                          kind="updates")),
-                     done, read_again_after_failure(win, "status"), button=button)
+                     done, read_again_after_failure(win, "status"), button=button,
+                     # TRANSLATORS: heading of the error when the file of an update the device
+                     # did not install was not removed
+                     failed_title=_("Update File Not Removed"))
 
     confirm(win, "free-update",
             # TRANSLATORS: heading of the confirmation before the file of an update the device

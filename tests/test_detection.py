@@ -5774,7 +5774,7 @@ def login_finished(win, monkeypatch):
     monkeypatch.setattr(GLib, "idle_add", lambda fn: fn())
     real = win.run_task
 
-    def run_task(title, fn, done, failed=None, device=True, in_page=False):
+    def run_task(title, fn, done, failed=None, device=True, in_page=False, failed_title=None):
         if title == "Signing In…":
             return done((types.SimpleNamespace(display="someone"), True))
         return real(title, fn, done, failed)

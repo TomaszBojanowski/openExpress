@@ -352,7 +352,10 @@ def set_primary_wearable(win, button=None) -> None:
 
     win.run_task(_("Changing the Primary Wearable…"),
                  lambda: service.set_primary_wearable(s.client, s.device, apply=True), done,
-                 device=False, button=button)
+                 device=False, button=button,
+                 # TRANSLATORS: heading of the error when the primary wearable could not be
+                 # changed on the account
+                 failed_title=_("Primary Wearable Not Changed"))
 
 
 # Why the picture work found no picture: unit-info gave no address of one.
@@ -442,7 +445,8 @@ def get_picture_from_account(win, button=None) -> None:
         win.error(_("Picture Not Downloaded"), account_picture_refused_text(e.status))
         return True
 
-    win.run_task(_("Getting the Picture…"), work, done, failed, device=False, button=button)
+    win.run_task(_("Getting the Picture…"), work, done, failed, device=False, button=button,
+                 failed_title=_("Picture Not Downloaded"))
 
 
 def account_picture_refused_text(status: int | None) -> str:
@@ -1151,7 +1155,10 @@ class DevicePage:
 
         self.run_task(_("Changing the Primary Training Device…"),
                       lambda: service.set_primary_training(s.client, s.device, apply=True), done,
-                      device=False, button=button)
+                      device=False, button=button,
+                      # TRANSLATORS: heading of the error when the primary training device could
+                      # not be changed on the account
+                      failed_title=_("Primary Training Device Not Changed"))
 
     def _set_device_texture(self, texture) -> None:
         self.device_picture.set_paintable(texture)
@@ -1495,6 +1502,8 @@ class DevicePage:
                                    progress=stop_when_closed(self, self.progress))),
             lambda r: (self.toast(backup_made_text(r)), show_backups(self),
                        tell_left_out(self, r)),
+            # TRANSLATORS: heading of the error when the backup of the device was not made
+            failed_title=_("Backup Not Made"),
         )
 
     # --- sync -------------------------------------------------------------------------
@@ -1534,7 +1543,10 @@ class DevicePage:
 
         # Stop Waiting pressed during the previous sync of this session: not for this one.
         s.stop_waiting.clear()
-        self.run_task(_("Syncing…"), writes_to_device(work), done, failed)
+        self.run_task(_("Syncing…"), writes_to_device(work), done, failed,
+                      # TRANSLATORS: heading of the error when a sync stopped before its end
+                      # (what it uploaded before stays uploaded)
+                      failed_title=_("Sync Not Finished"))
 
     def ask_first_sync(self) -> None:
         # TRANSLATORS: heading of the confirmation before the first sync of a device

@@ -12,9 +12,6 @@ from fakes import replace_in_window
 from fakes import window as stand_in
 
 GUI = Path(__file__).resolve().parent.parent / "openexpress" / "gui"
-# The pages whose every task writes to the device or reads it for the user: each names what
-# did not happen.
-PAGES = ("activities_page", "maps_page", "apps_page", "music_page", "courses_page")
 
 
 def _at_once(monkeypatch):
@@ -82,13 +79,36 @@ def test_no_heading_of_an_error_is_the_words_of_a_progress():
     assert found == []
 
 
-@pytest.mark.parametrize("module", PAGES)
-def test_every_task_of_a_page_names_what_did_not_happen(module):
-    """A new task of these pages comes with its heading ("<Thing> Not <Done>")."""
-    tasks = [c for c in _calls(module) if _called(c) == "run_task"]
-    without = [c.lineno for c in tasks
-               if not any(k.arg == "failed_title" for k in c.keywords)]
-    assert tasks and without == [], f"{module}: run_task without failed_title at {without}"
+def _calls_in(node, function):
+    """(the function a run_task call is in, the call) under `node`."""
+    for child in ast.iter_child_nodes(node):
+        inner = child.name if isinstance(child, (ast.FunctionDef,
+                                                 ast.AsyncFunctionDef)) else function
+        if isinstance(child, ast.Call) and _called(child) == "run_task":
+            yield function, child
+        yield from _calls_in(child, inner)
+
+
+def _tasks():
+    """(module, the function a run_task call is in, the call) for every task of the window."""
+    for path in sorted(GUI.glob("*.py")):
+        tree = ast.parse(path.read_text(encoding="utf-8"))
+        for function, call in _calls_in(tree, None):
+            yield path.stem, function, call
+
+
+# The tasks that keep the general heading: they only read, or their own handler heads every
+# error (an update not installed, a device not ejected).
+GENERAL = {("activity_page", "open_activity"), ("detection", "refresh_device"),
+           ("detection", "open_choice"), ("device_page", "_load"),
+           ("updates_page", "install"), ("updates_page", "eject_device")}
+
+
+def test_every_task_that_changes_something_names_what_did_not_happen():
+    """A new task comes with its heading ("<Thing> Not <Done>"), or is named here for a reason."""
+    without = sorted({(module, function) for module, function, call in _tasks()
+                      if not any(k.arg == "failed_title" for k in call.keywords)})
+    assert without == sorted(GENERAL)
 
 
 def test_apps_queued_in_garmin_connect_are_information_not_an_error():

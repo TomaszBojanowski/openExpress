@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 09:03+0100\n"
+"POT-Creation-Date: 2026-11-12 09:45+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -6498,6 +6498,12 @@ msgstr "Zmieniono podstawowe urządzenie typu wearable"
 msgid "Changing the Primary Wearable…"
 msgstr "Zmienianie podstawowego urządzenia typu wearable…"
 
+#. TRANSLATORS: heading of the error when the primary wearable could not be
+#. changed on the account
+#: openexpress/gui/device_page.py
+msgid "Primary Wearable Not Changed"
+msgstr "Nie zmieniono podstawowego urządzenia typu wearable"
+
 #: openexpress/gui/device_page.py
 msgid "Device Picture"
 msgstr "Zdjęcie urządzenia"
@@ -6726,6 +6732,12 @@ msgstr "Zmieniono podstawowe urządzenie treningowe"
 msgid "Changing the Primary Training Device…"
 msgstr "Zmienianie podstawowego urządzenia treningowego…"
 
+#. TRANSLATORS: heading of the error when the primary training device could
+#. not be changed on the account
+#: openexpress/gui/device_page.py
+msgid "Primary Training Device Not Changed"
+msgstr "Nie zmieniono podstawowego urządzenia treningowego"
+
 #: openexpress/gui/device_page.py openexpress/gui/words.py
 #, python-brace-format
 msgid "{count} update available"
@@ -6756,6 +6768,11 @@ msgstr "Nie udało się sprawdzić aktualizacji"
 msgid "Creating Backup…"
 msgstr "Tworzenie kopii zapasowej…"
 
+#. TRANSLATORS: heading of the error when the backup of the device was not made
+#: openexpress/gui/device_page.py
+msgid "Backup Not Made"
+msgstr "Nie utworzono kopii zapasowej"
+
 #: openexpress/gui/device_page.py
 msgid "Sync finished"
 msgstr "Synchronizacja zakończona"
@@ -6767,6 +6784,12 @@ msgstr "Synchronizacja zakończona z błędami"
 #: openexpress/gui/device_page.py
 msgid "Syncing…"
 msgstr "Synchronizowanie…"
+
+#. TRANSLATORS: heading of the error when a sync stopped before its end
+#. (what it uploaded before stays uploaded)
+#: openexpress/gui/device_page.py
+msgid "Sync Not Finished"
+msgstr "Nie dokończono synchronizacji"
 
 #. TRANSLATORS: heading of the confirmation before the first sync of a device
 #: openexpress/gui/device_page.py
@@ -7610,6 +7633,12 @@ msgstr "Zapisano klucz aplikacji"
 msgid "Reading the Installer…"
 msgstr "Odczytywanie instalatora…"
 
+#. TRANSLATORS: heading of the error when the application key could not
+#. be read from Garmin Express's installer
+#: openexpress/gui/preferences.py
+msgid "Installer Not Read"
+msgstr "Nie odczytano instalatora"
+
 #: openexpress/gui/preferences.py
 msgid "Choose the Garmin Express Installer First"
 msgstr "Najpierw wskaż instalator Garmin Express"
@@ -7638,6 +7667,12 @@ msgstr "Zalogowano, ale nie udało się wczytać danych konta"
 #: openexpress/gui/preferences.py
 msgid "Signing In…"
 msgstr "Logowanie…"
+
+#. TRANSLATORS: heading of the error when signing in to Garmin
+#. Connect did not end
+#: openexpress/gui/preferences.py
+msgid "Sign-In Not Finished"
+msgstr "Nie dokończono logowania"
 
 #: openexpress/gui/preferences.py
 msgid "Signed out"
@@ -7956,6 +7991,11 @@ msgstr "Urządzenie nie ma ukrytych dzienników awarii"
 msgid "Copying the Crash Logs…"
 msgstr "Kopiowanie dzienników awarii…"
 
+#. TRANSLATORS: heading of the error when the crash logs could not be copied
+#: openexpress/gui/status_page.py
+msgid "Crash Logs Not Copied"
+msgstr "Nie skopiowano dzienników awarii"
+
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "{count} memory dump copied to this computer"
@@ -7977,6 +8017,11 @@ msgstr[2] "{count} plików pominiętych: nie zmieściły się w {size}"
 #: openexpress/gui/status_page.py
 msgid "Copying the Memory Dumps…"
 msgstr "Kopiowanie zrzutów pamięci…"
+
+#. TRANSLATORS: heading of the error when the memory dumps could not be copied
+#: openexpress/gui/status_page.py
+msgid "Memory Dumps Not Copied"
+msgstr "Nie skopiowano zrzutów pamięci"
 
 #. TRANSLATORS: a kind of file in the storage of the page Device Status
 #: openexpress/gui/status_page.py
@@ -8310,6 +8355,11 @@ msgstr[2] "Usunięto {count} zrzutów pamięci, zwolniono {size}"
 msgid "Removing the Memory Dumps…"
 msgstr "Usuwanie zrzutów pamięci…"
 
+#. TRANSLATORS: heading of the error when the older memory dumps were not removed
+#: openexpress/gui/status_page.py
+msgid "Memory Dumps Not Removed"
+msgstr "Nie usunięto zrzutów pamięci"
+
 #. TRANSLATORS: heading of the confirmation before the older memory dumps are removed
 #: openexpress/gui/status_page.py
 msgid "Remove Older Memory Dumps?"
@@ -8325,6 +8375,12 @@ msgstr "Usunięto plik aktualizacji, zwolniono {size}"
 #: openexpress/gui/status_page.py
 msgid "Removing the Update File…"
 msgstr "Usuwanie pliku aktualizacji…"
+
+#. TRANSLATORS: heading of the error when the file of an update the device
+#. did not install was not removed
+#: openexpress/gui/status_page.py
+msgid "Update File Not Removed"
+msgstr "Nie usunięto pliku aktualizacji"
 
 #. TRANSLATORS: heading of the confirmation before the file of an update the device
 #. did not install is removed

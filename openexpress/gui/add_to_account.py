@@ -121,4 +121,4 @@ def add_to_account(win, button=None) -> None:
 
     win.run_task(_("Adding to the Account {account}…").format(account=account),
                  lambda: service.add_device(s.client, s.device, apply=True), done, refused,
-                 device=False, button=button)
+                 device=False, button=button, failed_title=_("Device Not Added"))
