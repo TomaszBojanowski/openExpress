@@ -74,17 +74,11 @@ class AppsPage:
         s = self.session
         sec = self.sections["apps"]
         if not s.logged_in:
-            sec.clear()
-            sec.error.set_title("Connect IQ")
-            sec.error.set_description(GLib.markup_escape_text(_("Sign in to manage apps")))
-            sec.show("error")
+            sec.show_info(_("Sign in to manage apps"))
             return
         if s.ownership_error is not None:
             sec.clear()
-            sec.error.set_title("Connect IQ")
-            # Markup: a network error names <path>, <hex> or "<… object at …>" (escaped).
-            sec.error.set_description(GLib.markup_escape_text(str(s.ownership_error)))
-            sec.show("error")
+            sec.show_error(str(s.ownership_error))  # an error: Try Again checks once more
             return
 
         def work():

@@ -38,11 +38,10 @@ def map_update_type_text(word: str) -> str:
     return _("Garmin's map update type for this device: {type}").format(type=word)
 
 
-def _no_maps(win, sec, text: str, detail: str | None = None,
-             check_again: bool = True) -> None:
-    """The Maps page without Garmin's maps: why (and `detail` under it), and a button that
-    checks again (`check_again` False: for a device without maps there is nothing to
-    check)."""
+def _no_maps(win, sec, text: str, detail: str | None = None) -> None:
+    """The Maps page without Garmin's maps to show (none offered, map updates not supported):
+    why (and `detail` under it), and a button that checks again. A device without maps gets
+    the page of information (Section.show_info) instead."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8,
                   halign=Gtk.Align.CENTER, margin_top=24, margin_bottom=24)
     box.append(Gtk.Image(icon_name="mark-location-symbolic", pixel_size=64))
@@ -53,11 +52,10 @@ def _no_maps(win, sec, text: str, detail: str | None = None,
         line = Gtk.Label(label=detail, wrap=True, justify=Gtk.Justification.CENTER,
                          css_classes=["dim-label"])
         box.append(line)
-    if check_again:
-        check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
-        check.add_css_class("pill")
-        check.connect("clicked", lambda *_a: _check_again(win))
-        box.append(check)
+    check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
+    check.add_css_class("pill")
+    check.connect("clicked", lambda *_a: _check_again(win))
+    box.append(check)
     sec.group().add(box)
 
 
@@ -100,6 +98,9 @@ class MapsPage:
         def done(r):
             self.map_cleanup = r[4]  # for the questions before a map is installed or removed
             self.show_maps(r[0], r[1], space=r[2], map_update_type=r[3], no_maps=r[5])
+            # A device without maps: the page of information show_maps drew, not the content
+            # (show_loaded shows what this names).
+            return "info" if r[5] else None
 
         self._load("maps", _("Checking Maps…"), work, done, on_error=failed)
 
@@ -117,14 +118,13 @@ class MapsPage:
         if result is None:  # map updates for this device are not supported (maps.check)
             self.maps_cache = []
             self._set_map_state(None, no_maps=no_maps)  # the "Maps" row of the device page
-            if no_maps:
-                # TRANSLATORS: title of the Maps page of a device without maps
-                _no_maps(self, sec, _("No Maps on This Device"), check_again=False)
-            else:
-                # TRANSLATORS: title of the Maps page when map updates of the device are not
-                # supported
-                _no_maps(self, sec, _("Map Updates Not Supported Yet"),
-                         map_update_type_text(map_update_type) if map_update_type else None)
+            if no_maps:  # nor a folder for maps of its own: a page of information
+                sec.show_info(mp.no_maps_on_device_text())
+                return
+            # TRANSLATORS: title of the Maps page when map updates of the device are not
+            # supported
+            _no_maps(self, sec, _("Map Updates Not Supported Yet"),
+                     map_update_type_text(map_update_type) if map_update_type else None)
             if own is not None:  # the maps of your own, whatever serves Garmin's
                 self.show_own_maps(own)
             return

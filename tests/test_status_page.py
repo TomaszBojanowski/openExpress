@@ -873,7 +873,8 @@ def test_a_device_without_diagnostic_data_has_the_empty_page(clock):
     _win, section = page(facts(has_diagnostics=False, crashes=[], events=[], dumps=[],
                                hidden_logs=False, copies=(0, 0, None)))
     assert section.stack.get_visible_child_name() == "info"
-    assert section.info.get_title() == "No Diagnostic Data"
+    # The page's name, as every page whose device has none of what it shows (show_info).
+    assert section.info.get_title() == section.title
     assert section.info.get_description() == ("This device keeps no error logs or memory dumps "
                                               "that openExpress can read")
 

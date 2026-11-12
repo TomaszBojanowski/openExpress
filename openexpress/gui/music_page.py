@@ -16,7 +16,7 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follo
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.gui.words import space_text  # noqa: E402
-from openexpress.i18n import _, caption, human_size, ngettext, pgettext  # noqa: E402
+from openexpress.i18n import _, caption, human_size, ngettext  # noqa: E402
 
 
 def note_music_count(win, count: int | None, size: int | None) -> None:
@@ -40,13 +40,9 @@ class MusicPage:
 
         s = self.session
         if not music.supported_kinds(s.device):
-            sec = self.sections["music"]
-            sec.clear()
-            sec.error.set_title(pgettext("tab", "Music"))
-            sec.error.set_description(GLib.markup_escape_text(
-                # TRANSLATORS: the Music page of a device without music
-                _("This device does not play music, podcasts or audiobooks")))
-            sec.show("error")
+            # TRANSLATORS: the Music page of a device without music
+            self.sections["music"].show_info(_("This device does not play music, podcasts or "
+                                               "audiobooks"))
             return
         # The free space too: asked of the device here, never as the page is drawn.
         self._load("music", _("Reading Music on the Device…"),

@@ -75,4 +75,4 @@ def test_the_music_page_without_media_shows_its_words_with_brackets(monkeypatch)
     win = stand_in(sections={"music": section},
                    session=types.SimpleNamespace(device=None))
     MainWindow.load_music(win)
-    assert words in _shown(section)
+    assert words in _shown(section, "info")

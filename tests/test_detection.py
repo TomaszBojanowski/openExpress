@@ -3276,13 +3276,20 @@ def test_a_failed_write_to_a_drive_says_what_failed_and_leaves_no_half_file(driv
 def _recording_page(key):
     """Stands in for a Section: records what the page is made to show."""
     seen = {}
+    from openexpress.gui.device_page import Section
+
     status = types.SimpleNamespace(set_title=lambda title: seen.update(title=title),
                                    set_description=lambda text: seen.update(description=text),
-                                   set_icon_name=lambda icon: seen.update(icon=icon))
-    return types.SimpleNamespace(key=key, title=key.title(), icon=f"{key}-symbolic",
+                                   set_icon_name=lambda icon: seen.update(icon=icon),
+                                   set_child=lambda child: None)
+    page = types.SimpleNamespace(key=key, title=key.title(), icon=f"{key}-symbolic",
                                  loaded=False, error=status, info=status, seen=seen,
                                  clear=lambda: seen.update(cleared=True),
                                  show=lambda name: seen.update(shown=name))
+    # The page's own drawing of information and of an error, on the stand-in.
+    page.show_info = types.MethodType(Section.show_info, page)
+    page.show_error = types.MethodType(Section.show_error, page)
+    return page
 
 
 @pytest.mark.parametrize("force", [False, True])  # True: "Try Again"

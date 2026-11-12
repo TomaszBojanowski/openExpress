@@ -362,14 +362,8 @@ class CoursesPage:
         s = self.session
         sec = self.sections["courses"]
         if not courses.offered(s.device):
-            # As a page that does not apply to the device: information, nothing read.
-            sec.clear()
-            sec.info.set_icon_name(PAGE_ICON)
-            sec.info.set_title(sec.title)
-            sec.info.set_description(GLib.markup_escape_text(
-                # TRANSLATORS: the Courses page of a device that does not take GPX files
-                _("This device does not make courses of GPX files")))
-            sec.show("info")
+            # TRANSLATORS: the Courses page of a device that does not take GPX files
+            sec.show_info(_("This device does not make courses of GPX files"))  # nothing read
             return
         self._load("courses", _("Reading Courses…"),
                    lambda: courses.overview(s.device, s.storage), self.show_courses)

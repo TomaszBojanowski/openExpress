@@ -605,16 +605,11 @@ def device_view_icon(win, s) -> str:
 
 def show_not_for_mass_storage(sec) -> None:
     """A page that does not apply to a Garmin device in mass storage mode: it loads nothing
-    and says why, as information (the page's icon, no Try Again), not as an error."""
-    sec.clear()
-    sec.info.set_icon_name(sec.icon)
-    sec.info.set_title(sec.title)
-    # The description is markup: words with "<" or "&" would leave it empty.
-    sec.info.set_description(GLib.markup_escape_text(
+    and says why."""
+    sec.show_info(
         # TRANSLATORS: the pages Maps, Apps and Music of a device connected as a USB drive
         _("The device is connected in mass storage mode (as a USB drive): apps, maps and "
-          "music are not supported in this mode")))
-    sec.show("info")
+          "music are not supported in this mode"))
 
 
 class Section:
@@ -670,6 +665,18 @@ class Section:
 
     def show(self, name: str) -> None:
         self.stack.set_visible_child_name(name)
+
+    def show_info(self, text: str, child: Gtk.Widget | None = None) -> None:
+        """A page whose device has none of what it shows, or that needs a step first (signing
+        in): information, not an error (no Try Again): the page's icon and name, why in one
+        sentence, `child` under it (the storage of a device without diagnostic data)."""
+        self.clear()
+        self.info.set_icon_name(self.icon)
+        self.info.set_title(self.title)
+        # The description is markup: words with "<" or "&" would leave it empty.
+        self.info.set_description(GLib.markup_escape_text(text))
+        self.info.set_child(child)
+        self.show("info")
 
     def show_error(self, text: str) -> None:
         self.error.set_title(_("Something Went Wrong"))

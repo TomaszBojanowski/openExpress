@@ -771,6 +771,7 @@ def test_window_banner_for_each_outcome(device_root, device):
 
 def test_window_shows_the_refusal_instead_of_account_features(device_root, device):
     from openexpress.gui.app import MainWindow
+    from openexpress.gui.device_page import Section
 
     client = make_client([{"unitid": OTHER}])
     s = service.check_session(session(device_root, device, client))
@@ -779,6 +780,7 @@ def test_window_shows_the_refusal_instead_of_account_features(device_root, devic
         clear=lambda: None, show=shown.append,
         error=types.SimpleNamespace(set_title=lambda t: None,
                                     set_description=lambda d: shown.append(d)))
+    section.show_error = types.MethodType(Section.show_error, section)  # the page's own
     started = []
     win = stand_in(
         session=s, busy=False, sections={"apps": section},

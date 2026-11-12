@@ -210,15 +210,13 @@ def test_music_page_on_a_device_without_media(device_root):
     st = LocalStorage(device_root)
     session = types.SimpleNamespace(device=parse(st.read("GARMIN/GarminDevice.xml")), storage=st)
     shown, started = [], []
-    section = types.SimpleNamespace(
-        clear=lambda: shown.append("clear"), show=shown.append,
-        error=types.SimpleNamespace(set_title=lambda t: shown.append(("title", t)),
-                                    set_description=lambda d: shown.append(("text", d))))
+    # A page of information (Section.show_info), not an error.
+    section = types.SimpleNamespace(show_info=lambda text, child=None: shown.append(text))
     win = stand_in(session=session, sections={"music": section},
                    _load=lambda *a: started.append(a))
     MainWindow.load_music(win)
     assert started == []  # nothing is read from the device
-    assert shown == ["clear", ("title", "Music"), ("text", NO_MEDIA), "error"]
+    assert shown == [NO_MEDIA]
 
 
 def test_music_page_reads_the_device_when_it_has_media(iq_device):

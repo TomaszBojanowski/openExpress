@@ -1203,17 +1203,15 @@ def test_maps_page_says_map_updates_are_not_supported_for_a_device_served_anothe
 
 @pytest.mark.needs_display
 def test_maps_page_says_a_device_that_declares_no_maps_has_none(device_root):
-    """The Maps page of a device without maps: the sentence, nothing to check again; the
-    "Maps" row of the device page follows."""
-    from test_detection import _texts
-
+    """The Maps page of a device without maps: the page of information with the sentence,
+    nothing to check again; the "Maps" row of the device page follows."""
     win, section, asked = _real_maps_page([], device_root, datatypes=(),
                                           unit_info={"mapupdatetype": "UniversalDetect"})
     win.load_section("maps")
-    texts = [t for g in section.groups for t in _texts(g)]
-    assert "No Maps on This Device" in texts
-    assert "Check Again" not in texts and not check_again_buttons(win) and asked == []
-    assert not any("map update type" in t for t in texts)
+    assert section.stack.get_visible_child_name() == "info"
+    assert (section.info.get_title(), section.info.get_description()) == (
+        section.title, "This device has no maps")
+    assert not check_again_buttons(win) and asked == []
     assert (win.map_state, win.map_row.subtitle) == ("nomaps", "This device has no maps")
 
 

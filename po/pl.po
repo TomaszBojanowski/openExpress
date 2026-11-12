@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 01:19+0100\n"
+"POT-Creation-Date: 2026-11-12 01:39+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -5579,7 +5579,6 @@ msgstr "Odczyt aplikacji Connect IQ…"
 
 #. TRANSLATORS: tab title
 #: openexpress/gui/app.py openexpress/gui/device_page.py
-#: openexpress/gui/music_page.py
 msgctxt "tab"
 msgid "Music"
 msgstr "Muzyka"
@@ -6820,11 +6819,6 @@ msgstr "Typ aktualizacji map tego urządzenia u Garmina: {type}"
 #: openexpress/gui/maps_page.py openexpress/gui/updates_page.py
 msgid "Check Again"
 msgstr "Sprawdź ponownie"
-
-#. TRANSLATORS: title of the Maps page of a device without maps
-#: openexpress/gui/maps_page.py
-msgid "No Maps on This Device"
-msgstr "Brak map na tym urządzeniu"
 
 #. TRANSLATORS: title of the Maps page when map updates of the device are not
 #. supported
@@ -8474,12 +8468,6 @@ msgstr ""
 "diagnostyczne"
 
 #. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
-#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
-#. "No Diagnostic Data", as a sentence
-#: openexpress/gui/status_page.py openexpress/gui/words.py
-msgid "No Diagnostic Data"
-msgstr "Brak danych diagnostycznych"
-
 #: openexpress/gui/status_page.py
 msgid ""
 "This device keeps no error logs or memory dumps that openExpress can read"
@@ -9495,6 +9483,12 @@ msgstr "Brak tętna, wysokości i prędkości w tej aktywności"
 msgid "no reading"
 msgstr "brak odczytu"
 
+#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+#. "No Diagnostic Data", as a sentence
+#: openexpress/gui/words.py
+msgid "No Diagnostic Data"
+msgstr "Brak danych diagnostycznych"
+
 #: openexpress/gui/words.py
 msgid "No diagnostic data"
 msgstr "Brak danych diagnostycznych"
@@ -9729,7 +9723,8 @@ msgstr "Aktualizacje map dla tego urządzenia nie są jeszcze obsługiwane."
 msgid "This device has no maps."
 msgstr "To urządzenie nie ma map."
 
-#. TRANSLATORS: subtitle of the row "Maps" of the device page, without a full stop
+#. TRANSLATORS: subtitle of the row "Maps" of the device page and the words of the Maps
+#. page of a device without maps, without a full stop
 #: openexpress/maps.py
 msgid "This device has no maps"
 msgstr "To urządzenie nie ma map"

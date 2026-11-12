@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 01:19+0100\n"
+"POT-Creation-Date: 2026-11-12 01:39+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5025,7 +5025,6 @@ msgstr ""
 
 #. TRANSLATORS: tab title
 #: openexpress/gui/app.py openexpress/gui/device_page.py
-#: openexpress/gui/music_page.py
 msgctxt "tab"
 msgid "Music"
 msgstr ""
@@ -6178,11 +6177,6 @@ msgstr ""
 
 #: openexpress/gui/maps_page.py openexpress/gui/updates_page.py
 msgid "Check Again"
-msgstr ""
-
-#. TRANSLATORS: title of the Maps page of a device without maps
-#: openexpress/gui/maps_page.py
-msgid "No Maps on This Device"
 msgstr ""
 
 #. TRANSLATORS: title of the Maps page when map updates of the device are not
@@ -7715,12 +7709,6 @@ msgid "Not connected – connect it to free up space or copy diagnostic files"
 msgstr ""
 
 #. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
-#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
-#. "No Diagnostic Data", as a sentence
-#: openexpress/gui/status_page.py openexpress/gui/words.py
-msgid "No Diagnostic Data"
-msgstr ""
-
 #: openexpress/gui/status_page.py
 msgid ""
 "This device keeps no error logs or memory dumps that openExpress can read"
@@ -8699,6 +8687,12 @@ msgstr ""
 msgid "no reading"
 msgstr ""
 
+#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
+#. "No Diagnostic Data", as a sentence
+#: openexpress/gui/words.py
+msgid "No Diagnostic Data"
+msgstr ""
+
 #: openexpress/gui/words.py
 msgid "No diagnostic data"
 msgstr ""
@@ -8925,7 +8919,8 @@ msgstr ""
 msgid "This device has no maps."
 msgstr ""
 
-#. TRANSLATORS: subtitle of the row "Maps" of the device page, without a full stop
+#. TRANSLATORS: subtitle of the row "Maps" of the device page and the words of the Maps
+#. page of a device without maps, without a full stop
 #: openexpress/maps.py
 msgid "This device has no maps"
 msgstr ""

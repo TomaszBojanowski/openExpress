@@ -174,13 +174,7 @@ class ActivitiesPage:
         s = self.session
         sec = self.sections["activities"]
         if not activities.keeps_activities(s.device):
-            # As a page that does not apply to the device: information, nothing read.
-            sec.clear()
-            sec.info.set_icon_name(PAGE_ICON)
-            sec.info.set_title(sec.title)
-            sec.info.set_description(GLib.markup_escape_text(
-                _("This device does not keep activities")))
-            sec.show("info")
+            sec.show_info(_("This device does not keep activities"))  # nothing read
             return
         found = self.activities
         if found is None or found.storage is not s.storage:

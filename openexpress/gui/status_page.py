@@ -1120,17 +1120,14 @@ def show_kept_status(win) -> None:
 
 
 def _empty_page(sec, facts: status.Facts) -> None:
-    sec.info.set_icon_name(PAGE_ICON)
-    # TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
-    sec.info.set_title(_("No Diagnostic Data"))
-    sec.info.set_description(GLib.markup_escape_text(
-        _("This device keeps no error logs or memory dumps that openExpress can read")))
+    child = None
     if facts.capacity:
         # Not the card itself under the clamp: the status page's style spaces the boxes there.
         holder = Gtk.Box()
         card = _storage_card(facts)
         card.set_hexpand(True)
         holder.append(card)
-        sec.info.set_child(Adw.Clamp(maximum_size=520, valign=Gtk.Align.START, child=holder))
-    else:
-        sec.info.set_child(None)
+        child = Adw.Clamp(maximum_size=520, valign=Gtk.Align.START, child=holder)
+    # TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
+    sec.show_info(_("This device keeps no error logs or memory dumps that openExpress can read"),
+                  child)
