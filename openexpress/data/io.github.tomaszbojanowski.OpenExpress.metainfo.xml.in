@@ -126,12 +126,13 @@
           <li>Free Up Space removes older memory dumps (the newest one stays) and update files
           the device did not install, after asking first. The dumps are copied to this computer
           before they are removed (up to 100 MB per device). Activities, maps, music, courses and
-          settings are never removed. CLI: openexpress diagnostics --free-space.</li>
+          settings are never removed. On the command line: openexpress diagnostics
+          --free-space.</li>
           <li>A remembered device that is not connected has the row Device Status in its view:
           the same page from what this computer keeps of it, as of its last connection.</li>
           <li>openExpress keeps a short log of each connection of a device on this computer: the
-          software version, the storage by kind of file, the memory dumps and the last crash,
-          without file names, Unit ID or serial number. The software updates on Device Status
+          software version, the storage by kind of file, the memory dumps and the crashes its
+          error logs held, without file names, Unit ID or serial number. The software updates on Device Status
           come from it, and openexpress diagnostics shows it.</li>
           <li>The device report has a Diagnostics section: the last crashes (date, software
           version, error number), the memory dumps and whether the copy of the diagnostic files

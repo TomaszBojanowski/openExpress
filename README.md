@@ -54,7 +54,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
   on), charts, laps, heart rate zones, training effect and details. Exports them as GPX.
 - Shows what any FIT file holds, and what a sync will write to the device.
 - Shows what needs attention on the device: its crashes, its software updates and what takes
-  its space; frees up space taken by old memory dumps and update files it did not install.
+  its space; frees up space taken by older memory dumps and updates it did not install.
 - Makes backups of the device and keeps copies of its diagnostic files on this computer.
 - Shows and sets the primary training device and the primary wearable.
 - Works in a GTK 4 / libadwaita window, on the command line and in the background.
