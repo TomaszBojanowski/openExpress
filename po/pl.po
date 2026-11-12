@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 00:15+0100\n"
+"POT-Creation-Date: 2026-11-12 01:19+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -6011,7 +6011,9 @@ msgstr "Usunięto {name} z listy aplikacji na koncie Garmin"
 
 #. TRANSLATORS: heading of the confirmation before an app or a map is removed ({name}: its
 #. name)
+#. TRANSLATORS: heading of the confirmation before a music file or a playlist is removed
 #: openexpress/gui/apps_page.py openexpress/gui/maps_page.py
+#: openexpress/gui/music_page.py
 #, python-brace-format
 msgid "Remove {name}?"
 msgstr "Usunąć {name}?"
@@ -6060,7 +6062,8 @@ msgstr "Usuń z urządzenia i konta"
 #. TRANSLATORS: button of the row of an update file the device did not install:
 #. removes the file
 #: openexpress/gui/apps_page.py openexpress/gui/courses_page.py
-#: openexpress/gui/maps_page.py openexpress/gui/status_page.py
+#: openexpress/gui/maps_page.py openexpress/gui/music_page.py
+#: openexpress/gui/status_page.py
 msgid "Remove"
 msgstr "Usuń"
 
@@ -6932,7 +6935,7 @@ msgstr "Nie usunięto mapy"
 msgid "Took {name} off the list of own maps; the file was not on the device"
 msgstr "Usunięto {name} z listy własnych map; pliku nie było na urządzeniu"
 
-#: openexpress/gui/maps_page.py
+#: openexpress/gui/maps_page.py openexpress/gui/music_page.py
 #, python-brace-format
 msgid "{path} ({size}) will be removed from the device."
 msgstr "Plik {path} ({size}) zostanie usunięty z urządzenia."
@@ -7222,6 +7225,13 @@ msgstr "Dodaj"
 #: openexpress/gui/music_page.py
 msgid "Reading the Playlist…"
 msgstr "Odczytywanie listy odtwarzania…"
+
+#. TRANSLATORS: the confirmation before a playlist is removed: the music files it lists
+#. stay on the device
+#: openexpress/gui/music_page.py
+#, python-brace-format
+msgid "{path} will be removed from the device; its music stays."
+msgstr "Plik {path} zostanie usunięty z urządzenia; jego utwory zostają."
 
 #: openexpress/gui/music_page.py
 msgid "Removing…"

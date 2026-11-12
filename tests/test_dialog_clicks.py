@@ -550,6 +550,12 @@ def _playlist_add(ctx):
     MainWindow.add_playlist(win, "/made/up/Mine.m3u")
 
 
+def _music_remove(ctx):
+    from openexpress.gui.app import MainWindow
+
+    MainWindow.confirm_remove_music(_escape_window(ctx), "Music/Someone/Song.mp3", 3_000_000)
+
+
 def _cache_clear(ctx):
     from openexpress.gui.preferences import ask_to_clear
 
@@ -727,7 +733,8 @@ OPENERS = {
     "first-sync": _first_sync, "forget-device": _forget_device, "own-map-add": _own_map_add,
     "course-add": _course_add, "course-remove": _course_remove,
     "own-map-remove": _own_map_remove, "map-install": _map_install, "map-remove": _map_remove,
-    "music-copy": _music_copy, "playlist-add": _playlist_add, "cache-clear": _cache_clear,
+    "music-copy": _music_copy, "playlist-add": _playlist_add, "music-remove": _music_remove,
+    "cache-clear": _cache_clear,
     "update-install": _update_install, "update-install-all": _update_install_all,
     "eject-ask": _eject_ask, "ejected": _ejected,
     "eject-retry": _eject_retry, "error": _error, "report": _report,
@@ -791,7 +798,7 @@ def test_the_error_message_logs_its_words_unless_private(click, monkeypatch, in_
 # Their words carry names of the user's files, maps, music or courses: only the name of the
 # dialog goes to the log. An error() whose words do, too (the music page's).
 PRIVATE_DIALOGS = {"course-add", "course-remove", "own-map-add", "own-map-remove", "music-copy",
-                   "playlist-add", "backup-incomplete"}
+                   "playlist-add", "music-remove", "backup-incomplete"}
 PRIVATE_ERRORS = {"music_page.py"}
 
 

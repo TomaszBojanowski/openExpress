@@ -93,7 +93,7 @@ class MusicPage:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(f.path.split("/")[-1]),
                                     subtitle=GLib.markup_escape_text(f.path))
                 row.add_suffix(self._trash(_("Remove {name}").format(name=f.path.split("/")[-1]),
-                                           lambda p=f.path: self.remove_music([p])))
+                                           lambda f=f: self.confirm_remove_music(f.path, f.size)))
                 exp.add_row(row)
         if music.supports_playlists(self.session.device):
             g = sec.group(_("Playlists"))
@@ -101,7 +101,7 @@ class MusicPage:
             for p in playlists:
                 row = Adw.ActionRow(title=GLib.markup_escape_text(p.split("/")[-1]))
                 row.add_suffix(self._trash(_("Remove {name}").format(name=p.split("/")[-1]),
-                                           lambda p=p: self.remove_music([p])))
+                                           lambda p=p: self.confirm_remove_music(p)))
                 g.add(row)
 
     def choose_music(self, kind: str, folders: bool) -> None:
@@ -254,6 +254,22 @@ class MusicPage:
 
         self.run_task(_("Reading the Playlist…"),
                       lambda: music.plan_playlist(path, s.device, s.storage), ask_add)
+
+    def confirm_remove_music(self, path: str, size: int | None = None) -> None:
+        """The trash of a file (`size`: its size) or of a playlist (no size): asked first, as
+        every trash of the window."""
+        if size is None:
+            # TRANSLATORS: the confirmation before a playlist is removed: the music files it lists
+            # stay on the device
+            body = _("{path} will be removed from the device; its music stays.").format(path=path)
+        else:
+            body = _("{path} ({size}) will be removed from the device.").format(
+                path=path, size=human_size(size))
+        # TRANSLATORS: heading of the confirmation before a music file or a playlist is removed
+        heading = _("Remove {name}?").format(name=path.split("/")[-1])
+        confirm(self, "music-remove", heading, body,
+                Answer("ok", _("Remove"), lambda: self.remove_music([path]), look="destructive"),
+                private=True)
 
     def remove_music(self, device_paths) -> None:
         from openexpress import music
