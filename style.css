@@ -282,9 +282,17 @@ figcaption {
 /* The row: each picture as wide as its shape asks, so that all are as high (the narrow
    window smaller) and their captions on one line. */
 .shot-row {
+  --gap: 18px;
   display: flex;
-  gap: 18px;
+  gap: var(--gap);
   margin-top: 26px;
+}
+
+/* A row of two: as wide as two pictures of a row of three and their gap, so that a picture is
+   as large in every row. */
+.shot-row.pair {
+  max-width: calc((200% - var(--gap)) / 3);
+  margin-inline: auto;
 }
 
 .shot-row > .shot { flex: var(--ratio, 1.351) 1 0; min-width: 0; }   /* 1400 × 1036 */
@@ -446,7 +454,9 @@ footer p { margin: 0 0 12px; }
   .summary { font-size: 1.18rem; }
   .shot-row { flex-direction: column; }
   .shot-row > .shot { flex: none; }
-  .shot-row > .narrow-shot { width: 62%; margin: 0 auto; }
+  /* 360 of a window of 1000 px: as large as the others, one under the other */
+  .shot-row > .narrow-shot { width: 36%; margin: 0 auto; }
+  .shot-row.pair { max-width: none; }   /* one under the other: each as wide as the page */
   main > section { padding-top: 40px; }
   .spotlight {
     grid-template-columns: 1fr;
