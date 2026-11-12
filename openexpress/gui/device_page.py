@@ -197,6 +197,17 @@ def show_backups(win) -> None:
     row.set_tooltip_text(str(paths.default_backup_dir()))
 
 
+def section_row(win, title: str, key: str, *suffixes, **props) -> Adw.ActionRow:
+    """A row that opens the page `key` of the window (select_section): `suffixes` at its end,
+    then an arrow."""
+    row = Adw.ActionRow(title=title, activatable=True, **props)
+    for widget in suffixes:
+        row.add_suffix(widget)
+    row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+    row.connect("activated", lambda *_a: win.select_section(key))
+    return row
+
+
 def status_row(win, group=None) -> None:
     """The row "Device Status" under "Backup": the title of the summary of the page Device
     Status (status.told, words.status_summary), which it leads to, as the page tells it (also
@@ -217,10 +228,8 @@ def status_row(win, group=None) -> None:
                                   datetime.now(), t.has_diagnostics).row
     else:
         subtitle = space_text(None, reading=True)
-    row = Adw.ActionRow(title=pgettext("tab", "Device Status"),
-                        subtitle=GLib.markup_escape_text(subtitle), activatable=True)
-    row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-    row.connect("activated", lambda *_a: win.select_section("status"))
+    row = section_row(win, pgettext("tab", "Device Status"), "status",
+                      subtitle=GLib.markup_escape_text(subtitle))
     group.add(row)
     win.status_row = row
 
@@ -961,15 +970,12 @@ class DevicePage:
         # wrote to it): the page asks the device nothing.
         # TRANSLATORS: group on the device page: the device's own storage
         g = sec.group(_("Storage"))
-        self.storage_row = Adw.ActionRow(title=_("Device Storage"), activatable=True)
-        self.storage_row.connect("activated", lambda *_a: self.select_section("status"))
         self.storage_bar = Gtk.LevelBar(min_value=0, max_value=1, valign=Gtk.Align.CENTER,
                                         width_request=120, visible=False)
         self.storage_bar.add_offset_value("low", 0.75)
         self.storage_bar.add_offset_value("high", 0.9)
         self.storage_bar.add_offset_value("full", 1.0)
-        self.storage_row.add_suffix(self.storage_bar)
-        self.storage_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
+        self.storage_row = section_row(self, _("Device Storage"), "status", self.storage_bar)
         g.add(self.storage_row)
         render_space(self)
         if getattr(s, "space", None) is None:
@@ -1005,9 +1011,7 @@ class DevicePage:
 
         g = sec.group(pgettext("tab", "Updates"))
         # TRANSLATORS: row of the device's own software (firmware) and its updates
-        self.update_row = Adw.ActionRow(title=_("Device Software"), activatable=True)
-        self.update_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-        self.update_row.connect("activated", lambda *_a: self.select_section("updates"))
+        self.update_row = section_row(self, _("Device Software"), "updates")
         g.add(self.update_row)
         # What the last check found, from the first frame (nothing moves when the check
         # confirms it); the check runs all the same.
@@ -1016,9 +1020,7 @@ class DevicePage:
         if self.update_state is None or recorded:
             self._check_updates_quietly()
         if not mass_storage:
-            self.map_row = Adw.ActionRow(title=pgettext("tab", "Maps"), activatable=True)
-            self.map_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-            self.map_row.connect("activated", lambda *_a: self.select_section("maps"))
+            self.map_row = section_row(self, pgettext("tab", "Maps"), "maps")
             g.add(self.map_row)
             self._render_map_state()
             if self.map_state is None:
@@ -1029,17 +1031,12 @@ class DevicePage:
             # (note_apps_count, note_music_count), never a read of their own.
             # TRANSLATORS: group on the device page with the rows "Apps" and "Music"
             g = sec.group(_("Apps and Music"))
-            self.apps_row = Adw.ActionRow(title=pgettext("tab", "Apps"), activatable=True)
-            self.apps_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-            self.apps_row.connect("activated", lambda *_a: self.select_section("apps"))
+            self.apps_row = section_row(self, pgettext("tab", "Apps"), "apps")
             g.add(self.apps_row)
             note_apps_count(self, self.apps_count)
             self.music_row = None
             if music_kinds(d):
-                self.music_row = Adw.ActionRow(title=pgettext("tab", "Music"),
-                                               activatable=True)
-                self.music_row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-                self.music_row.connect("activated", lambda *_a: self.select_section("music"))
+                self.music_row = section_row(self, pgettext("tab", "Music"), "music")
                 g.add(self.music_row)
                 count = self.music_count
                 note_music_count(self, *(count or (None, None)))

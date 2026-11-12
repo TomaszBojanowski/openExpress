@@ -32,6 +32,7 @@ from openexpress.gui import words  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
     Section,
     read_diagnostics,
+    section_row,
     show_loaded,
     status_changed,
 )
@@ -483,12 +484,11 @@ def _storage(win, sec, facts: status.Facts, now: datetime) -> None:
         title=_("Category Details"),
         subtitle=_counted_text(facts, now))
     for kind, size in kinds:
-        row = Adw.ActionRow(title=names[kind], subtitle=human_size(size))
-        row.add_prefix(_row_dot(kind))
         if facts.connected and kind in PAGES and kind in win.sections:
-            row.set_activatable(True)
-            row.add_suffix(Gtk.Image(icon_name="go-next-symbolic"))
-            row.connect("activated", lambda _r, k=kind: win.select_section(k))
+            row = section_row(win, names[kind], kind, subtitle=human_size(size))
+        else:
+            row = Adw.ActionRow(title=names[kind], subtitle=human_size(size))
+        row.add_prefix(_row_dot(kind))
         details.add_row(row)
     rows = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE, css_classes=["boxed-list"],
                        margin_top=12)

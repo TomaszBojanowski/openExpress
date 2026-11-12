@@ -906,6 +906,29 @@ def test_the_device_page_leads_to_the_page_with_its_summary(clock):
     assert chosen == ["status"]
 
 
+@pytest.mark.needs_display
+def test_a_row_that_opens_a_page_has_its_suffixes_then_the_arrow():
+    """The rows that open a page of the window (Device Status, Device Storage with its bar,
+    Device Software, Maps, Apps, Music, a kind of file of Device Status) are made by one
+    function: what is at the row's end, then the arrow; activated, the row opens its page."""
+    from fakes import descendants
+    from gi.repository import Gtk
+
+    from openexpress.gui.device_page import section_row
+
+    chosen = []
+    bar = Gtk.LevelBar()
+    row = section_row(types.SimpleNamespace(select_section=chosen.append), "Device Storage",
+                      "status", bar, subtitle="Made-up space")
+    ends = [w for w in descendants(row) if w is bar or (
+        isinstance(w, Gtk.Image) and w.get_icon_name() == "go-next-symbolic")]
+    assert (row.get_title(), row.get_subtitle(), row.get_activatable()) == (
+        "Device Storage", "Made-up space", True)
+    assert len(ends) == 2 and ends[0] is bar  # the bar, then the arrow
+    row.emit("activated")
+    assert chosen == ["status"]
+
+
 # --- a device not connected: its view leads to the page from the records ----------------------
 
 
