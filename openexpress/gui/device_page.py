@@ -1134,7 +1134,7 @@ class DevicePage:
         confirm(self, "primary-training", _("Change the Primary Training Device?"),
                 _("The primary training device is the main source of performance and "
                   "training data in Garmin Connect.\n\nCurrent: {old}\nNew: {new}").format(
-                    old=current, new=s.device.description),
+                    old=current, new=device_name(s)),
                 # TRANSLATORS: button that makes this device the primary training device
                 Answer("set", _("Change"), lambda: self.set_primary_training(button),
                        look="suggested"),

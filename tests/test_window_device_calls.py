@@ -944,7 +944,7 @@ def test_set_as_primary_spins_its_button(monkeypatch, delay, text_shown):
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
     monkeypatch.setattr(service, "set_primary_training",
                         lambda client, device, apply: time.sleep(delay))
-    s = device_session(device=types.SimpleNamespace(description="Test watch"),
+    s = device_session(device=types.SimpleNamespace(description="Test watch", unit_id=None),
                        logged_in=True, ownership_error=None, client=None)
     overviews = []
     win = _task_window(session=s, show_overview=lambda: overviews.append(True),
@@ -961,6 +961,25 @@ def test_set_as_primary_spins_its_button(monkeypatch, delay, text_shown):
 
 
 @pytest.mark.needs_display
+def test_the_question_names_the_device_as_its_page_does(monkeypatch):
+    """A device whose GarminDevice.xml names it in capitals only: the question says the name
+    Garmin gives its model, as the page and the question of the primary wearable do."""
+    from gi.repository import Adw
+
+    from openexpress.gui import app
+
+    questions = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
+    s = device_session(device=types.SimpleNamespace(description="MADE-UP", unit_id=None),
+                       logged_in=True, ownership_error=None, client=None,
+                       unit_info_answer={"devicemodel": "Made-up Pro (Gen 2)"})
+    win = _task_window(session=s, _primary_training_text=app.MainWindow._primary_training_text)
+    app.MainWindow.confirm_primary_training(win, PRIMARY)
+    (question,) = questions
+    assert question.get_body().endswith("New: Made-up Pro (Gen 2)")
+
+
+@pytest.mark.needs_display
 def test_cancel_leaves_set_as_primary_as_it_was(monkeypatch):
     from gi.repository import Adw, Gtk
 
@@ -968,7 +987,7 @@ def test_cancel_leaves_set_as_primary_as_it_was(monkeypatch):
 
     questions = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: questions.append(self))
-    s = device_session(device=types.SimpleNamespace(description="Test watch"),
+    s = device_session(device=types.SimpleNamespace(description="Test watch", unit_id=None),
                        logged_in=True, ownership_error=None, client=None)
     win = _task_window(session=s, _primary_training_text=app.MainWindow._primary_training_text)
     win.set_primary_training = lambda button=None: pytest.fail("set without Set")
