@@ -645,14 +645,14 @@ def _free_dumps(ctx):
 
 def _free_update(ctx):
     from openexpress import updates
-    from openexpress.gui.status_page import confirm_update
+    from openexpress.gui.status_page import confirm_remove_update
 
     u = updates.SoftwareUpdate(
         part_number="006-D0000-00", name="GPS software", version="6.20", severity="Recommended",
         is_primary=False, is_reinstall=False, restart_required=False,
         device_path="GARMIN/RemoteSW/006-D0000-00.GCD", url="", md5=None, size=4_100_000,
         order=0, on_device=True)
-    confirm_update(_escape_window(ctx), u)
+    confirm_remove_update(_escape_window(ctx), u)
 
 
 def _free_not_removed(ctx):

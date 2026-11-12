@@ -662,7 +662,8 @@ def _free_up_space(win, sec, facts: status.Facts) -> None:
             subtitle, human_size(u.size) if u.size else ""))
         # TRANSLATORS: button of the row of an update file the device did not install:
         # removes the file
-        row.add_suffix(win._button(_("Remove"), lambda button, u=u: confirm_update(win, u, button),
+        row.add_suffix(win._button(_("Remove"),
+                                   lambda button, u=u: confirm_remove_update(win, u, button),
                                    style="destructive-action", with_button=True))
         g.add(row)
 
@@ -804,7 +805,7 @@ def confirm_dumps(win, plan: freeing.DumpPlan, button=None) -> None:
                    look="destructive"))
 
 
-def confirm_update(win, u, button=None) -> None:
+def confirm_remove_update(win, u, button=None) -> None:
     """Remove the Update File?: after the question, the task that removes it
     (freeing.remove_update); the Updates page offers the update again."""
     s = win.session

@@ -1834,7 +1834,7 @@ def test_an_update_file_removed_from_a_device_that_then_stops_is_taken_off_its_u
     gps.listed_file = freeing.listed_file(st, gps)
     monkeypatch.setattr(freeing, "updates_not_installed",
                         lambda client, storage, device, fresh=False: ([gps], None))
-    status_page.confirm_update(removing_window(st, dev, in_the_window), gps)
+    status_page.confirm_remove_update(removing_window(st, dev, in_the_window), gps)
     kept = status.read_kept(UNIT)
     assert (kept.categories["updates"], kept.categories["logs"]) == (0, 9_000)
     assert kept.dumps_at_last == (1, 9_000)
@@ -1905,7 +1905,7 @@ def test_the_question_names_the_size_of_the_file_on_the_device(in_the_window):
                   asked.append(body))
     gps = made_up_update("GARMIN/RemoteSW/006-D0000-00.GCD", size=4_100_000)
     gps.listed_file = (3_900_000, 1_700_000_000.0)
-    status_page.confirm_update(window(session=device_session()), gps)
+    status_page.confirm_remove_update(window(session=device_session()), gps)
     (body,) = asked
     assert "GPS software 6.20 (3.9 MB)" in body
 
