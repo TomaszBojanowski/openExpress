@@ -99,6 +99,23 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.2" date="2026-11-12">
+      <description translate="no">
+        <p>A maintenance release: consistent words and dialogs.</p>
+        <ul>
+          <li>Error dialogs say what did not happen ("Map Not Installed") instead of repeating the
+          progress text.</li>
+          <li>The Music page asks before removing a file or a playlist.</li>
+          <li>Pages for something the device does not have look the same everywhere; Try Again
+          appears only for real errors.</li>
+          <li>The Courses page shows saved locations also when there are no courses.</li>
+          <li>The message after a backup gives the number of files and their size instead of the
+          folder.</li>
+          <li>Clearer texts in English and Polish; Czech translation updated by prajzner through
+          Hosted Weblate.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.10.1" date="2026-11-11">
       <description translate="no">
         <p>A maintenance release with fixes.</p>
