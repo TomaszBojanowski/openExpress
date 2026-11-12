@@ -968,7 +968,7 @@ def _updates_page(items, beta=False, drive=False, device=None):
     win.confirm_update = win.asked.append
     win.eject_device = lambda s, button=None: win.ejected.append(s)
     win.load_section = lambda *a, **kw: win.loads.append((a, kw))
-    for name in ("_updates_status", "_update_row", "_not_installed_row", "_button"):
+    for name in ("_updates_status", "_update_row", "_button"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     MainWindow.show_updates(win, items, beta)
     return (win, *_read_page(win))

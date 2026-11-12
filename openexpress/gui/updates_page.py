@@ -226,6 +226,57 @@ def confirm_install_all(win, items) -> None:
             extra=_below_the_question(s, kept))
 
 
+def _copied_lines(copied, lead, installed: str):
+    """The subtitle and the detail of the Updates page for updates copied to the device
+    (`copied`: waiting for it, or not installed by it): the versions of `lead`, the one the
+    page names ("Beta" apart, a tuple), else the version `installed`; the title, severity and
+    file of the only one, else the names of all."""
+    if lead is None:
+        subtitle = installed
+    else:
+        versions = versions_text(lead)
+        subtitle = (versions, _("Beta"), "") if lead.is_beta else versions
+    detail = (caption(lead.title, lead.severity_text, lead.filename) if len(copied) == 1
+              else caption(*(u.title for u in copied)))
+    return subtitle, detail
+
+
+def _label(text: str, styles, **props) -> Gtk.Label:
+    """A label in the style classes `styles`."""
+    widget = Gtk.Label(label=text, **props)
+    for style in styles:
+        widget.add_css_class(style)
+    return widget
+
+
+def _status_line(text, styles) -> Gtk.Widget | None:
+    """A line of the top of the Updates page in the style classes `styles`: `text`, or the
+    tuple of a beta version (its versions, "Beta", the rest), whose "Beta" stands out. None
+    without text."""
+    if not isinstance(text, tuple):
+        return (_label(text, styles, wrap=True, justify=Gtk.Justification.CENTER,
+                       max_width_chars=50) if text else None)
+    versions, word, after = text
+    # In a narrow window the parts go on to the next line: a separator stays with the part
+    # before it, never at the start of a line.
+    if WRAP_BOX is None:
+        # A FlowBox puts parts in columns: one text that wraps, "Beta" in bold (Pango markup
+        # knows no colours of the theme); a hard space before each separator.
+        line = _label("", styles, wrap=True, justify=Gtk.Justification.CENTER,
+                      max_width_chars=50)
+        tail = f"{SEPARATOR}{GLib.markup_escape_text(after)}" if after else ""
+        line.set_markup(f"{GLib.markup_escape_text(versions)}{SEPARATOR}"
+                        f"<b>{GLib.markup_escape_text(word)}</b>{tail}")
+        return line
+    marked = Gtk.Box()
+    marked.append(_label(word, ["warning", "heading"]))
+    parts = [_label(versions + SEPARATOR, styles), marked]
+    if after:  # none after "Beta" for an update copied already
+        marked.append(_label(SEPARATOR, styles))
+        parts.append(_label(after, styles, wrap=True, justify=Gtk.Justification.CENTER))
+    return wrapping_row(parts, 0)
+
+
 def check_updates_again(win) -> None:
     """"Check Again" on the Updates page: Garmin's server is asked anew."""
     answers.forget_session(answers.SOFTWARE_UPDATES, win.session)
@@ -294,7 +345,7 @@ class UpdatesPage:
             # that the device has not installed although it was unplugged since
             g = sec.group(_("Not Installed by the Device"))
             for u in untaken:
-                self._not_installed_row(g, u)
+                self._update_row(g, u, not_installed=True)
         # A file the device already has is a reinstall, whatever the server calls it; but not
         # an update copied that is waiting for the device to install it, nor one it did not
         # install.
@@ -319,15 +370,15 @@ class UpdatesPage:
 
     def _updates_status(self, sec, system, count: int, beta: bool = False, ready=(),
                         only=None, installable=(), untaken=()) -> None:
-        """Builds the top of the Updates page in `sec`: the state of the updates as "Device
-        software" says it (update_state_text): `count` to install (`only`: the one of them),
-        some copied that wait for the device (`ready`) with `count` still to install, or up
-        to date; under it the
-        `system` update or the device's version; whether Garmin offers it beta versions
-        (`beta`). More than one update `installable`: Install all, one question and one copy
-        (a drive is ejected once after all of them; each Install ejects it after its own).
-        `untaken`: copied, and not installed by the device although it was unplugged since:
-        when nothing else is to do, what became of them, without Eject or Install."""
+        """Builds the top of the Updates page in `sec`: the state of the updates as the row
+        "Device Software" says it (update_state_text), under it the `system` update or the
+        device's version. The state: `count` to install (`only`: the one of them); some
+        copied that wait for the device (`ready`), with `count` still to install; when
+        nothing else is to do, those copied and not installed by the device although it was
+        unplugged since (`untaken`), without Eject or Install; else up to date. `beta`:
+        Garmin offers the device beta versions. More than one update `installable`: Install
+        All, one question and one copy (a drive is ejected once after all of them; each
+        Install ejects it after its own)."""
         from openexpress import updates as upd
 
         d = self.session.device
@@ -367,13 +418,7 @@ class UpdatesPage:
                 buttons.append(self._button(
                     _("Eject"), lambda button, s=self.session: self.eject_device(s, button=button),
                     "suggested-action", with_button=True))
-            if lead is None:
-                subtitle = installed
-            else:
-                versions = versions_text(lead)
-                subtitle = (versions, _("Beta"), "") if lead.is_beta else versions
-            detail = (caption(lead.title, lead.severity_text, lead.filename) if len(ready) == 1
-                      else caption(*(u.title for u in ready)))
+            subtitle, detail = _copied_lines(ready, lead, installed)
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
             title = update_state_text("available", count, only)
@@ -384,13 +429,8 @@ class UpdatesPage:
             title = ngettext("Update Not Installed by the Device",
                              "Updates Not Installed by the Device", len(untaken))
             lead = untaken[0] if len(untaken) == 1 else None
-            if lead is None:
-                subtitle = installed
-                detail = caption(*(u.title for u in untaken))
-            else:
-                versions = versions_text(lead)
-                subtitle = (versions, _("Beta"), "") if lead.is_beta else versions
-                detail = caption(lead.title, lead.severity_text, lead.filename)
+            subtitle, detail = _copied_lines(untaken, lead, installed)
+            if lead is not None:
                 note = not_installed_text(lead)
                 if lead.changed_on_device:  # copied again, it may be taken this time
                     buttons.append(self._button(_("Reinstall"),
@@ -412,91 +452,59 @@ class UpdatesPage:
         if system is None and not ready and not count and not untaken:
             image.add_css_class("success")  # up to date only
         box.append(image)
-
-        def label(text, styles, **props):
-            widget = Gtk.Label(label=text, **props)
-            for style in styles:
-                widget.add_css_class(style)
-            return widget
-
         for text, styles in ((title, ["title-1"]), (subtitle, ["dim-label"]),
                              (detail, ["caption", "dim-label"]),
                              (note, ["caption", "dim-label"]),
                              (advice, ["caption", "dim-label"]),
                              (_(upd.BETA_OFFERED) if beta else None, ["caption", "dim-label"])):
-            if isinstance(text, tuple):  # a beta version: "Beta" stands out
-                versions, word, after = text
-                # In a narrow window the parts go on to the next line: a separator stays
-                # with the part before it, never at the start of a line.
-                if WRAP_BOX is None:
-                    # A FlowBox puts parts in columns: one text that wraps, "Beta" in bold
-                    # (Pango markup knows no colours of the theme); a hard space before
-                    # each separator.
-                    line = label("", styles, wrap=True, justify=Gtk.Justification.CENTER,
-                                 max_width_chars=50)
-                    tail = f"{SEPARATOR}{GLib.markup_escape_text(after)}" if after else ""
-                    line.set_markup(f"{GLib.markup_escape_text(versions)}{SEPARATOR}"
-                                    f"<b>{GLib.markup_escape_text(word)}</b>{tail}")
-                    box.append(line)
-                    continue
-                marked = Gtk.Box()
-                marked.append(label(word, ["warning", "heading"]))
-                parts = [label(versions + SEPARATOR, styles), marked]
-                if after:  # none after "Beta" for an update copied already
-                    marked.append(label(SEPARATOR, styles))
-                    parts.append(label(after, styles, wrap=True,
-                                       justify=Gtk.Justification.CENTER))
-                box.append(wrapping_row(parts, 0))
-            elif text:
-                box.append(label(text, styles, wrap=True, justify=Gtk.Justification.CENTER,
-                                 max_width_chars=50))
+            line = _status_line(text, styles)
+            if line is not None:
+                box.append(line)
         for b in buttons:
             b.add_css_class("pill")
         box.append(wrapping_row(buttons, 12, margin_top=8))  # one under the other if need be
         sec.group().add(box)
 
-    def _update_row(self, parent, u, reinstall: bool = False, waits_for=None) -> None:
+    def _update_row(self, parent, u, reinstall: bool = False, waits_for=None,
+                    not_installed: bool = False) -> None:
         """A row of update `u`; `waits_for`: the update copied already to its file, which the
         device has not installed yet: then no button, as a copy would replace it. One copied
-        before that is offered again says so, with Reinstall."""
-        details = caption(versions_text(u), human_size(u.size),
-                          u.severity_text, u.filename)
-        # A system update says so in its title; the name the server gives it goes first.
-        subtitle = caption(u.title, details) if u.is_system else details
-        if waits_for is not None:
-            # TRANSLATORS: below an update whose file on the device holds another update,
-            # copied already and not installed yet by the device
-            subtitle += "\n" + _("Can be installed once the device has installed {name}").format(
-                name=waits_for.title)
-        note = copied_update_text(u)
-        if note is not None:
-            subtitle += "\n" + note
-            reinstall = True
+        before that is offered again says so, with Reinstall. `not_installed`: copied, and not
+        installed by the device although it was unplugged since: what became of it, and
+        Reinstall only when the device changed its file (the same file again changes
+        nothing)."""
+        if not_installed:
+            subtitle = caption(versions_text(u), human_size(u.size), u.filename)
+            subtitle += "\n" + not_installed_text(u)
+            reinstall, button = True, u.changed_on_device
+        else:
+            details = caption(versions_text(u), human_size(u.size),
+                              u.severity_text, u.filename)
+            # A system update says so in its title; the name the server gives it goes first.
+            subtitle = caption(u.title, details) if u.is_system else details
+            if waits_for is not None:
+                # TRANSLATORS: below an update whose file on the device holds another update,
+                # copied already and not installed yet by the device
+                subtitle += "\n" + _(
+                    "Can be installed once the device has installed {name}").format(
+                        name=waits_for.title)
+            note = copied_update_text(u)
+            if note is not None:
+                subtitle += "\n" + note
+                reinstall = True
+            button = waits_for is None
         row = Adw.ActionRow(
             # TRANSLATORS: title of the row of an update of the device's own software (firmware), on
             # the Updates page
             title=GLib.markup_escape_text(_("Device Software") if u.is_system else u.title),
             subtitle=GLib.markup_escape_text(subtitle),
         )
-        if waits_for is None:
+        if button:
             # TRANSLATORS: button
             row.add_suffix(self._button(_("Reinstall") if reinstall else _("Install"),
                                         lambda u=u: self.confirm_update(u),
                                         None if reinstall else "suggested-action"))
         parent.add_row(row) if isinstance(parent, Adw.ExpanderRow) else parent.add(row)
-
-    def _not_installed_row(self, parent, u) -> None:
-        """A row of update `u`, copied and not installed by the device although it was
-        unplugged since: what became of it, and Reinstall only when the device changed its
-        file (the same file again changes nothing)."""
-        subtitle = caption(versions_text(u), human_size(u.size), u.filename)
-        subtitle += "\n" + not_installed_text(u)
-        row = Adw.ActionRow(title=GLib.markup_escape_text(_("Device Software") if u.is_system
-                                                          else u.title),
-                            subtitle=GLib.markup_escape_text(subtitle))
-        if u.changed_on_device:
-            row.add_suffix(self._button(_("Reinstall"), lambda u=u: self.confirm_update(u), None))
-        parent.add(row)
 
     @staticmethod
     def _update_done_text(rep) -> str:
