@@ -266,8 +266,8 @@ def cmd_diagnostics(args) -> int:
                                    size=human_size(sum(size for _p, size in dumps))))
     from openexpress import crashes
 
-    found = crashes.history(dev.unit_id, None if missed else entries,
-                            test_drive=bool(getattr(st, "test_drive", False)))
+    test_drive = bool(getattr(st, "test_drive", False))
+    found = crashes.history(dev.unit_id, None if missed else entries, test_drive=test_drive)
     # TRANSLATORS: `diagnostics`: heading of the crashes; each line under it says where its
     # crash was found
     print(_("Crashes that restarted the device:"))
@@ -276,12 +276,18 @@ def cmd_diagnostics(args) -> int:
     if not found:
         # TRANSLATORS: under "Crashes that restarted the device:" when there is none
         print("  " + _("none found"))
+    if (read.hidden_logs and not (args.crash_logs and args.apply)
+            and diagnostics.crash_logs_behind(entries, dev.unit_id, test_drive)):
+        # TRANSLATORS: `diagnostics`, under the crashes, for a watch that hides its crash logs
+        # while they were not copied to this computer; --crash-logs --apply copies them
+        print(_("The hidden crash logs, not copied yet, may hold more crashes: to count them, "
+                "add --crash-logs --apply."))
     print(_("Copies on this computer: {copies}").format(
-        copies=diagnostics.copies_text(dev.unit_id, bool(getattr(st, "test_drive", False)))))
+        copies=diagnostics.copies_text(dev.unit_id, test_drive)))
     # Not the folder itself: it is named after the unit ID, and this is pasted into reports.
     print("  " + _("in the folder of the device under {folder}").format(
         folder=paths.data_dir() / "devices"))
-    for line in history_lines(dev.unit_id, bool(getattr(st, "test_drive", False))):
+    for line in history_lines(dev.unit_id, test_drive):
         print(line)
     if not args.apply:
         print(_("Dry run: nothing was copied. Add --apply to copy the files the device shows now."))

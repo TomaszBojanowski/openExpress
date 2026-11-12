@@ -422,7 +422,9 @@ choose under Free Up Space.
 - **Crashes and Updates:** each crash once, from the device's error logs, its boot log, the
   copies on this computer and its connection log, with its details inside; the software updates,
   from its connection log (see [What is kept of each device](privacy.md#what-is-kept-of-each-device));
-  and when openExpress first saw the device.
+  and when openExpress first saw the device. On a watch that hides its crash logs (such as a
+  fēnix 8), crashes are counted from them only once they are copied (**Crash Logs**, **Copy**);
+  until then the summary says so.
 - **Free Up Space:** the files the device no longer needs, with their size, each removed with
   **Remove** only after a confirmation dialog:
   - the memory dumps except the newest: those whose copies fit in 100 MB are copied to this

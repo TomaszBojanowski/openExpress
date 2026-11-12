@@ -422,6 +422,65 @@ def test_the_rule_of_copy_crash_logs(device):
     assert not diagnostics.may_have_hidden_logs(st)
 
 
+# What the page's summary and the command line say while the hidden crash logs may hold crashes
+# not counted.
+NOT_COPIED_PAGE = "Crash logs not copied yet may hold more crashes: copy them below"
+NOT_COPIED_CLI = ("The hidden crash logs, not copied yet, may hold more crashes: to count them, "
+                  "add --crash-logs --apply.")
+
+
+def told_now(st, dev, now, monkeypatch, capsys) -> tuple[int, bool, bool]:
+    """At a new connection: the crashes the page counts, and whether its summary and
+    `openexpress diagnostics` say the hidden crash logs may hold more."""
+    from gi.repository import Adw, Gtk
+
+    from openexpress import cli
+    from openexpress.gui import status_page
+
+    st.usb.address += 1
+    found = diagnostics.at_open(dev, st)
+    facts = status.read(device_session(device=dev, storage=st, diagnostics=found))
+    group = Adw.PreferencesGroup()
+    status_page._summary(types.SimpleNamespace(group=lambda: group), facts, now)
+    labels = [w.get_label() for w in descendants(group) if isinstance(w, Gtk.Label)]
+    monkeypatch.setattr(cli, "open_device", lambda args: (st, dev))
+    assert cli.main(["diagnostics"]) == 0
+    printed = capsys.readouterr().out.splitlines()
+    return len(facts.crashes), NOT_COPIED_PAGE in labels, NOT_COPIED_CLI in printed
+
+
+@pytest.mark.needs_display
+def test_crashes_the_hidden_crash_logs_may_hold_are_said_until_they_are_copied(
+        device, clock, monkeypatch, capsys):
+    """A device that shows its event logs (a Venu 2, an Edge 1050) never says it. A watch that
+    hides its boot log says it until the boot log is copied here: then the sentence goes and
+    the boot log's older crash counts; an error log with a crash after the copy says it again."""
+    from ptp_fake import FakeDevice
+
+    st, dev = device
+    shown = st.root / "GARMIN" / "Debug" / "EventLogs"
+    shown.mkdir()
+    assert told_now(st, dev, clock.current, monkeypatch, capsys) == (1, False, False)
+    shown.rmdir()
+
+    fake = FakeDevice()
+    fake.add("GARMIN/Debug/err_log.bak", err_log(TRAP))
+    fake.add("GARMIN/Debug/recovery_mode_log.txt",
+             b"[10/12/26 08:00:00 99]: RTL Trap detected, errnum: 0x1a2b\n"
+             b"[10/20/26 22:24:39 1234]: RTL Trap detected, errnum: 0x1a2b\n", hidden=True)
+    st.fake = fake
+    assert told_now(st, dev, clock.current, monkeypatch, capsys) == (1, True, True)
+
+    assert diagnostics.copy_crash_logs(dev, st).saved
+    assert told_now(st, dev, clock.current, monkeypatch, capsys) == (2, False, False)
+
+    clock.current += timedelta(hours=3)
+    later = entry("RTL Trap", "2026-10-21 14:00:00",
+                  **{"RTL Error Number": "0x003", "programCounter": "0x10000abc"})
+    (st.root / "GARMIN" / "Debug" / "err_log.bak").write_bytes(err_log(TRAP, later))
+    assert told_now(st, dev, clock.current, monkeypatch, capsys) == (3, True, True)
+
+
 def test_without_access_to_usb_it_says_why(device):
     st, dev = device
     st.blocked = True

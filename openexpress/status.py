@@ -118,6 +118,9 @@ class Facts:
     dumps_at_last: tuple[int, int] | None = None  # not connected: (count, bytes) at the last
     # connection; None: not known
     device_busy: bool = False  # read while another task ran: what needs the device left out
+    # The hidden crash logs may hold crashes not counted (diagnostics.crash_logs_behind): the
+    # summary says so while Copy Crash Logs is offered.
+    crash_logs_behind: bool = False
 
 
 @dataclass
@@ -214,14 +217,16 @@ class Told:
     hidden: bool
     copies: tuple[int, int, datetime | None]
     has_diagnostics: bool
+    crash_logs_behind: bool = False
 
 
 def told(session) -> Told:
     """The crashes of every source (crashes_known), whether the error logs were read, the
     space the window read last (session.space: the one source of it), the kinds of file
     counted last (kinds_counted), and whether the device has diagnostic data (has_diagnostics,
-    by its error logs, its memory dumps now, the copies and the crash logs to copy). Nothing is
-    asked of the device: the page, the row of the device page and the report alike."""
+    by its error logs, its memory dumps now, the copies and the crash logs to copy), and whether
+    the crash logs to copy may hold crashes not counted. Nothing is asked of the device: the
+    page, the row of the device page and the report alike."""
     found = getattr(session, "diagnostics", None)
     device, storage = getattr(session, "device", None), getattr(session, "storage", None)
     unit = getattr(device, "unit_id", None)
@@ -237,8 +242,10 @@ def told(session) -> Told:
     has = has_diagnostics(errors_known, found.error_logs if errors_known else None,
                           found_crashes, dumps[0] if dumps is not None else None,
                           copies[0], hidden)
+    behind = hidden and diagnostics.crash_logs_behind(
+        found.entries if found is not None else None, unit, test_drive)
     return Told(found_crashes, errors_known, free, capacity, categories, counted_at, recounted,
-                hidden, copies, has)
+                hidden, copies, has, behind)
 
 
 def kinds_counted(session) -> tuple[dict[str, int], datetime | None, bool]:
@@ -288,7 +295,8 @@ def read(session, ask_device: bool = True) -> Facts:
         not_installed=[*plan.updates, *plan.waiting] if plan is not None else [],
         has_diagnostics=t.has_diagnostics, recounted=t.recounted,
         updates_why=plan.why if plan is not None else None,
-        dumps_plan=plan.dumps_plan if plan is not None else None, device_busy=not ask_device)
+        dumps_plan=plan.dumps_plan if plan is not None else None, device_busy=not ask_device,
+        crash_logs_behind=t.crash_logs_behind)
 
 
 def read_kept(unit_id: int) -> Facts | None:

@@ -583,6 +583,30 @@ def hidden_logs_to_copy(said: bool | None, unit_id: int | None, test_drive: bool
     return bool(said) and not (unit_id and hidden_logs_known_absent(unit_id, test_drive))
 
 
+def crash_logs_copied_at(unit_id: int, test_drive: bool = False) -> datetime | None:
+    """When the device's hidden crash logs were last copied to this computer (Copy Crash Logs:
+    the newest copy of that kind kept); None: never, or no such copy is kept any more."""
+    at = _last(folder(unit_id, test_drive), "crash logs").get("at")
+    try:
+        return datetime.fromisoformat(at) if isinstance(at, str) else None
+    except ValueError:
+        return None
+
+
+def crash_logs_behind(entries, unit_id: int | None, test_drive: bool = False) -> bool:
+    """Whether the hidden crash logs may hold crashes this computer does not count: they were
+    never copied here, or an error log (`entries`, read now) holds a crash after the last copy.
+    Asked only of a device whose crash logs Copy Crash Logs reads (hidden_logs_to_copy), and
+    never on its own: nothing is read of the device."""
+    if not unit_id:
+        return False
+    copied = crash_logs_copied_at(unit_id, test_drive)
+    if copied is None:
+        return True
+    newest = max((e.at for e in entries or () if e.is_crash and e.at is not None), default=None)
+    return newest is not None and newest > copied
+
+
 def may_have_hidden_logs(storage: Storage, shown: bool | None = None) -> bool:
     """The rule of "Copy Crash Logs": a device over MTP whose event logs
     the ordinary connection does not show (a fēnix 8 hides them, a Venu 2 and an Edge 1050

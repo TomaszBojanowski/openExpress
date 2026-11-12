@@ -306,6 +306,10 @@ def _summary(sec, facts: status.Facts, now: datetime) -> None:
                    hexpand=True)
     text.append(Gtk.Label(label=title, wrap=True, xalign=0, css_classes=["title-3"]))
     text.append(Gtk.Label(label=line, wrap=True, xalign=0, css_classes=["dim-label"]))
+    # Only beside the row Crash Logs, which the page leaves out while another task runs.
+    if facts.hidden_logs and facts.crash_logs_behind and not facts.device_busy:
+        text.append(Gtk.Label(label=words.crash_logs_not_copied(), wrap=True, xalign=0,
+                              css_classes=["dim-label"]))
     box.append(text)
     sec.group().add(box)
 

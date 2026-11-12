@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 10:39+0100\n"
+"POT-Creation-Date: 2026-11-12 19:05+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -951,6 +951,14 @@ msgstr ""
 #. TRANSLATORS: under "Crashes that restarted the device:" when there is none
 #: openexpress/cli.py
 msgid "none found"
+msgstr ""
+
+#. TRANSLATORS: `diagnostics`, under the crashes, for a watch that hides its crash logs
+#. while they were not copied to this computer; --crash-logs --apply copies them
+#: openexpress/cli.py
+msgid ""
+"The hidden crash logs, not copied yet, may hold more crashes: to count them, "
+"add --crash-logs --apply."
 msgstr ""
 
 #: openexpress/cli.py
@@ -8824,6 +8832,12 @@ msgstr ""
 #. TRANSLATORS: beside the chart of an activity, where its cursor is on a gap or a pause
 #: openexpress/gui/words.py
 msgid "no reading"
+msgstr ""
+
+#. TRANSLATORS: under the summary of the page Device Status of a watch that hides its crash
+#. logs; "below" is the row "Crash Logs" with its button "Copy"; one sentence, no full stop
+#: openexpress/gui/words.py
+msgid "Crash logs not copied yet may hold more crashes: copy them below"
 msgstr ""
 
 #. TRANSLATORS: subtitle of the row Device Status of a device that keeps no error logs or

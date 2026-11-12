@@ -134,7 +134,8 @@ as GPX 1.1 files.
 - what the device logged as errors (the "Assert" entries an Edge writes at each start as their
   number; each of them with `-v`);
 - the crashes that restarted it, each once, from its error logs, its boot log, the copies on
-  this computer and its log of connections;
+  this computer and its log of connections; for a watch that hides its crash logs, a line saying
+  they may hold more crashes until they are copied (`--crash-logs --apply`);
 - its memory dumps and the copies of its diagnostic files kept on this computer;
 - its log of connections: the newest five, and the storage by kind of file at the last.
 

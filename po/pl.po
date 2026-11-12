@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 10:39+0100\n"
+"POT-Creation-Date: 2026-11-12 19:05+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -1066,6 +1066,16 @@ msgstr "Awarie, po których urządzenie uruchomiło się ponownie:"
 #: openexpress/cli.py
 msgid "none found"
 msgstr "nie znaleziono"
+
+#. TRANSLATORS: `diagnostics`, under the crashes, for a watch that hides its crash logs
+#. while they were not copied to this computer; --crash-logs --apply copies them
+#: openexpress/cli.py
+msgid ""
+"The hidden crash logs, not copied yet, may hold more crashes: to count them, "
+"add --crash-logs --apply."
+msgstr ""
+"Ukryte dzienniki awarii, jeszcze nieskopiowane, mogą zawierać więcej awarii: "
+"aby je policzyć, dodaj --crash-logs --apply."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -9621,6 +9631,13 @@ msgstr "Brak tętna, wysokości i prędkości w tej aktywności"
 #: openexpress/gui/words.py
 msgid "no reading"
 msgstr "brak odczytu"
+
+#. TRANSLATORS: under the summary of the page Device Status of a watch that hides its crash
+#. logs; "below" is the row "Crash Logs" with its button "Copy"; one sentence, no full stop
+#: openexpress/gui/words.py
+msgid "Crash logs not copied yet may hold more crashes: copy them below"
+msgstr ""
+"Nieskopiowane dzienniki awarii mogą zawierać więcej awarii: skopiuj je niżej"
 
 #. TRANSLATORS: subtitle of the row Device Status of a device that keeps no error logs or
 #. memory dumps openExpress can read (its page says so in a sentence)

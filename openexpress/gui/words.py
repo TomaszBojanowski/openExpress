@@ -989,6 +989,14 @@ def chart_cursor_text(seconds: float, kind: str, value: float | None) -> str:
     return caption(activity_clock(seconds), shown)
 
 
+def crash_logs_not_copied() -> str:
+    """Under the summary of the page Device Status while the device's hidden crash logs may hold
+    crashes not counted (status.Facts.crash_logs_behind): the row Crash Logs below copies them."""
+    # TRANSLATORS: under the summary of the page Device Status of a watch that hides its crash
+    # logs; "below" is the row "Crash Logs" with its button "Copy"; one sentence, no full stop
+    return _("Crash logs not copied yet may hold more crashes: copy them below")
+
+
 class Summary(NamedTuple):
     """The summary of the page Device Status."""
     look: str  # "good", "warning", "unknown", or "none" without diagnostic data
