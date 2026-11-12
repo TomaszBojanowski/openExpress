@@ -14,6 +14,7 @@ import os
 import re
 import subprocess
 import sys
+import tempfile
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -74,10 +75,18 @@ def main() -> int:
     for old in [*(p for p in folder.glob("*.png") if NAME.fullmatch(p.name)),
                 folder / "index.html"]:
         old.unlink(missing_ok=True)
-    env = dict(os.environ, OPENEXPRESS_REVIEW_SHOTS=str(folder))
-    run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-                          "tests/test_status_review.py"], cwd=ROOT, env=env,
-                         capture_output=True, text=True, check=False)
+    # On a D-Bus of its own with a runtime folder of its own (tests/separate_bus.py): the window
+    # of the review can then start no second document portal over the session's.
+    sys.path.insert(0, str(ROOT / "tests"))
+    import separate_bus
+
+    with tempfile.TemporaryDirectory(prefix="status-review-") as bus:
+        env = separate_bus.environment(Path(bus), dict(os.environ,
+                                                       OPENEXPRESS_REVIEW_SHOTS=str(folder)))
+        run = subprocess.run(separate_bus.command(
+            [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+             "tests/test_status_review.py"], Path(bus)),
+            cwd=ROOT, env=env, capture_output=True, text=True, check=False)
     lines = run.stdout.strip().splitlines()
     failures = [line for line in lines if line.startswith(("FAILED", "E   "))]
     summary = "\n".join([*failures[:40], lines[-1] if lines else ""])

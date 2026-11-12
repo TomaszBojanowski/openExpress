@@ -7,6 +7,7 @@ import shutil
 import signal
 import struct
 import subprocess
+import sys
 import time
 from datetime import datetime
 from pathlib import Path
@@ -638,18 +639,63 @@ def plain_http_to_the_test_servers(monkeypatch):
 
 # --- the document portal: no test may take its mount away --------------------------------------
 #
-# A second xdg-document-portal (one started on a private D-Bus) unmounts the session's
-# /run/user/UID/doc when it starts; every Flatpak then fails until the portal is restarted.
-# After each test the mount must still be there; if it is gone, the run stops at once.
+# A second xdg-document-portal unmounts the session's /run/user/UID/doc when it starts (and mounts
+# its own there); every Flatpak then fails until the session's portal is restarted. A program a
+# test or a tool runs goes on a bus of its own (separate_bus). After each test the session's mount
+# is still there and still the same one (its device number); at the end of the run the session's
+# portal is still the same process. A run under a bus of its own watches the session's folder all
+# the same (OPENEXPRESS_SESSION_RUNTIME).
 
-DOCUMENTS = Path(os.environ.get("XDG_RUNTIME_DIR", f"/run/user/{os.getuid()}")) / "doc"
+SESSION_RUNTIME = Path(os.environ.get("OPENEXPRESS_SESSION_RUNTIME")
+                       or os.environ.get("XDG_RUNTIME_DIR") or f"/run/user/{os.getuid()}")
+DOCUMENTS = SESSION_RUNTIME / "doc"
+RESTART = "systemctl --user restart xdg-document-portal.service"
+PORTAL: dict = {"start": None, "last": "none yet"}
+
+
+def _documents_mount() -> int | None:
+    """The device number of the session's document portal mount; None when it is not mounted."""
+    if not os.path.ismount(DOCUMENTS):
+        return None
+    try:
+        return os.stat(DOCUMENTS).st_dev
+    except OSError:
+        return None
+
+
+def _portal_process() -> int | None:
+    """The process of the session's document portal, as the session's systemd knows it."""
+    try:
+        done = subprocess.run(["systemctl", "--user", "show", "--property=MainPID", "--value",
+                               "xdg-document-portal.service"],
+                              env=dict(os.environ, XDG_RUNTIME_DIR=str(SESSION_RUNTIME)),
+                              capture_output=True, text=True, timeout=10, check=False)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    found = done.stdout.strip()
+    return int(found) if found.isdigit() and found != "0" else None
+
+
+def pytest_sessionstart(session):
+    PORTAL["start"] = (_documents_mount(), _portal_process())
+
+
+def pytest_sessionfinish(session, exitstatus):
+    start = PORTAL["start"]
+    if start is None or start[0] is None:
+        return
+    if (_documents_mount(), _portal_process()) != start:
+        session.exitstatus = 3
+        print(f"\nThe session's document portal is not the one of the start of the run ({DOCUMENTS} "
+              f"or the portal's process changed); the last test: {PORTAL['last']}. The portal needs "
+              f"a restart ({RESTART}).", file=sys.stderr)
 
 
 @pytest.fixture(autouse=True)
 def documents_portal_stays(request):
-    there = os.path.ismount(DOCUMENTS)
+    before = _documents_mount()
     yield
-    if there and not os.path.ismount(DOCUMENTS):
-        pytest.exit(f"{request.node.nodeid} took {DOCUMENTS} away: the document portal needs a "
-                    "restart (systemctl --user restart xdg-document-portal.service)",
-                    returncode=3)
+    PORTAL["last"] = request.node.nodeid
+    if before is not None and _documents_mount() != before:
+        pytest.exit(f"{request.node.nodeid} took {DOCUMENTS} away or put another portal there: "
+                    f"the document portal needs a restart ({RESTART})", returncode=3)
