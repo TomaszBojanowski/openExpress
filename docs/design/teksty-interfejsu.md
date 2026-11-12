@@ -213,8 +213,8 @@ in the template and in every `.po`, also when no text changed.
 What it changes:
 - One diff once: every reference of the template and of each `.po` loses its line number.
 - Weblate: its "Source string location" shows the file without a line, and its link opens the file,
-  not the line. Its msgmerge add-on is off (it would drop the flags of `po/weblate-flags.txt`), so
-  only our scripts write the references; Weblate keeps what it finds when it saves a translation.
+  not the line. Its msgmerge add-on merges every language but Polish (dropping the flags of
+  `po/weblate-flags.txt` there), and our scripts merge Polish.
   Fewer lines touched on both sides: fewer conflicts between Weblate's pull requests and ours.
 - Translators lose the line, not the context: comments and `msgctxt` stay.
 - The scripts: `tools/update-template.sh` (the template) and `tools/update-translations.sh`

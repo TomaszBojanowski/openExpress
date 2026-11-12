@@ -1,18 +1,16 @@
 #!/usr/bin/env python3
-"""Typography in a .po file, by the rules of its language, so that a text of the window that
-wraps never leaves a short word or a mark alone at the end or the start of a line:
-- Polish, Czech and Slovak: a hard space (U+00A0) instead of a plain one after a one-letter
-  word (Polish w, z, i, o, u, a; Czech and Slovak k, s, v, z, o, u, a, i; and their capitals);
-- Polish also: a hard space before an en dash (–), which would otherwise begin a line;
-- French: a narrow hard space (U+202F) instead of a plain one before ; : ! ? and inside « ».
-The language is the file's name (pl.po), or --lang. A language without rules is left as it
-is. In the repository only Polish is changed: every other language is its translators', in
-Weblate, and its file here is refused. tests/test_i18n.py checks Polish.
+"""The hard spaces of Polish in a .po file, so that a text of the window that wraps never leaves
+a one-letter word at the end of a line nor begins one with a dash: a hard space (U+00A0)
+instead of a plain one after a one-letter word (w, z, i, o, u, a and their capitals) and before
+an en dash (–). Polish is the one language the project changes: every other is its
+translators', in Weblate (their typography is theirs), so its file here is refused and a
+language other than Polish is left as it is. The language is the file's name (pl.po), or
+--lang. tests/test_i18n.py checks Polish.
 
 Usage, after new translations (e.g. tools/po-fill.py):
     tools/po-hard-spaces.py po/pl.po            preview: what would change, nothing written
     tools/po-hard-spaces.py po/pl.po --apply    write it
-    tools/po-hard-spaces.py draft.po --lang cs  a file named otherwise
+    tools/po-hard-spaces.py draft.po --lang pl  a file named otherwise
 
 Only msgstr (also msgstr[N]) is changed, not in the header nor in obsolete entries (#~), and
 the layout of the lines stays.
@@ -21,12 +19,12 @@ import re
 import sys
 from pathlib import Path
 
-NBSP, NARROW_NBSP = "\u00a0", "\u202f"
+NBSP = "\u00a0"
 KEY = re.compile(r'^(msgctxt|msgid|msgid_plural|msgstr(?:\[\d+\])?) "(.*)"$')
 CONTINUED = re.compile(r'^"(.*)"$')
 # A letter that is not a word is left alone: one after a letter or a digit, a format code
 # (%i), a tag (<a href…>), an option (-a), a placeholder ({a}), a path (/a) or an escape (\a).
-ONE_LETTER_WORDS = {"pl": "wziouaWZIOUA", "cs": "ksvzouaiKSVZOUAI", "sk": "ksvzouaiKSVZOUAI"}
+ONE_LETTER_WORDS = "wziouaWZIOUA"
 
 
 def one_letter_words(letters: str):
@@ -38,12 +36,6 @@ def one_letter_words(letters: str):
     return spaces
 
 
-def french(text: str) -> list[tuple[int, str]]:
-    """The plain spaces before ; : ! ? and », and after «."""
-    return [(i, NARROW_NBSP) for i, ch in enumerate(text) if ch == " " and (
-        (i + 1 < len(text) and text[i + 1] in ";:!?»") or (i > 0 and text[i - 1] == "«"))]
-
-
 def before_a_dash(text: str) -> list[tuple[int, str]]:
     """The plain spaces before an en dash (a hyphen is no dash)."""
     return [(i, NBSP) for i, ch in enumerate(text) if ch == " " and text[i + 1:i + 2] == "–"]
@@ -53,9 +45,7 @@ def both(*rules):
     return lambda text: [place for rule in rules for place in rule(text)]
 
 
-RULES = {**{lang: one_letter_words(letters) for lang, letters in ONE_LETTER_WORDS.items()},
-         "fr": french}
-RULES["pl"] = both(RULES["pl"], before_a_dash)
+RULES = {"pl": both(one_letter_words(ONE_LETTER_WORDS), before_a_dash)}
 ESCAPES = {"n": "\n", "t": "\t", '"': '"', "\\": "\\"}
 
 

@@ -1,9 +1,10 @@
 # Translating openExpress
 
 openExpress uses GNU gettext. The texts are in the template `po/openexpress.pot`, each language
-has its `po/<language>.po`, and `po/LINGUAS` lists the languages. You can translate them in your
-browser on Hosted Weblate (next section), or in any editor for `.po` files: Poedit, GNOME
-Translation Editor or a text editor.
+has its `po/<language>.po`, and `po/LINGUAS` lists the languages. Every language is translated
+in the browser on Hosted Weblate (next section), and only there: a translation is its
+translators', so the project never changes their files. Polish alone is kept by the project
+itself, with the code: a correction of Polish goes in an issue or a pull request.
 
 ## Translating on Hosted Weblate
 
@@ -22,8 +23,8 @@ GitHub account:
   apply there too. "translator-credits" and the language name are texts like any other
   ([Credits and sending a translation](#credits-and-sending-a-translation)).
 - **Sending**: Weblate sends the translations to this repository in a pull request, merged
-  before each release: the hard spaces and the tests are run then, and your name goes to
-  `TRANSLATORS`.
+  before each release: the tests are run then, and your name goes to `TRANSLATORS`. Weblate also
+  brings each new text of the template into your language.
 - **In a release**: a language goes into the program once at least 90% of its texts are
   translated; the project then adds it to `po/LINGUAS` (Weblate does not).
 
@@ -73,35 +74,30 @@ example:
 
 ## Plurals, placeholders and punctuation
 
-- **Plurals**: fill every plural form your language has. `msginit` sets the `Plural-Forms` line
-  of the header when the file is started.
+- **Plurals**: fill every plural form your language has. Weblate sets the `Plural-Forms` line
+  of the header when it starts the language.
 - **Placeholders** in braces (`{count}`, `{name}`, `{size}`, `{date}`…) stay exactly as they are.
   You may move them within the sentence. A few texts are date formats (`%Y-%m-%d`); their
   comment says so, and they must keep valid format codes.
 - **Ellipsis**: the single character `…` (U+2026), wherever the English has it: a button that
   asks for more before it acts, or a task under way.
-- **Hard spaces**: `tools/po-hard-spaces.py po/<language>.po` shows where your language's
-  typography wants a hard space, and `--apply` writes them. The command line prints plain
-  spaces in their place.
-  - **Rules:** Polish, Czech and Slovak get one after a one-letter word; French gets a narrow
-    one before `; : ! ?` and inside `« »`.
-  - **Not checked yet:** the Czech, Slovak and French rules were written from the usual
-    typography of those languages, and no translator has checked them. If yours are wrong,
-    correct them in that file or turn them off for your language, and say so in the pull
-    request.
-  - **Another language:** add its rules to that file; `tests/test_i18n.py` checks every
-    language that has rules.
+- **Hard spaces**: where your language's typography wants a hard space (after a one-letter
+  word, before `; : ! ?`…), type it in your translation in Weblate: the typography of your
+  language is yours. The command line prints plain spaces in their place. The project puts
+  those of Polish itself.
 
 ## Trying a translation in the window
 
-From [source](install.md#from-source), with GNU gettext installed:
+From [source](install.md#from-source), with GNU gettext installed, and your translation
+downloaded from Weblate into `po/<language>.po`:
 
 ```bash
-tools/update-translations.sh de        # starts po/de.po and adds de to po/LINGUAS (once)
-tools/update-translations.sh           # merges every language, builds the catalogs
+python3 -m openexpress.catalogs        # builds the catalogs of po/LINGUAS
 python3 -m openexpress --lang de gui   # the window in that language
-python3 -m pytest tests/test_i18n.py tests/test_catalogs.py
 ```
+
+A language not yet in `po/LINGUAS` needs its code added there first, on your computer only (the
+project adds it for a release, below).
 
 `--lang` (or `OPENEXPRESS_LANG=de`) wins over the language chosen in the Preferences.
 `LANGUAGE=de` works only while the Preferences say "System default". The window opens a
@@ -113,4 +109,5 @@ connected device as usual.
   shows it. Add your language and name to [TRANSLATORS](../TRANSLATORS) too.
 - Translate "English" in the context "language name" into the name of your language in your
   language ("Deutsch", "Français"). The list of languages in the Preferences shows it.
-- Send `po/LINGUAS`, your `po/<language>.po` and `TRANSLATORS` in a pull request.
+- Weblate sends your translation; the project adds your language to `po/LINGUAS` once at
+  least 90% of its texts are translated, and your name to `TRANSLATORS`.

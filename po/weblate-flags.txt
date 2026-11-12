@@ -1,8 +1,9 @@
 # The flags of Weblate for the texts whose check has nothing to say of them, one text a line:
 # context|text|flag, flag (the context empty for a text without one; the text written as in
 # a PO file, \n for a new line). tools/update-template.sh writes them into the template and
-# tools/update-translations.sh into each language after msgmerge, which drops them. Each
-# text must be one of the template (tests/test_catalogs.py).
+# tools/update-translations.sh into po/pl.po after msgmerge, which drops them (Weblate's own
+# msgmerge drops them from the other languages: Weblate may warn there). Each text must be one
+# of the template (tests/test_catalogs.py).
 
 # ignore-same
 sport|Multisport|ignore-same

@@ -1,7 +1,7 @@
 # Design: opening openExpress to translators
 
-Status: implemented, with the recommended option of each decision of section 4; openExpress is
-translated on Hosted Weblate.
+Status: implemented, with the recommended option of each decision of section 4 and D7, decided
+once Weblate was running; openExpress is translated on Hosted Weblate.
 
 ## 1. Before this change
 
@@ -40,9 +40,10 @@ Less work at each release: Hosted Weblate (D1).
 
 1. **The template and its refresh.** The template on its own (`tools/update-template.sh`):
    `xgettext` writes the `.pot`, committed with the code that changes the texts. The `msgmerge`
-   of the languages runs in the repository (`tools/update-translations.sh`); Weblate's msgmerge
-   add-on is not used, as both doing it makes conflicts. Polish keeps its rule (a new text and its Polish in one commit): Polish
-   is edited in the repository, and Weblate's pending changes of Polish are merged first (D5).
+   of Polish runs in the repository (`tools/update-translations.sh`); every other language is
+   merged by Weblate's msgmerge add-on, and only there (D7): both doing it made conflicts. Polish
+   keeps its rule (a new text and its Polish in one commit) and is edited in the repository
+   only (D5).
 2. **`po/LINGUAS`**, kept by the project, not by Weblate's add-on: a language is added by hand
    once it translates at least 90% of the template of a release, together with its
    `po/<language>.po` (a test holds that the two agree and that Polish is listed). The add-on
@@ -63,10 +64,9 @@ Less work at each release: Hosted Weblate (D1).
 6. **`TRANSLATORS` comments** for every text that is ambiguous alone (a short label, a chip, a
    unit, a text with placeholders whose meaning is not in the text): a pass over the `.pot`
    for texts of up to three words without a comment or a context.
-7. **Hard spaces in other languages**: `po-hard-spaces.py` with rules per language – Polish,
-   Czech and Slovak (their one-letter prepositions and conjunctions), French (the narrow
-   no-break space before `; : ! ?` and inside « »); run at a release for the languages that
-   have rules; the test for every language with rules.
+7. **Hard spaces**: `po-hard-spaces.py` puts those of Polish (after its one-letter words and
+   before an en dash), checked by a test; the typography of every other language is its
+   translators', in Weblate (D7).
 8. **The tests** for any language: placeholders and plural forms checked in every `.po`;
    untranslated texts allowed (English shows); the completeness and hard spaces checked for
    Polish only.
@@ -106,9 +106,9 @@ Less work at each release: Hosted Weblate (D1).
 
 ### D5: Polish — recommended: 5a
 
-- **5a. Polish stays in the repository, written with the code, with its rule; in Weblate it is
-  visible, its suggestions taken by hand (recommended).** + The one language with a complete
-  translation and rules keeps them.
+- **5a. Polish stays in the repository, written with the code, with its rule; Weblate leaves it
+  out of its languages (recommended).** + The one language with a complete translation and
+  rules keeps them, and no suggestion in Weblate collides with the project's commit.
 - **5b. Polish in Weblate as any language.** − New texts need their Polish in the same commit;
   with Weblate, that commit and Weblate's would collide.
 
@@ -122,6 +122,17 @@ Less work at each release: Hosted Weblate (D1).
   translator only checks. − Garmin's translations of a few hundred terms, published: short names
   are not protected by copyright in the US; in the EU a substantial extraction from a database
   can be; to be decided for each language on its own.
+
+### D7: who changes a language's file — chosen: 7a
+
+- **7a. Every language but Polish is changed only in Weblate (chosen).** The project never
+  commits to `po/<language>.po` but Polish: no `msgmerge` of it, no hard spaces, no correction;
+  Weblate's msgmerge add-on brings the new texts into each language, and a hook before each push
+  refuses a commit of the project that changes another language's file. + The translator owns
+  the text and its typography; no commit of ours collides with Weblate's pull requests. − A
+  correction the project would make waits for a translator.
+- **7b. The project merges and corrects every language.** − Each of its commits to a language's
+  file made a conflict with Weblate's next pull request.
 
 ## 5. Garmin Connect's words for translators
 
@@ -148,10 +159,10 @@ Short terms only, never sentences, and nothing of Garmin's code.
 ## 6. README and the website
 
 - README, a section **Help translate** after Support: Weblate's badge, where to translate (in
-  the browser on Hosted Weblate, with no GitHub account, or a `.po` file in a pull request) and
-  a link to the page for translators, `docs/translating.md`.
-- `docs/translating.md` holds the help of section 3, item 9: Weblate and the `.po` route side by
-  side. CONTRIBUTING, "Adding a translation", links to it.
+  the browser on Hosted Weblate, with no GitHub account; Polish, which the project keeps, in an
+  issue or a pull request) and a link to the page for translators, `docs/translating.md`.
+- `docs/translating.md` holds the help of section 3, item 9: Weblate, the one place of every
+  language but Polish (D7). CONTRIBUTING, "Adding a translation", links to it.
 - The website: the same line and badge in its footer, and "help translate" after the languages
   in the features.
 
@@ -166,4 +177,4 @@ Short terms only, never sentences, and nothing of Garmin's code.
    the Libre plan.
 4. README, CONTRIBUTING, the website (section 6), published with a release.
 5. Each release: Weblate's pull request fetched, merged locally (signed merge commit), the
-   checks, the hard-space tool; the release as usual.
+   checks; the hard-space tool on Polish; the release as usual.

@@ -232,28 +232,13 @@ msgstr "Soubor v adresáři a k zařízení s kopií"
 """
 
 
-@pytest.mark.parametrize("language", ["cs", "sk"])
-def test_czech_and_slovak_get_hard_spaces_after_one_letter_words(tmp_path, language):
-    text, said = _tool(tmp_path, f"{language}.po", CZECH_PO)
-    nb = "\u00a0"
-    assert f'"Soubor v{nb}adresáři a{nb}k{nb}zařízení s{nb}kopií"' in text
-    assert said.endswith("\n1 texts, 4 spaces\n")
-
-
-FRENCH_PO = """msgid ""
-msgstr ""
-"Language: fr\\n"
-
-msgid "x"
-msgstr "Erreur : le fichier « a » manque ; vraiment ?"
-"""
-
-
-def test_french_gets_narrow_hard_spaces_before_its_marks_and_inside_its_quotes(tmp_path):
-    text, said = _tool(tmp_path, "fr.po", FRENCH_PO)
-    nn = "\u202f"
-    assert f'"Erreur{nn}: le fichier «{nn}a{nn}» manque{nn}; vraiment{nn}?"' in text
-    assert said.endswith("\n1 texts, 5 spaces\n")
+@pytest.mark.parametrize("language", ["cs", "sk", "fr"])
+def test_only_polish_has_rules(tmp_path, language):
+    """The project changes no other language (Weblate does), so the tool keeps rules for Polish
+    alone: a file of another language is left as it is."""
+    text, said = _tool(tmp_path, f"{language}.po", CZECH_PO.replace("cs", language))
+    assert text == CZECH_PO.replace("cs", language)
+    assert said == f"{language}: no rules for hard spaces, nothing to do\n"
 
 
 def test_a_language_without_rules_is_left_as_it_is(tmp_path):
@@ -263,8 +248,10 @@ def test_a_language_without_rules_is_left_as_it_is(tmp_path):
 
 
 def test_the_language_of_a_file_named_otherwise_is_given(tmp_path):
-    text, _said = _tool(tmp_path, "draft.po", CZECH_PO, "--lang", "cs")
-    assert "v\u00a0adresáři" in text
+    draft = CZECH_PO.replace("cs", "pl").replace("Soubor v adresáři a k zařízení s kopií",
+                                                 "Plik w katalogu i z kopią")
+    text, _said = _tool(tmp_path, "draft.po", draft, "--lang", "pl")
+    assert "w\u00a0katalogu i\u00a0z\u00a0kopią" in text
 
 
 def test_the_name_of_each_language_in_that_language():

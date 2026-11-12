@@ -11,7 +11,8 @@ xgettext and msgfmt do the work.
 Weblate takes a text's flags (ignore-same and the like, which quiet a check that has nothing to
 say of that text) from the "#," line of a PO file, but GNU gettext's tools drop every flag they
 do not know: so the flags of po/weblate-flags.txt are written into the template when it is made
-and into each language after msgmerge (tools/update-translations.sh).
+and into po/pl.po after msgmerge (tools/update-translations.sh; Weblate's own msgmerge drops
+them from the other languages, where its checks may then warn).
 
 Has: nothing of the window (a module of the build and of install-desktop).
 """
