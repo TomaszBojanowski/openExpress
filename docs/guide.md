@@ -185,7 +185,7 @@ connected device; no login is needed.
   ejects it once, after all of them.
 
 Installing a system update was tested on an Edge 1050 (betas 33.12, 33.20 and 33.21) and
-reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)); component updates were tested on a Venu 2.
+reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)); component updates were tested on a Venu 2 and a fēnix 8 (a map support file).
 
 <p align="center">
   <img src="screenshots/update-confirm.png" width="700"
