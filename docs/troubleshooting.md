@@ -10,11 +10,13 @@
   watch was lost.
   - Before a bigger change (maps, several apps), it may help to turn the watch off and on first.
   - The watch keeps only the last such error in its log and overwrites it at the next restart,
-    sometimes already when it is unplugged. To keep it, turn on Preferences → **Diagnostics** →
-    **Keep Diagnostic Files** (what is copied and when: [Diagnostics](privacy.md#diagnostics)).
-  - The page **Device Status** lists each crash once, from the watch's error logs, its boot log
-    and the copies on this computer, with its details; the device page's row **Device Status**
-    says when it crashed in the last 30 days, whether the copy is on or not.
+    sometimes already when it is unplugged. openExpress notes each crash in its connection log
+    whenever the watch is connected; Preferences → **Diagnostics** → **Keep Diagnostic Files**
+    also keeps the error log itself, for a report (what is copied and when:
+    [Diagnostics](privacy.md#diagnostics)).
+  - The page **Device Status** lists each crash once, from the watch's error logs, its boot log,
+    the copies on this computer and its connection log, with its details; the device page's row
+    **Device Status** says when it crashed in the last 30 days.
 - **The watch is not found after the computer slept.** Watches (seen on a fēnix 8 and a Venu
   2) lose their USB connection when the computer sleeps: unplug the cable and plug it in
   again.

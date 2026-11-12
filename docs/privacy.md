@@ -64,13 +64,11 @@ Otherwise the device's diagnostic files stay on this computer:
 - The device report (`openexpress report`, **Report a Device or Problem…**) lists the device's
   last crashes (date, software version and error number) and its memory dumps; never where the
   software stopped, the screen, the Unit ID or a serial number.
-- The window remembers where it found the error logs and the device's other diagnostic files, so
-  that the next openings read them there without looking through the device's folders; they list
-  only the folder of the error logs and that of the memory dumps. It looks through them again when
-  one of the files is gone, an error log or a memory dump was written since, or the device has
-  other software; only then does it look again for what was not there. This is kept in
-  `diagnostic-places.json` in the device's folder (below): the paths, the device's software
-  version and whether its event logs are visible, nothing of the files themselves.
+- The window remembers where it found the device's diagnostic files, so that the next openings
+  list only the folders of the error logs and of the memory dumps; it looks through the device
+  again when one of the files is gone, a new one was written or the device has other software.
+  What is kept, in `diagnostic-places.json` in the device's folder (below): the paths, the
+  software version and whether the event logs are visible, nothing of the files.
 - With Preferences → **Diagnostics** → **Keep Diagnostic Files** turned on (off by default;
   `openexpress setup --diagnostics-copy on`), the window also copies the diagnostic files the
   device shows: `Garmin/Debug`, the folders of its diagnostic data types and its event logs. It
@@ -78,23 +76,26 @@ Otherwise the device's diagnostic files stay on this computer:
   ordinary connection. Health metrics (`MetricsBackup`), settings (`Backup`), memory dumps and
   files of more than 4 MB are only listed.
 - Only when you ask: the hidden crash logs of a fēnix 8 (its boot log and event logs) are read
-  with **Copy Crash Logs** or `openexpress diagnostics --crash-logs --apply`, in a session of
-  openExpress's own; the memory dumps (encrypted by Garmin) are copied with **Copy Memory Dumps**
-  or `openexpress diagnostics --dumps --apply`.
-
+  with **Copy** in the row **Crash Logs** of the Device Status page or
+  `openexpress diagnostics --crash-logs --apply`, in a session of openExpress's own; the memory
+  dumps (encrypted by Garmin) are copied with **Copy** in the row **Memory Dumps** or
+  `openexpress diagnostics --dumps --apply`.
 - Before older memory dumps are removed from the device (**Free Up Space** → **Remove** on the
-  Device Status page, `openexpress diagnostics --free-space --apply`), those
-  that fit are copied to this computer, whatever **Keep Diagnostic Files** says, and each copy is
-  checked first: at most 100 MB per device, apart from the copies above, the oldest removal
-  dropped first. A dump too large for that is removed without a copy, and the question says so.
+  Device Status page, `openexpress diagnostics --free-space --apply`), those that fit are copied
+  to this computer, whatever **Keep Diagnostic Files** says, and each copy is checked first. A
+  dump that does not fit is removed without a copy, and the confirmation dialog says so.
 
 The copies are in the device's folder of openExpress's data (`~/.local/share/openexpress/devices/`,
 in the Flatpak `~/.var/app/io.github.tomaszbojanowski.OpenExpress/data/openexpress/devices/`),
-readable only by you: at most 30 copies and 50 MB per device for the error and crash logs, as
-many for the memory dumps of Copy Memory Dumps, the oldest removed first, and the
-copies of removed dumps in `diagnostics/removed/` (those of a test drive, as all its copies, in
-`test-drive/diagnostics/`, with limits of their own). **Forget Device** removes them. These copies
-are never sent.
+readable only by you, each kind within its limit, the oldest removed first:
+
+| Copies | At most, per device |
+|---|---|
+| The error and crash logs | 30 copies and 50 MB |
+| The memory dumps copied with **Copy** | 30 copies and 50 MB |
+| The memory dumps copied before their removal (`diagnostics/removed/`) | 100 MB |
+
+**Forget Device** removes them. These copies are never sent.
 
 ## Activities
 
@@ -133,9 +134,12 @@ The map data is © OpenStreetMap contributors, under the Open Database License.
 ## Files on the device
 
 - Sync never deletes files from the device.
-- Files are deleted only when you ask for it: by `maps install/update/remove` (old map files
-  indicated by the server), `maps remove --own`, `music remove` and `apps remove`. On the command
-  line this happens only with `--apply`; without it, a dry run lists the files.
+- Files are deleted only when you ask for it, with the window's buttons or these commands:
+  `maps install/update/remove` (old map files indicated by the server), `maps remove --own`,
+  `music remove`, `apps remove`, `courses remove` and `diagnostics --free-space` (older memory
+  dumps and the files of updates the device did not install; in the window **Free Up Space** →
+  **Remove**, see [Device Status](guide.md#device-status)). On the command line this happens
+  only with `--apply`; without it, a dry run lists the files.
 - Before writing a software update, openExpress deletes a file of the same name in another letter
   case and, for a system update, a leftover `GUPDATE.TMP` in its folder. It removes a copy that
   failed its check.

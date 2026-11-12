@@ -182,10 +182,6 @@ changes anything only shows its plan until you add `--apply`. Every command:
   Updates page or with `openexpress updates --install`.
 - A device that connects only over HID, such as the inReach Mini of the first generation
   ([#31](https://github.com/TomaszBojanowski/openExpress/issues/31)), is not supported.
-- Removing the file of an update the device did not install (**Free Up Space** on the Device
-  Status page) was checked only on a test USB drive, not on a real device; removing older memory
-  dumps was checked on a fēnix 8 and an Edge 1050
-  ([what was checked](docs/devices.md#the-developers-fēnix-8-and-edge-1050)).
 
 ## Privacy
 

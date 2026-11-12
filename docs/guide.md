@@ -83,8 +83,8 @@ checked since …* when that check is older than 30 days), and, while the accoun
 known, its **Primary Wearable**.
 
 **Forget Device** at the bottom of that page removes what this installation keeps of the device:
-what was uploaded from it, its last sync, the maps of your own copied to it and the copies of
-its diagnostic files. Connected again, it is a new device, and its first sync asks again whether
+what was uploaded from it, its last sync, its connection log, the maps of your own copied to it
+and the copies of its diagnostic files. Connected again, it is a new device, and its first sync asks again whether
 to upload everything or new data only. While files of it are not uploaded yet, it is forgotten
 only once you tick that they are discarded; its backups go only when you tick that too. Nothing
 changes on the device or on your Garmin account. From the command line:
@@ -115,11 +115,9 @@ systemctl --user enable --now openexpress-watch.service
   exactly one Garmin device is connected; with two or more it writes a line in the
   [log](troubleshooting.md#log-file) and does nothing. A watch and a Varia: the watch is synced.
 
-A device that connects as a USB drive is synced with the **Sync** button (or
-`openexpress sync`), never in the background. As over MTP, its files are uploaded and Garmin
-Connect's queue is written to it (Connect IQ apps stay queued); after a sync that wrote files to
-it, the window asks to eject it, so that the device takes them. The device page says why a drive
-is not synced, when it is not ([USB modes](devices.md#usb-modes-mtp-and-mass-storage)).
+A device that connects as a USB drive is synced only with the **Sync** button (or
+`openexpress sync`), never in the background: what that sync does, and when the drive is
+ejected, in [Mass storage (USB drive)](devices.md#mass-storage-usb-drive).
 
 <p align="center">
   <img src="screenshots/device.png" width="700"
@@ -423,20 +421,19 @@ choose under Free Up Space.
   none of is left out) and the free space last; the kinds with a page of their own lead to it.
 - **Crashes and Updates:** each crash once, from the device's error logs, its boot log, the
   copies on this computer and its connection log, with its details inside; the software updates,
-  from its connection log (see [Diagnostics](privacy.md#diagnostics)); and when openExpress first
-  saw the device.
+  from its connection log (see [What is kept of each device](privacy.md#what-is-kept-of-each-device));
+  and when openExpress first saw the device.
 - **Free Up Space:** the files the device no longer needs, with their size, each removed with
-  **Remove** only after a question: the memory dumps but the newest (copied to this computer
-  first where the copies fit in 100 MB, the question's answer is then **Copy and Remove**; the
-  question names those whose copies would not fit, which are removed without a copy) and the
-  file of an update the device did not install, outside its main folder (the Updates page offers
-  the update again; map support files and satellite data are never offered). Only
-  the files the question named go: when the device holds other ones by then, nothing is removed
-  and the page is read again. No memory dump is offered while their times cannot be trusted (a
-  device whose clock is not set). A software update waiting in the device's main folder is only
-  shown: removing it would cancel the update. Activities, maps, music, courses and settings are
-  never removed. The same list from the command line: `openexpress diagnostics --free-space`, a
-  dry run until `--apply`.
+  **Remove** only after a confirmation dialog:
+  - the memory dumps except the newest: those whose copies fit in 100 MB are copied to this
+    computer first (the dialog's button is then **Copy and Remove**), and the dialog names the
+    others, removed without a copy;
+  - the file of an update the device did not install, outside its main folder (the Updates page
+    offers the update again); a software update waiting in the main folder is only shown, as
+    removing it would cancel the update;
+  - never activities, maps, music, courses, settings, map support files or satellite data;
+  - the same list from the command line: `openexpress diagnostics --free-space`, a dry run until
+    `--apply`.
 - **Diagnostic Files** and **Report a Problem:** the copy of the diagnostic files (the same
   switch as in Preferences), the copies on this computer (**Open** shows their folder), the rows
   **Crash Logs** and **Memory Dumps**, each with **Copy**, and the report.
@@ -446,9 +443,7 @@ choose under Free Up Space.
        alt="The Device Status page of an Edge 1050: its software update from 33.20 to 33.21 and its first connection to this computer, its diagnostic files (two copies on this computer, one memory dump) and Report a Problem">
 </p>
 
-What could not be read is said so, never shown as none. A device that keeps no error logs or
-memory dumps (a bike sensor, a USB drive) gets a page with its storage only. The device page
-leads there from its rows **Device Storage** and **Device Status**.
+The device page leads there from its rows **Device Storage** and **Device Status**.
 
 A remembered device that is not connected has the row **Device Status** under **Tools** of its
 view, when this computer has records of it: the same page from those records only, as of its

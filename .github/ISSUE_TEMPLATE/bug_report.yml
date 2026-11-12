@@ -16,7 +16,7 @@ body:
         In the window: main menu (☰) → **Report a Device or Problem…** → **Copy**.
         Or in a terminal: `openexpress report`
         (Flatpak: `flatpak run io.github.tomaszbojanowski.OpenExpress report`).
-        No device detected? Write the openExpress version (About openExpress) and your system instead.
+        No device detected? The report still works: it says what is connected over USB.
       render: markdown
     validations:
       required: true
