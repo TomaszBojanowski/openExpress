@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-11 21:15+0100\n"
-"PO-Revision-Date: 2026-11-11 21:03+0000\n"
+"PO-Revision-Date: 2026-11-12 18:06+0000\n"
 "Last-Translator: prajzner <prajzner@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/openexpress/"
 "openexpress/cs/>\n"
@@ -1352,7 +1352,7 @@ msgstr[2] "Přeskočeno {count} poškozeno řádků"
 #: openexpress/cli.py
 #, python-brace-format
 msgid "software {version}"
-msgstr "Verze softwaru {version}"
+msgstr "verze softwaru {version}"
 
 #. TRANSLATORS: in a line of the device log (`diagnostics`): its free space then
 #: openexpress/cli.py
@@ -1540,7 +1540,7 @@ msgstr "celé číslo od 1, nikoli {value}"
 #: openexpress/cli.py
 #, python-brace-format
 msgid "{device}, software {version}"
-msgstr "{device}, software {version}"
+msgstr "{device}, verze softwaru {version}"
 
 #: openexpress/cli.py
 msgid "This device keeps no activities."
@@ -2001,7 +2001,7 @@ msgstr "Zařízení rozpoznaná touto instalací:"
 #: openexpress/gui/start_window.py openexpress/gui/words.py
 #, python-brace-format
 msgid "Software {version}"
-msgstr "Software {version}"
+msgstr "verze softwaru {version}"
 
 #. TRANSLATORS: when this computer last saw a device: {when} is "2 h ago" on a tile, a full date
 #. in its tooltip and in the CLI
@@ -3316,8 +3316,8 @@ msgstr "Zařízení {model} už je přiřazeno k účtu Garmin {account}."
 msgid ""
 "{model} ({part}, software {version}) is not on the Garmin account {account}."
 msgstr ""
-"Zařízení {model} ({part}, software {version}) není přiřazeno k účtu Garmin "
-"{account}."
+"Zařízení {model} ({part}, verze softwaru {version}) není přiřazeno k účtu "
+"Garmin {account}."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -7538,7 +7538,7 @@ msgstr "Podpořit projekt"
 #. TRANSLATORS: replace with your name(s) in the translated version
 #: openexpress/gui/report_dialog.py
 msgid "translator-credits"
-msgstr "Překlad: česká komunita openExpress"
+msgstr "Český překlad: Václav Prajzner"
 
 #. TRANSLATORS: a chip on the tile of a device on the start page (its tooltip says when
 #. the check found it), and under the software version on the device page
@@ -7852,6 +7852,8 @@ msgstr "Volné"
 msgid ""
 "Another task is running – free up space or copy diagnostic files when it ends"
 msgstr ""
+"Právě probíhá jiná úloha – po jejím dokončení můžete uvolnit místo nebo "
+"zkopírovat diagnostické soubory"
 
 #. TRANSLATORS: group of the page Device Status
 #: openexpress/gui/status_page.py
@@ -7900,7 +7902,7 @@ msgstr "Podrobnosti kategorie"
 #, python-brace-format
 msgctxt "crash"
 msgid "software {version}"
-msgstr "Software verze {version}"
+msgstr "software verze {version}"
 
 #. TRANSLATORS: in the subtitle of a crash on the page Device Status
 #: openexpress/gui/status_page.py
@@ -8240,7 +8242,7 @@ msgstr[2] "{count} kopií"
 #: openexpress/gui/status_page.py
 #, python-brace-format
 msgid "the last {when}"
-msgstr "Naposledy {when}"
+msgstr "naposledy {when}"
 
 #. TRANSLATORS: group of the page Device Status
 #: openexpress/gui/status_page.py
