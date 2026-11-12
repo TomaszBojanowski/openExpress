@@ -1,7 +1,8 @@
 # Design: an update the device did not take in
 
-Status: accepted, with the heading of the state "Update Not Installed by the Device" (PL „Urządzenie
-nie zainstalowało aktualizacji”) instead of the one proposed; the row "Device Software" as proposed.
+Status: implemented, with the heading of the state "Update Not Installed by the Device" (PL
+„Urządzenie nie zainstalowało aktualizacji”) instead of the one proposed; the row "Device Software"
+as proposed.
 
 ## 1. The case
 
@@ -64,27 +65,25 @@ it. What openExpress can see of that, from /sys only:
 - **The USB address alone is no signal.** The bus and device number change at every
   re-enumeration: at a plug-in, but also when a watch ejected as a drive switches to its Garmin USB
   mode (091e:0003) on the cable, and when it comes back. The place on USB (the port, the name of its
-  folder in /sys) stays the same then; `gio_storage._drive_places` already tells the Garmin USB mode
-  by the place, not by the number. Before this change the log line "the drive ejected by openExpress
-  was unplugged" (`_forget_unplugged`, `usb_still_there`: the same bus and device number) is written
-  also when the watch only switched to its Garmin USB mode, the cable still in: to be fixed with
-  this design, by the same rule as below.
+  folder in /sys) stays the same then; the program already told the Garmin USB mode by the place,
+  not by the number. Before this change the log line "the drive ejected by openExpress was
+  unplugged" (taken from the same bus and device number) was written also when the watch only
+  switched to its Garmin USB mode, the cable still in; it follows the rule below now.
 - **Signal 1 – an unplugging seen (the one relied on).** A running openExpress (the window or the
-  background sync) sees the place of a drive it ejected left empty for at least `USB_GAP_S`
-  (5 s): the cable went out. Kept with the copy in `known_devices.copied_updates` (the time it was
+  background sync) sees the place of a drive it ejected left empty for at least 5 s: the cable
+  went out. Kept with the copy in `known_devices.copied_updates` (the time it was
   seen), so that a later connection, also in another run, knows it. A switch to the Garmin USB mode
   and back keeps the place busy, so it is not taken for an unplugging; a cable out and in again
   within 5 s is not seen by this signal (signals 2 and 3).
 - **Signal 2 – another address without the Garmin USB mode.** A new connection of the device at the
   same place with another device number counts only when openExpress watched that place without a
   break since the copy and saw no 091e:0003 there meanwhile (the cable out and in again within
-  `USB_GAP_S`, or the device restarted). Not across two runs of the program: what happened between
+  5 s, or the device restarted). Not across two runs of the program: what happened between
   them is not known.
 - **Signal 3 – the drive at another port.** While the place of a drive it ejected is empty, the
   same device (vendor, product and USB serial, or no serial for a device that gives none) is on USB
-  at another place: the cable went out and into another port. Counted at once, without waiting for
-  `USB_GAP_S`, so that the window opens it as any device plugged in and says nothing of an ejected
-  drive. Another device of the same model (another serial) is not taken for it.
+  at another place: the cable went out and into another port. Counted at once, without waiting the
+  5 s, so that the window opens it as any device plugged in and says nothing of an ejected drive. Another device of the same model (another serial) is not taken for it.
 - **No signal.** openExpress did not run while the cable went out, the place is not known, or the
   device connects over MTP (where 091e:0003 is also its usual starting mode): nothing is claimed,
   and the update stays "ready" as before this change.
@@ -129,17 +128,17 @@ When the eject follows a copied update that waits for the device ("ready"):
 | Start page and command line, the watch in its Garmin USB mode (091e:0003) | After it was ejected, the watch switched to its Garmin USB mode. Unplug the cable and leave the device unplugged so it can install the update. | Po wysunięciu zegarek przełączył się w swój tryb Garmin USB. Odłącz kabel i zostaw urządzenie odłączone, aby mogło zainstalować aktualizację. |
 
 Without a waiting update (the files of a sync, an eject from the Updates page with nothing
-copied), both texts stay as they are. Which applies is kept with the ejected drive
-(`gio_storage._ejected`: a flag "an update waits"), as its USB place is.
+copied), both texts stay as they are. Which applies is kept with the ejected drive (a flag "an
+update waits"), as its USB place is.
 
-## 6. Tests (when implemented)
+## 6. Tests
 
 - `staged` leaves out a copied update whose file matches or changed once an unplugging was seen
   (signal 1) or the address changed without the Garmin USB mode (signal 2); it keeps it without a
   signal, and after a switch to the Garmin USB mode and back on the cable.
-- The place of an ejected drive empty for `USB_GAP_S` is an unplugging; 091e:0003 at that place, and
-  back, is none (also for the log line of `_forget_unplugged`).
-- The cable out and in again within `USB_GAP_S`, at the same port or at another: the drive opens at
+- The place of an ejected drive empty for 5 s is an unplugging; 091e:0003 at that place, and back,
+  is none (also for the log line of an ejected drive unplugged).
+- The cable out and in again within 5 s, at the same port or at another: the drive opens at
   once and the window does not say "Device Ejected"; another device of its model at another port
   is not taken for it; the drive named for testing (`OPENEXPRESS_TEST_DRIVE_USB`) is seen back as
   a watch is.

@@ -67,6 +67,10 @@ STORY = re.compile("|".join((
     (r"\bthe user(?:'s)? (?:rule|read|reads|compares|chose|chooses|changed|accepted|asked"
      r"|decided|corrects)\b"),
     r"\b\d{2}:\d{2}:\d{2}\b")))
+# An implemented design says what the program does: the program before it is "Before this
+# change", never "today", and the steps of the work and who took them belong to the notes.
+IMPLEMENTED = re.compile(r"^Status: implemented\b", re.MULTILINE)
+WORK = re.compile(r"\btoday\b|\bmaintainer\b|^#{2,4} .*\bSteps\b")
 
 
 def _docstrings(tree) -> set[int]:
@@ -142,11 +146,13 @@ def references(path: Path) -> list[str]:
 def design_references(path: Path) -> list[str]:
     """What a design document tells of the work, outside its blocks of code: "line: words"."""
     said, in_code = [], False
-    for n, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+    text = path.read_text(encoding="utf-8")
+    story = (STORY, DATE, WHEN[1], WHEN[4]) + ((WORK,) if IMPLEMENTED.search(text) else ())
+    for n, line in enumerate(text.splitlines(), 1):
         if line.lstrip().startswith("```"):
             in_code = not in_code
         elif not in_code:
-            said += _said(n, line, (STORY, DATE, WHEN[1], WHEN[4]))
+            said += _said(n, line, story)
             said += _said(n, QUOTED.sub("", line), (ISO_DATE,))  # an example's date is data
     return said
 
@@ -274,6 +280,19 @@ def test_the_design_documents_tell_no_story_of_the_work():
              if (refs := design_references(path))}
     assert found == {}, "a design says what and why, not how the work went: " + json.dumps(
         found, indent=1)
+
+
+def test_an_implemented_design_tells_no_work_still_to_do(tmp_path):
+    """Not "today", the maintainer or a section of steps once the design is implemented; a design
+    still proposed may say them."""
+    words = ("The page today; after the\nmaintainer's consent.\n### D15. Steps\n"
+             "Each step is checked on its own.\n")
+    implemented, proposed = tmp_path / "implemented.md", tmp_path / "proposed.md"
+    implemented.write_text("Status: implemented.\n\n" + words, encoding="utf-8")
+    proposed.write_text("Status: proposed.\n\n" + words, encoding="utf-8")
+    assert [r.split(": ", 1)[1] for r in design_references(implemented)] == [
+        "today", "maintainer", "### D15. Steps"]
+    assert design_references(proposed) == []
 
 
 def test_what_a_design_document_does_not_tell(tmp_path):

@@ -258,23 +258,3 @@ or "Open openExpress and choose how to sync the device."). 4 texts become 3.
 | "Choose files stored on this computer" / "Choose a file stored on this computer" | stay (one or several files) | – |
 
 17 texts.
-
-## 4. Screenshots and documents
-
-Step 10 (documents) and the screenshots quote the window. What the decisions change there:
-
-| Decision | Screenshots | Documents |
-|---|---|---|
-| D1 | `updates.png`, `device.png` when an update waits ("Update ready: …"); `apps.png` (the group description under the apps) | `docs/guide.md` and others: "disconnect" 12×, "reconnect" 5×, "plug it back in" 1× (+ README 1×) |
-| D2 | `apps.png` (group description) | – |
-| D3 | `activity.png`, `activity-light.png`, the website's four activity pictures (detail rows and tiles) | `docs/guide.md`: "Moving time" and other detail names 5× |
-| D4 | none of the pictures shows these buttons (the fēnix is on the account) | `docs/guide.md`: "Add to Account…" 3×, "Forget Device…" 4×, "Clear All…" 2× |
-| D5, D6, D8, D9, D10, D12, D13 | none | `docs/cli.md`: "trial run" 3× (D6) |
-| D7 | `updates.png`, `update-confirm.png` ("System Software"), `apps.png` ("Connect IQ store") | "System Software" 2×, "Connect IQ store" 2× (+ website 1×), "Remove and Forget" 2×, "unit ID" in prose |
-| D11 | none (the details of "Last Sync" are not in a picture) | – |
-
-## 5. Totals
-
-About 176 English texts change (D1 19, D2 18 besides the 8 toasts of D9, D3 24, D4 9, D5 6, D6 8,
-D7 35, D8 24, D9 11, D11 1, D13 4, section 3 17), and 8 comments for translators (D10); in Polish
-about 120 follow (sentence case and the existing terms keep many as they are).
