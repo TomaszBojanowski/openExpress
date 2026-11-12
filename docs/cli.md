@@ -13,11 +13,11 @@ the two are separate installations, see
 | `openexpress activities export NAME… [--dest DIR] [--backups DIR] [--apply]` | write activities as GPX 1.1 files, by default to `Garmin/GPX` in your Documents folder ([details](#activities-export)) |
 | `openexpress fit inspect FILE` | what a FIT file on this computer holds and whether it is whole ([details](#fit-inspect)) |
 | `openexpress report [--log]` | device report for GitHub, without serial numbers, Unit IDs or e-mail, with the device's last crashes (date, software version, error number) and its memory dumps; when no device can be opened, a report of what is connected over USB and of the system (exit code 0); `--log` prints the last 200 lines of the [log](troubleshooting.md#log-file) instead, filtered, for the form's “Log” field |
-| `openexpress diagnostics [--crash-logs] [--dumps] [--free-space] [--apply]` | what the device logged as errors (the "Assert" entries an Edge writes at each start as their number; each of them with `-v`), the crashes that restarted it, each once, from its error logs, its boot log, the copies on this computer and its log of connections, its memory dumps, the copies of its diagnostic files kept on this computer and its log of connections (the newest five, and the storage by kind of file at the last); `--apply` copies the files it shows now; with it, `--crash-logs` also reads its hidden crash logs (the device leaves the file manager for a moment) and `--dumps` also copies its memory dumps; `--free-space`, an action of its own (not with `--crash-logs` or `--dumps`), shows only what can be freed on the device, the same list as the Device Status page (the memory dumps but the newest, which of them would be copied to this computer first and which not, as the copies would not fit in 100 MB, the files of updates it did not install, and an update waiting in its main folder, which is never removed), and with `--apply` copies and removes exactly those (each looked at again first) and does nothing else; what it removed is told also when it stops half-way (Ctrl+C); exit code 1 when the device kept a file, a copy failed, the files changed since they were listed or the update server could not be asked again before an update file was removed (then nothing of them is removed); what is read, copied and kept, and that nothing is sent: [Diagnostics](privacy.md#diagnostics) |
+| `openexpress diagnostics [--crash-logs] [--dumps] [--free-space] [--apply]` | what the device logged as errors, the crashes that restarted it, its memory dumps and its log of connections; copies its diagnostic files, or frees up space on it ([details](#diagnostics)) |
 | `openexpress status [--online]` | the sign-in, the Garmin devices connected (name, USB mode, whether they are on the account), the last sync of each with the activities it has to upload now, and what the window's last check of its updates found; `--online` also asks Garmin Connect and Garmin's update server now (nothing of the answers is kept); without it nothing is asked of a server |
 | `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it, as **Forget Device** does ([what that is](guide.md#the-start-page-and-the-device-page)); files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
 | `openexpress setup --from-installer GarminExpress.exe` | one-time setup from the Garmin Express installer for Windows (only read, nothing installed); instead of it `--from-dll Networking.dll [--utilities-dll Utilities.dll]` or `--key KEY --secret SECRET` |
-| `openexpress setup [--ui-language en\|de\|pl\|system] [--diagnostics-copy on\|off] [--locale LOCALE] [--environment production\|china]` | settings: the program's language, the copy of the device's diagnostic files, the language asked of Garmin's servers (by default the program's), Garmin's servers; without options it shows them |
+| `openexpress setup [--ui-language en\|cs\|de\|pl\|system] [--diagnostics-copy on\|off] [--locale LOCALE] [--environment production\|china]` | settings: the program's language, the copy of the device's diagnostic files, the language asked of Garmin's servers (by default the program's), Garmin's servers; without options it shows them |
 | `openexpress login [--manual]` | sign in on the Garmin SSO page (WebKitGTK window) |
 | `openexpress whoami [--check]`, `logout` | account (its name masked: a user name as `t…b`, an e-mail address as `t…@e…`, as in every command's output), sign out (removes the local token) |
 | `openexpress upload-config [--json]` | what data is uploaded for this device and where (Garmin server) |
@@ -60,7 +60,7 @@ Options before the command:
 - `--no-wait`: fail at once instead of waiting for a device that is starting (see below);
 - `--device-uri URI`: one MTP device when several are connected;
 - `--path DIR`: a folder with a copy of a device's files instead of a device (`diagnostics`
-  keeps what it copies of it apart from the device's own records, as for a test drive);
+  keeps what it copies of it apart from the device's own records);
 - `--version`.
 
 `--no-wait`, `--device-uri` and `--path` also go after a command that opens a device
@@ -126,6 +126,29 @@ as GPX 1.1 files.
 - Never the device's serial number.
 - In the Flatpak it reaches only `Garmin` in your Documents folder and, to read, Downloads and
   Music.
+
+### diagnostics
+
+`openexpress diagnostics [--crash-logs] [--dumps] [--free-space] [--apply]` shows:
+
+- what the device logged as errors (the "Assert" entries an Edge writes at each start as their
+  number; each of them with `-v`);
+- the crashes that restarted it, each once, from its error logs, its boot log, the copies on
+  this computer and its log of connections;
+- its memory dumps and the copies of its diagnostic files kept on this computer;
+- its log of connections: the newest five, and the storage by kind of file at the last.
+
+`--apply` copies the files it shows now; with it, `--crash-logs` also reads its hidden crash
+logs (the device leaves the file manager for a moment) and `--dumps` also copies its memory
+dumps.
+
+`--free-space` is an action of its own (not with `--crash-logs` or `--dumps`): it shows only what
+can be freed on the device, the list of **Free Up Space** on the Device Status page
+([what it holds](guide.md#device-status)). With `--apply` it removes exactly those, each looked
+at again first, and does nothing else; what it removed is told also when it stops half-way
+(Ctrl+C).
+
+What is read, copied and kept, and that nothing is sent: [Diagnostics](privacy.md#diagnostics).
 
 ### sync
 
@@ -198,7 +221,7 @@ does not list, for example one registered only as a product on garmin.com.
 | Code | Meaning |
 |---|---|
 | 0 | done (also a dry run) |
-| 1 | an error or a refusal: the device, the account, a server or the network, or a value the command checks itself (e.g. an unknown part in `cache --only`); the message says why; for `fit inspect`, a file that is not a whole FIT file (cut short, damaged, not FIT) or cannot be read |
+| 1 | an error or a refusal: the device, the account, a server or the network, or a value the command checks itself (e.g. an unknown part in `cache --only`); the message says why; for `fit inspect`, a file that is not a whole FIT file (cut short, damaged, not FIT) or cannot be read; for `diagnostics --free-space --apply`, a file the device kept, a copy that failed, files changed since they were listed, or the update server not asked again before an update file was removed (then none of those is removed) |
 | 2 | a wrong command line: an unknown command or option, a value that is not one of the choices or not a number (e.g. `setup --environment`, `devices --forget`), `--key` without `--secret`, `diagnostics --free-space` with `--crash-logs` or `--dumps`, or a missing argument |
 | 3 | the first sync with this program waits for a choice: `openexpress baseline --apply` or `openexpress sync --apply --all` |
 | 130 | interrupted (Ctrl+C); not while `sync` waits for TrueUp, which Ctrl+C only stops (the sync then ends as usual) |

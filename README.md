@@ -58,7 +58,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 - Makes backups of the device and keeps copies of its diagnostic files on this computer.
 - Shows and sets the primary training device and the primary wearable.
 - Works in a GTK 4 / libadwaita window, on the command line and in the background.
-- Sends no telemetry. Speaks English, Polish, German and Czech.
+- Sends no telemetry. Translated on Hosted Weblate ([Help translate](#help-translate)).
 
 <p align="center">
   <picture>

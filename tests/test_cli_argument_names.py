@@ -105,6 +105,32 @@ def _each(words):
             yield (first, *rest)
 
 
+def test_every_list_of_choices_is_that_of_the_program():
+    """`--option a|b|c` in docs/cli.md lists the choices the program takes, all of them (a
+    language added to the program and not to the table is found)."""
+    found = dict(parsers(cli.build_parser()))
+    wrong = []
+    for line in DOCS.read_text(encoding="utf-8").splitlines():
+        if not line.startswith("| `openexpress "):
+            continue
+        spans = [span.replace("\\|", "|") for span in re.findall(r"`([^`]+)`", line)]
+        words = []
+        for word in spans[0].split()[1:]:
+            if not re.fullmatch(r"[a-z][a-z-]*(\|[a-z][a-z-]*)*", word):
+                break
+            words.append(word.split("|"))
+        for span in spans:
+            for option, choices in re.findall(r"(--[a-z][a-z-]*) ([a-z0-9]+(?:\|[a-z0-9]+)+)",
+                                              span):
+                for command in _each(words):
+                    action = next(a for a in found[command]._actions
+                                  if option in a.option_strings)
+                    if sorted(choices.split("|")) != sorted(action.choices or ()):
+                        wrong.append(f"{' '.join(command)} {option}: {sorted(action.choices or ())}"
+                                     f", docs/cli.md {choices}")
+    assert wrong == []
+
+
 def test_every_name_of_a_value_is_that_of_the_documentation():
     found = dict(parsers(cli.build_parser()))
     wrong = []
