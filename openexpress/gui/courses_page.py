@@ -25,7 +25,13 @@ from openexpress.course_gpx import CourseFileError  # noqa: E402
 from openexpress.gui import course_map  # noqa: E402
 from openexpress.gui.device_page import device_name  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
-from openexpress.gui.window_tasks import DIALOG_MARGINS, WRAP_BOX, Answer, confirm  # noqa: E402
+from openexpress.gui.window_tasks import (  # noqa: E402
+    DIALOG_MARGINS,
+    Answer,
+    chip,
+    confirm,
+    wrapping_line,
+)
 from openexpress.gui.words import (  # noqa: E402
     row_ascent_text,
     row_distance_text,
@@ -150,11 +156,6 @@ def file_text(name: str, size: int) -> str:
 # --- the widgets of the page ---------------------------------------------------------------------
 
 
-def _chip(words: str, accent: bool) -> Gtk.Label:
-    return Gtk.Label(label=words, valign=Gtk.Align.CENTER,
-                     css_classes=["oe-chip", "accent" if accent else "dimmed"])
-
-
 def _row(title: str, subtitle: str, origin: str | None = None,
          remove: Gtk.Widget | None = None) -> Gtk.ListBoxRow:
     """A row of a course or of a waiting file: its name with the chip of where it came from
@@ -164,13 +165,10 @@ def _row(title: str, subtitle: str, origin: str | None = None,
     if origin is None:
         head = name
     else:
-        chip = _chip(origin, accent=origin == courses.ORIGIN_OPENEXPRESS)
-        if WRAP_BOX is not None:
-            head = WRAP_BOX(child_spacing=8, line_spacing=4, halign=Gtk.Align.START)
-        else:  # libadwaita before 1.7
-            head = Gtk.Box(spacing=8)
+        head = wrapping_line(8)
         head.append(name)
-        head.append(chip)
+        head.append(chip(origin, "accent" if origin == courses.ORIGIN_OPENEXPRESS else "dimmed",
+                         valign=Gtk.Align.CENTER))
     text = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, hexpand=True,
                    margin_start=12, margin_end=12, margin_top=8, margin_bottom=8)
     text.append(head)

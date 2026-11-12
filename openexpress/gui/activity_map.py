@@ -18,6 +18,7 @@ what keeps them away (MapView) is that of the question before a GPX file is copi
 Has: no attribute of the window; the map's widgets keep their track and state themselves."""
 from __future__ import annotations
 
+import itertools
 import logging
 import math
 import queue
@@ -407,14 +408,13 @@ def _stored(cache_, result, request, tile) -> None:
     request.emit_data(tile, True)
 
 
-_stored_count = [0]
+_tiles_stored = itertools.count()
 
 
 def _stored_once_more(cache_) -> None:
     """Every PURGE_EVERY tiles stored (and at the first), the cache brought to its limit."""
-    if _stored_count[0] % PURGE_EVERY == 0:
+    if next(_tiles_stored) % PURGE_EVERY == 0:
         cache_.purge_cache_async(None, None)
-    _stored_count[0] += 1
 
 
 if can_ask():

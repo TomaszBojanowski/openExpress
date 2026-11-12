@@ -85,6 +85,22 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
     return row
 
 
+def wrapping_line(spacing: int, halign: Gtk.Align = Gtk.Align.START) -> Gtk.Widget:
+    """A line of short widgets (a name and its chips) at `halign`, `spacing` apart: those that
+    do not fit go on to the next line, 4 px below; with a libadwaita older than 1.7 one line (a
+    box), whose labels get shorter where they can."""
+    if WRAP_BOX is not None:
+        return WRAP_BOX(child_spacing=spacing, line_spacing=4,
+                        align=0.0 if halign == Gtk.Align.START else 0.5, halign=halign)
+    return Gtk.Box(spacing=spacing, halign=halign)
+
+
+def chip(words: str, style: str | None = None, **props) -> Gtk.Label:
+    """A chip: `words` in the one shape of every chip of the window (the class oe-chip,
+    start.CSS), in the colours of `style` ("accent", "warning", "dimmed"); none: no colour."""
+    return Gtk.Label(label=words, css_classes=["oe-chip", *([style] if style else [])], **props)
+
+
 # The margin at the sides of the content of a page (Adw.PreferencesPage): libadwaita's CSS
 # gives its box 12 px; the bar at the bottom takes the same.
 PAGE_SIDE = 12

@@ -23,7 +23,7 @@ from openexpress.i18n import _, caption, human_size  # noqa: E402
 log = logging.getLogger(__name__)
 
 
-def _check_again(win) -> None:
+def check_maps_again(win) -> None:
     """"Check Again" on the Maps page: Garmin's servers are asked anew, unit-info too."""
     if win.session is not None:
         service.forget_unit_info(win.session)
@@ -54,7 +54,7 @@ def _no_maps(win, sec, text: str, detail: str | None = None) -> None:
         box.append(line)
     check = Gtk.Button(label=_("Check Again"), halign=Gtk.Align.CENTER, margin_top=8)
     check.add_css_class("pill")
-    check.connect("clicked", lambda *_a: _check_again(win))
+    check.connect("clicked", lambda *_a: check_maps_again(win))
     box.append(check)
     sec.group().add(box)
 
@@ -146,7 +146,7 @@ class MapsPage:
         # The list is what Garmin's server said when the page was opened; a device that has
         # just been plugged in may not have named all its map files yet.
         g.set_header_suffix(self._button(
-            _("Check Again"), lambda: _check_again(self)))
+            _("Check Again"), lambda: check_maps_again(self)))
         if free is not None and total:
             used_by_maps = sum(m.size for m in installed if m.occupies)
             row = Adw.ActionRow(

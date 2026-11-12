@@ -154,16 +154,14 @@ class TrackLegend(Gtk.Box):
     def __init__(self):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, visible=False)
         self.name = Gtk.Label(xalign=0, wrap=True)
-        self.low, self.high = (Gtk.Label() for _side in range(2))
+        self.low, self.high = (Gtk.Label(css_classes=["caption", "numeric"])
+                               for _side in range(2))
         ends = Gtk.Box(spacing=6, valign=Gtk.Align.CENTER)
         bar = Gtk.DrawingArea(content_width=LEGEND_WIDTH, content_height=LEGEND_HEIGHT,
                               valign=Gtk.Align.CENTER,
                               accessible_role=Gtk.AccessibleRole.PRESENTATION)
         bar.set_draw_func(_draw_scale)
         for widget in (self.low, bar, self.high):
-            if isinstance(widget, Gtk.Label):
-                widget.add_css_class("caption")
-                widget.add_css_class("numeric")
             ends.append(widget)
         # The name and the ends packed to the left, the ends under the name when narrow.
         self.scale = _plain_flow(column_spacing=10, row_spacing=4, halign=Gtk.Align.START,

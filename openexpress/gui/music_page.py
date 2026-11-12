@@ -120,13 +120,13 @@ class MusicPage:
         else:
             dialog.open_multiple(self, None, chosen)
 
-    def add_music(self, paths_, kind: str) -> None:
+    def add_music(self, files, kind: str) -> None:
         from openexpress import music
 
         s = self.session
 
         def plan():
-            tracks = music.scan(paths_, s.device, forced_kind=None if kind == "track" else kind)
+            tracks = music.scan(files, s.device, forced_kind=None if kind == "track" else kind)
             return music.plan_copy(tracks, s.device, s.storage)
 
         def copy(p):

@@ -65,6 +65,7 @@ from openexpress.gui.tasks import (  # noqa: E402
 from openexpress.gui.updates_page import update_check_failed  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     Answer,
+    chip,
     confirm,
     diagnostics_state,
     error_text,
@@ -751,7 +752,7 @@ def section_title(sec: Section) -> Gtk.Widget | None:
     box.set_layout_manager(_TitleLayout())
     box.append(Gtk.Label(label=sec.title, ellipsize=Pango.EllipsizeMode.END,
                          css_classes=["title"]))
-    box.append(Gtk.Label(label=sec.chip, css_classes=["oe-chip", "dimmed"]))
+    box.append(chip(sec.chip, "dimmed"))
     box.update_property([Gtk.AccessibleProperty.LABEL], [f"{sec.title}, {sec.chip}"])
     return box
 
@@ -960,8 +961,8 @@ class DevicePage:
         box.append(self.software_label)
         # An update to install: the chip of the device's tile, under its version
         # (_highlight_update).
-        self.update_chip = Gtk.Label(label=start.update_available(), halign=Gtk.Align.CENTER,
-                                     css_classes=["oe-chip", "warning"], visible=False)
+        self.update_chip = chip(start.update_available(), "warning", halign=Gtk.Align.CENTER,
+                                visible=False)
         box.append(self.update_chip)
         hero.add(box)
         self._show_device_picture()

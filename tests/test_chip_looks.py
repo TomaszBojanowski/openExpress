@@ -1,7 +1,9 @@
 """Tests that the grey chips of a tile ("Primary", "USB drive", "Not on your account", "Never
 synced", "Synced") stand out from the grey line under them in the dark and the light theme,
 though libadwaita 1.7 dims their style class "dimmed" too (opacity 0.55); and that every chip
-has one shape and size. Made-up words."""
+has one shape and size, made by one function. Made-up words."""
+
+from pathlib import Path
 
 import pytest
 
@@ -117,11 +119,60 @@ def test_chips_of_every_style_have_one_size():
     from gi.repository import Gdk, Gtk
 
     from openexpress.gui import start
+    from openexpress.gui.window_tasks import chip
 
     start.load_css(Gdk.Display.get_default())
     sizes = set()
     for style in ("warning", "accent", "dimmed"):
-        label = Gtk.Label(label="Primary", css_classes=["oe-chip", style])
+        label = chip("Primary", style)
         sizes.add((label.measure(Gtk.Orientation.HORIZONTAL, -1)[1],
                    label.measure(Gtk.Orientation.VERTICAL, -1)[1]))
     assert len(sizes) == 1, sizes
+
+
+def _gui_files_saying(words: str) -> list[str]:
+    """The modules of the window other than window_tasks whose code holds `words`."""
+    from openexpress import gui
+
+    folder = Path(gui.__file__).parent
+    return sorted(p.name for p in folder.glob("*.py")
+                  if p.name != "window_tasks.py" and words in p.read_text(encoding="utf-8"))
+
+
+def test_every_chip_is_made_by_one_function():
+    """Only window_tasks.chip gives a label the class oe-chip (start.CSS gives it its shape),
+    and only window_tasks asks whether libadwaita has Adw.WrapBox: the lines of a name and its
+    chips are its wrapping_line."""
+    assert _gui_files_saying('"oe-chip"') == []
+    assert _gui_files_saying("WrapBox") == []
+
+
+@pytest.mark.needs_display
+def test_a_chip_has_its_words_and_style():
+    from openexpress.gui.window_tasks import chip
+
+    made = chip("Made-up", "accent", tooltip_text="Made-up words")
+    assert (made.get_label(), sorted(made.get_css_classes()), made.get_tooltip_text()) == (
+        "Made-up", ["accent", "oe-chip"], "Made-up words")
+    assert chip("").get_css_classes() == ["oe-chip"]  # no colour: nothing to see
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("wraps", [True, False], ids=["libadwaita-1.7", "older"])
+def test_a_line_of_a_name_and_its_chips(wraps, in_the_window):
+    """With Adw.WrapBox (libadwaita 1.7) what does not fit goes on to the next line, 4 px
+    below; before it one line (a box). Aligned as asked."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import window_tasks
+
+    if wraps and window_tasks.WRAP_BOX is None:
+        pytest.skip("this libadwaita has no Adw.WrapBox")
+    if not wraps:
+        in_the_window("WRAP_BOX", None)
+    line = window_tasks.wrapping_line(6, Gtk.Align.CENTER)
+    assert line.get_halign() == Gtk.Align.CENTER
+    if wraps:
+        assert (line.get_child_spacing(), line.get_line_spacing(), line.get_align()) == (6, 4, 0.5)
+    else:
+        assert isinstance(line, Gtk.Box) and line.get_spacing() == 6

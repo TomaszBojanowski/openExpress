@@ -164,6 +164,19 @@ def test_how_long_a_tile_is_kept_before_it_is_asked_again(header, seconds):
     assert amap().freshness(header) == seconds
 
 
+def test_the_cache_of_tiles_is_brought_to_its_limit_at_the_first_tile_and_every_few(
+        monkeypatch):
+    import types
+
+    m = amap()
+    monkeypatch.setattr(m, "_tiles_stored", itertools.count())
+    purged = []
+    cache = types.SimpleNamespace(purge_cache_async=lambda *a: purged.append(1))
+    for _tile in range(2 * m.PURGE_EVERY + 1):
+        m._stored_once_more(cache)
+    assert len(purged) == 3  # the first, then after PURGE_EVERY, and again
+
+
 def test_the_tile_server_is_told_who_asks_and_what_the_cache_has(monkeypatch):
     """openExpress's own User-Agent, and the tag of the tile it has, so that an unchanged one
     is not sent again."""

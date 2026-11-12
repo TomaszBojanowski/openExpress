@@ -18,6 +18,7 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 from openexpress import devicelist, tile_facts  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.gui import sports  # noqa: E402
+from openexpress.gui.window_tasks import chip, wrapping_line  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     last_seen_tooltip,
     never_synced,
@@ -87,14 +88,15 @@ SUBTITLE_LINES = 2
 # 1px edge around the tile of a connected device; the accent only under the pointer or with
 # the keyboard focus. The edge is an outline drawn inside the tile: neither its size nor the
 # layout changes. A row that wraps with a libadwaita older than 1.7 (window_tasks.wrapping_row): no
-# room around each of its widgets, as in a box. Every chip of the window (the tiles, the rows
-# of the list view, the update on the device page) has the class oe-chip and its one shape:
-# font, padding, rounding; its style (accent, warning, dimmed) gives only its colours. The lap
-# chosen on an activity's page is tinted with the accent; the map's hint is a rounded label. A
-# flow box of the class oe-plain lays out, nothing more: its children get no background under
-# the pointer (libadwaita gives one to a child that can be activated). A note of a question
-# (oe-note: what the device does with a file) is a faint rounded box, a warning one in the
-# colours of a warning.
+# room around each of its widgets, as in a box. Every chip of the window (window_tasks.chip:
+# the tiles, the rows of the list view, the title of a page, the update on the device page, the
+# origin of a course) has the class oe-chip and its one shape: font, padding, rounding; its
+# style (accent, warning, dimmed) gives only its colours. The lap chosen on an activity's page
+# is tinted with the accent; the map's hint is a rounded label. A flow box of the class
+# oe-plain lays out, nothing more: its children get no background under the pointer
+# (libadwaita gives one to a child that can be activated). A note of a question (oe-note: what
+# the device does with a file) is a faint rounded box, a warning one in the colours of a
+# warning.
 CSS = """
 /* An item of a menu made of a flat button (Try Again in the popover of the server state):
    its words not bold, as those of a menu. */
@@ -493,20 +495,12 @@ def chips_row(said, align: Gtk.Align = Gtk.Align.CENTER) -> Adw.Bin:
 
 
 def _chips_line(said, align: Gtk.Align = Gtk.Align.CENTER) -> Gtk.Widget:
-    # Adw.WrapBox is in libadwaita 1.7; before it, one line whose chips get shorter.
-    if hasattr(Adw, "WrapBox"):
-        row = Adw.WrapBox(child_spacing=6, line_spacing=4,
-                          align=0.0 if align == Gtk.Align.START else 0.5, halign=align)
-    else:
-        row = Gtk.Box(spacing=6, halign=align)
+    row = wrapping_line(6, align)
     for words, style, tooltip in said:
-        label = Gtk.Label(label=words, ellipsize=Pango.EllipsizeMode.END, tooltip_text=tooltip)
-        label.add_css_class("oe-chip")
-        label.add_css_class(style)
-        row.append(label)
+        row.append(chip(words, style, ellipsize=Pango.EllipsizeMode.END, tooltip_text=tooltip))
     if not said:
         # A chip without words or colour: the font and padding of one, nothing to see.
-        row.append(Gtk.Label(label="", css_classes=["oe-chip"]))
+        row.append(chip(""))
     return row
 
 

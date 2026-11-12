@@ -131,7 +131,7 @@ def test_check_again_on_the_maps_page_asks_anew(server, monkeypatch):
     client.universal_maps(XML)
     win = _window()
     win.load_section = lambda key, force=False: win.loaded.append((key, force))
-    maps_page._check_again(win)
+    maps_page.check_maps_again(win)
     client.universal_maps(XML)
     assert len(server.sent) == 2 and win.loaded == [("maps", True)]
 
