@@ -315,7 +315,7 @@ def refresh_space(win, s) -> None:
 
         status_changed(win)
 
-    TaskRunner.in_background(lambda: read_space(s.storage, capacity), got)
+    win.in_background(lambda: read_space(s.storage, capacity), got)
 
 
 def count_again(win, s) -> None:
@@ -355,7 +355,7 @@ def count_again(win, s) -> None:
         finally:
             counting.set()
 
-    TaskRunner.in_background(count, done, failed)
+    win.in_background(count, done, failed)
 
 
 def row_label(row, style: str) -> Gtk.Label | None:

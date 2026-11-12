@@ -69,7 +69,6 @@ def test_the_preferences_and_the_question_of_the_cache_are_released(monkeypatch,
     from openexpress import cache
     from openexpress.gui.app import MainWindow
     from openexpress.gui.preferences import show_cache_usage
-    from openexpress.gui.window_tasks import TaskRunner
 
     shown, questions = [], []
     monkeypatch.setattr(Adw.PreferencesDialog, "present", lambda self, parent: shown.append(self))
@@ -96,7 +95,7 @@ def test_the_preferences_and_the_question_of_the_cache_are_released(monkeypatch,
     dialog.emit("closed")
     del dialog, question
     win._action_buttons.clear()
-    TaskRunner.in_background(cache.usage, lambda use: show_cache_usage(win, use))
+    win.in_background(cache.usage, lambda use: show_cache_usage(win, use))
     _settle()
     time.sleep(0.05)
     _settle()

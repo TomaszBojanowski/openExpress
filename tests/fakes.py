@@ -573,14 +573,17 @@ def tells_stalls(win, monkeypatch, connected=()):
 
 def window(**changes):
     """A stand-in for the window without GTK: every attribute the real window has, with the
-    value it has before anything is shown (MainWindow._init_state), then `changes`. None of
-    the window's methods: a test gives those it needs, or binds them with window_methods."""
+    value it has before anything is shown (MainWindow._init_state), and the window's own
+    in_background (it holds nothing of the window: what the window does off its thread, the
+    stand-in does so too); then `changes`. None of the window's other methods: a test gives
+    those it needs, or binds them with window_methods."""
     import types
 
     from openexpress.gui.app import MainWindow
 
     win = types.SimpleNamespace()
     MainWindow._init_state(win)
+    win.in_background = MainWindow.in_background
     for name, value in changes.items():
         setattr(win, name, value)
     return win

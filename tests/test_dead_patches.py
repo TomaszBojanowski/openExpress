@@ -279,7 +279,7 @@ def test_the_guard_sees_a_replacement_in_one_module_and_on_the_window_class():
     shared = shared_names()
     assert {"app", "start"} <= set(shared["Adw"]) and "maps_page" in shared["space_text"]
     assert "log" not in shared  # a logger of each module's own
-    assert {"in_background", "_report_and_log", "_written_apps"} <= called_through_a_mixin()
+    assert {"_report_and_log", "_written_apps"} <= called_through_a_mixin()
     assert "__subclasses__" not in called_through_a_mixin()  # not a method of the mixin
 
 

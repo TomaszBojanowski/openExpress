@@ -25,7 +25,7 @@ from openexpress.gui import activity_map  # noqa: E402
 from openexpress.gui.connected import open_address  # noqa: E402
 from openexpress.gui.gui_settings import update_gui_settings  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
-from openexpress.gui.window_tasks import Answer, TaskRunner, confirm  # noqa: E402
+from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.settings import (  # noqa: E402
     Settings,
@@ -496,7 +496,7 @@ class Preferences:
         # that what comes back from a thread finds the rows without holding them.
         self._storage = types.SimpleNamespace(parts=parts, everything=(everything, button),
                                               usage=None)
-        TaskRunner.in_background(cache.usage, lambda use: show_cache_usage(self, use))
+        self.in_background(cache.usage, lambda use: show_cache_usage(self, use))
         return g
 
     def _ask_clear_cache(self, button) -> None:

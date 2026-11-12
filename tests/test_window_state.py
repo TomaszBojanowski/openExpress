@@ -82,7 +82,10 @@ def test_every_attribute_named_in_a_string_is_there_once_it_is_built(window):
 def test_the_stand_in_has_every_attribute_of_the_real_window(window):
     from fakes import window as stand_in
 
-    assert sorted(vars(stand_in())) == sorted(vars(window))
+    made = stand_in()
+    # Every attribute of the real window; of its methods only its own in_background.
+    assert sorted(vars(made)) == sorted([*vars(window), "in_background"])
+    assert made.in_background is type(window).in_background
     changed = stand_in(busy=True, session="a session")
     assert (changed.busy, changed.session, changed.connected.devices) == (True, "a session", [])
 

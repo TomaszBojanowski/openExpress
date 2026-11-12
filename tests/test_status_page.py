@@ -1002,7 +1002,6 @@ def test_the_reading_is_in_the_session_before_anyone_learns_it_is_done(monkeypat
     from openexpress import diagnostics
     from openexpress.diagnostics import AtOpen, ErrorEntry
     from openexpress.gui import device_page
-    from openexpress.gui.window_tasks import TaskRunner
 
     crash_entry = ErrorEntry("RTL Trap", datetime(2026, 10, 20, 10, 0), "0x003")
 
@@ -1014,7 +1013,7 @@ def test_the_reading_is_in_the_session_before_anyone_learns_it_is_done(monkeypat
     for n in range(20):
         s = device_session(device=types.SimpleNamespace(unit_id=3_000_000_000 + n),
                            storage=None, space=None)
-        win = window(session=s, in_background=TaskRunner.in_background)
+        win = window(session=s)
         device_page.read_diagnostics(win)
         seen = []
 
@@ -1104,16 +1103,14 @@ def test_after_another_write_the_page_is_read_again(monkeypatch, in_the_window):
     from fakes import window
 
     from openexpress.gui import window_tasks
-    from openexpress.gui.window_tasks import TaskRunner
 
-    monkeypatch.setattr(TaskRunner, "in_background",
-                        staticmethod(lambda work, done, failed=None: done(work())))
     in_the_window("read_space", lambda storage, capacity: (5, 10))
     in_the_window("render_space", lambda win: None)
     reloads = []
     s = device_session(space=(9, 10), storage=None)
     win = window(session=s, sections={"status": types.SimpleNamespace(loaded=True)},
-                 load_section=lambda key, force=False: reloads.append(key))
+                 load_section=lambda key, force=False: reloads.append(key),
+                 in_background=lambda work, done, failed=None: done(work()))
     window_tasks.refresh_space(win, s)
     assert s.space == (5, 10) and reloads == ["status"]
 
@@ -1127,17 +1124,15 @@ def test_after_another_write_the_device_is_counted_again(monkeypatch, in_the_win
 
     from openexpress import status
     from openexpress.gui import window_tasks
-    from openexpress.gui.window_tasks import TaskRunner
 
-    monkeypatch.setattr(TaskRunner, "in_background",
-                        staticmethod(lambda work, done, failed=None: done(work())))
     counted = status.Recount({"maps": 4}, 5, 10, datetime(2026, 10, 30, 12, 0), dumps=[])
     monkeypatch.setattr(status, "recount", lambda device, storage: counted)
     in_the_window("render_space", lambda win: None)
     reloads = []
     s = device_session(space=(9, 10), storage=None, device=None, diagnostics=None)
     win = window(session=s, sections={"status": types.SimpleNamespace(loaded=True)},
-                 load_section=lambda key, force=False: reloads.append(key))
+                 load_section=lambda key, force=False: reloads.append(key),
+                 in_background=lambda work, done, failed=None: done(work()))
     window_tasks.count_again(win, s)
     assert s.recount is counted and s.space == (5, 10) and reloads == ["status"]
 
@@ -1517,7 +1512,6 @@ def test_a_count_begun_before_a_removal_never_undoes_its_count(clock, in_the_win
     from openexpress import freeing, history
     from openexpress.device.storage import LocalStorage
     from openexpress.gui import status_page, window_tasks
-    from openexpress.gui.window_tasks import TaskRunner
 
     asked = questions(in_the_window)
     in_the_window("render_space", lambda win: None)
@@ -1557,7 +1551,7 @@ def test_a_count_begun_before_a_removal_never_undoes_its_count(clock, in_the_win
         threads.append(threading.Thread(target=run, name="count"))
         threads[-1].start()
 
-    monkeypatch.setattr(TaskRunner, "in_background", staticmethod(in_background))
+    win.in_background = in_background
     window_tasks.count_again(win, s)
     assert listed.wait(5)
     clock.current += timedelta(seconds=5)
@@ -1573,13 +1567,11 @@ def test_a_count_begun_before_a_removal_never_undoes_its_count(clock, in_the_win
 
 def test_after_a_write_the_device_is_counted_once_and_tasks_wait_for_it(monkeypatch):
     from openexpress.gui import window_tasks
-    from openexpress.gui.window_tasks import TaskRunner
 
     later = []
-    monkeypatch.setattr(TaskRunner, "in_background",
-                        staticmethod(lambda work, done, failed=None: later.append(work)))
     s = device_session(device=None, storage=None)
-    window_tasks.count_again(types.SimpleNamespace(session=s), s)
+    window_tasks.count_again(types.SimpleNamespace(
+        session=s, in_background=lambda work, done, failed=None: later.append(work)), s)
     assert not s.counting.is_set()
     counted = status.Recount({"maps": 4}, 5, 10, NOW, dumps=[])
     monkeypatch.setattr(status, "recount", lambda device, storage: counted)
@@ -2091,7 +2083,7 @@ def test_a_removal_not_counted_reads_the_page_once(clock, in_the_window, monkeyp
     """After a removal whose count failed, the page is read once, with the free space read again."""
     from fakes import window
 
-    from openexpress.gui import device_page, status_page, window_tasks
+    from openexpress.gui import device_page, status_page
 
     reads = []
     s = device_session(device=None, storage=types.SimpleNamespace(
@@ -2099,9 +2091,8 @@ def test_a_removal_not_counted_reads_the_page_once(clock, in_the_window, monkeyp
     win = window(session=s, toast=lambda text: None, storage_row=None, storage_bar=None,
                  sections={"status": types.SimpleNamespace(loaded=True)},
                  pages=types.SimpleNamespace(get_visible_child_name=lambda: "status"),
-                 load_section=lambda key, force=False: reads.append(key))
-    monkeypatch.setattr(window_tasks.TaskRunner, "in_background",
-                        staticmethod(lambda fn, done, failed=None: done(fn())))
+                 load_section=lambda key, force=False: reads.append(key),
+                 in_background=lambda fn, done, failed=None: done(fn()))
     monkeypatch.setattr(device_page, "status_row", lambda win, group=None: None)
     status_page._freed(win, s, freeing.Freed(removed=[("GARMIN/Debug/dump/a.zip", 4)]),
                        "1 memory dump removed, 4 B freed", None)
@@ -2325,13 +2316,11 @@ def test_the_tasks_waiting_for_the_count_go_on_only_once_it_is_in_the_session(mo
     """A task that waited for the count after a write finds that count in the session: the
     waiting tasks are let go only after it is kept there."""
     from openexpress.gui import window_tasks
-    from openexpress.gui.window_tasks import TaskRunner
 
     later = []
-    monkeypatch.setattr(TaskRunner, "in_background",
-                        staticmethod(lambda work, done, failed=None: later.append(work)))
     s = device_session(device=None, storage=None)
-    window_tasks.count_again(types.SimpleNamespace(session=s), s)
+    window_tasks.count_again(types.SimpleNamespace(
+        session=s, in_background=lambda work, done, failed=None: later.append(work)), s)
     counted = status.Recount({"maps": 4}, 5, 10, NOW, dumps=[])
     monkeypatch.setattr(status, "recount", lambda device, storage: counted)
     real = status.counted_again
