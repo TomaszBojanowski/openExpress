@@ -116,9 +116,9 @@ def _children(widget):
 
 
 def _subtitle_classes(row):
-    from openexpress.gui.window_tasks import row_subtitle
+    from openexpress.gui.window_tasks import row_label
 
-    return set(row_subtitle(row).get_css_classes())
+    return set(row_label(row, "subtitle").get_css_classes())
 
 
 def _page(device_root, answer, software="23.39"):

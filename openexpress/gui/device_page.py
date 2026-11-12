@@ -72,7 +72,7 @@ from openexpress.gui.window_tasks import (  # noqa: E402
     log_unexpected,
     refresh_space,
     render_space,
-    row_subtitle,
+    row_label,
     still_in_window,
 )
 from openexpress.gui.words import (  # noqa: E402
@@ -1268,7 +1268,7 @@ class DevicePage:
         if chip is not None:
             self.update_chip.set_label(chip)
         self.update_chip.set_visible(chip is not None)
-        subtitle = row_subtitle(self.update_row)
+        subtitle = row_label(self.update_row, "subtitle")
         if subtitle is None:
             return
         if chip is not None:

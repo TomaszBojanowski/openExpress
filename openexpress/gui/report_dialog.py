@@ -15,7 +15,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress.gui.window_tasks import DIALOG_MARGINS  # noqa: E402
+from openexpress.gui.window_tasks import DIALOG_MARGINS, descendants  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 from openexpress.paths import APP_ID  # noqa: E402
 
@@ -25,18 +25,11 @@ log = logging.getLogger(__name__)
 def report_log_note(dialog) -> None:
     """The sentence of the report dialog that the log is in the clipboard, shown; found from
     the dialog of the signal (no widget held)."""
-    stack = [dialog.get_extra_child()]
-    while stack:
-        widget = stack.pop()
-        if widget is None:
-            continue
-        if isinstance(widget, Gtk.Label) and widget.get_name() == "report-log-note":
-            widget.set_visible(True)
-            return
-        child = widget.get_first_child()
-        while child is not None:
-            stack.append(child)
-            child = child.get_next_sibling()
+    extra = dialog.get_extra_child()
+    note = next((w for w in descendants(extra) if isinstance(w, Gtk.Label)
+                 and w.get_name() == "report-log-note"), None) if extra is not None else None
+    if note is not None:
+        note.set_visible(True)
 
 
 # The width of the report's preview: never more than the window leaves a dialog's content.

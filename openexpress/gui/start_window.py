@@ -39,6 +39,7 @@ from openexpress.gui.pictures import (  # noqa: E402
 )
 from openexpress.gui.preferences import account_client, resolve_account  # noqa: E402
 from openexpress.gui.start import kind_icon  # noqa: E402
+from openexpress.gui.window_tasks import descendants  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     last_seen_text,
     last_seen_tooltip,
@@ -152,16 +153,10 @@ class StartView:
 
     @staticmethod
     def _focus_chosen(popover) -> None:
-        todo = [popover]
-        while todo:
-            widget = todo.pop()
-            if isinstance(widget, Gtk.ToggleButton) and widget.get_active():
-                widget.grab_focus()
-                return
-            child = widget.get_first_child()
-            while child is not None:
-                todo.append(child)
-                child = child.get_next_sibling()
+        chosen = next((w for w in descendants(popover)
+                       if isinstance(w, Gtk.ToggleButton) and w.get_active()), None)
+        if chosen is not None:
+            chosen.grab_focus()
 
     @classmethod
     def install(cls, win) -> None:

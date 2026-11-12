@@ -46,7 +46,7 @@ from openexpress.gui.window_tasks import (  # noqa: E402
     read_space,
     refresh_space,
     render_space,
-    row_title,
+    row_label,
 )
 from openexpress.i18n import (  # noqa: E402
     _,
@@ -393,7 +393,7 @@ def title_level(area) -> float | None:
     """How far below the top of `area` the middle of the first line of the title of the row
     holding it is; None outside a row or before the row is laid out."""
     row = area.get_ancestor(Adw.ActionRow)
-    title = row_title(row) if row is not None else None
+    title = row_label(row, "title") if row is not None else None
     if title is None:
         return None
     _ink, line = title.get_layout().get_line_readonly(0).get_pixel_extents()

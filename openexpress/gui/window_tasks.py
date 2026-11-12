@@ -90,18 +90,20 @@ def wrapping_row(widgets, spacing: int, **props) -> Gtk.Widget:
 PAGE_SIDE = 12
 
 
+def descendants(widget):
+    """The widgets under `widget`, at any depth: its children, theirs, and so on, in order."""
+    child = widget.get_first_child()
+    while child is not None:
+        yield child
+        yield from descendants(child)
+        child = child.get_next_sibling()
+
+
 def page_column(child) -> Adw.Clamp:
     """`child` in the column of a page (Adw.PreferencesPage) at every width of the window:
     the clamp of that page's own width (read from one, so that it follows libadwaita)."""
-    def widgets(widget):
-        yield widget
-        child_ = widget.get_first_child()
-        while child_ is not None:
-            yield from widgets(child_)
-            child_ = child_.get_next_sibling()
-
-    page_clamp = next((w for w in widgets(Adw.PreferencesPage()) if isinstance(w, Adw.Clamp)),
-                      None)
+    page_clamp = next((w for w in descendants(Adw.PreferencesPage())
+                       if isinstance(w, Adw.Clamp)), None)
     column = Adw.Clamp(child=child, maximum_size=600, tightening_threshold=400)
     if page_clamp is not None:
         column.set_maximum_size(page_clamp.get_maximum_size())
@@ -356,32 +358,12 @@ def count_again(win, s) -> None:
     TaskRunner.in_background(count, done, failed)
 
 
-def row_subtitle(row) -> Gtk.Label | None:
-    """The label of the subtitle of an Adw.ActionRow, which libadwaita does not give: the one
-    with the style class "subtitle" (so in 1.5 as in 1.9). None when there is none."""
-    child = row.get_first_child()
-    while child is not None:
-        if isinstance(child, Gtk.Label) and child.has_css_class("subtitle"):
-            return child
-        found = row_subtitle(child)
-        if found is not None:
-            return found
-        child = child.get_next_sibling()
-    return None
-
-
-def row_title(row) -> Gtk.Label | None:
-    """The label of the title of an Adw.ActionRow, which libadwaita does not give: the one with
-    the style class "title" (so in 1.5 as in 1.9). None when there is none."""
-    child = row.get_first_child()
-    while child is not None:
-        if isinstance(child, Gtk.Label) and child.has_css_class("title"):
-            return child
-        found = row_title(child)
-        if found is not None:
-            return found
-        child = child.get_next_sibling()
-    return None
+def row_label(row, style: str) -> Gtk.Label | None:
+    """The label of the title ("title") or of the subtitle ("subtitle") of an Adw.ActionRow,
+    which libadwaita does not give: the one with that style class (so in 1.5 as in 1.9). None
+    when there is none."""
+    return next((w for w in descendants(row)
+                 if isinstance(w, Gtk.Label) and w.has_css_class(style)), None)
 
 
 def task_name(fn) -> str:

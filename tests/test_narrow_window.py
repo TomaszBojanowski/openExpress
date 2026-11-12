@@ -787,7 +787,7 @@ def test_the_copy_buttons_leave_their_subtitles_room(narrow_window, language):
     few words a line, not one or two."""
     from gi.repository import Adw, Gtk
 
-    from openexpress.gui.window_tasks import row_subtitle
+    from openexpress.gui.window_tasks import row_label
     from openexpress.i18n import _
 
     win = narrow_window(language)
@@ -802,8 +802,8 @@ def test_the_copy_buttons_leave_their_subtitles_room(narrow_window, language):
                                                                   _("Memory Dumps"))]
     assert len(rows) == 2
     for row in rows:
-        assert row_subtitle(row).get_width() >= 160, (row.get_title(),
-                                                      row_subtitle(row).get_width())
+        assert row_label(row, "subtitle").get_width() >= 160, (row.get_title(),
+                                                      row_label(row, "subtitle").get_width())
         (button,) = [w for w in descendants(row) if isinstance(w, Gtk.Button)]
         assert button.get_tooltip_text() and button.get_tooltip_text() != button.get_label()
 

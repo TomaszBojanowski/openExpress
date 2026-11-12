@@ -466,14 +466,14 @@ def check_dots(page, where: str) -> None:
     it, in Category Details the title of its row."""
     from gi.repository import Adw, Gtk
 
-    from openexpress.gui.window_tasks import row_title
+    from openexpress.gui.window_tasks import row_label
 
     for dot in descendants(page):
         if not isinstance(dot, Gtk.DrawingArea) or not dot.get_mapped():
             continue
         row = dot.get_ancestor(Adw.ActionRow)
         if row is not None:
-            name = row_title(row)
+            name = row_label(row, "title")
         elif dot.get_parent() is not None and dot.get_parent().get_parent() is not None \
                 and dot.get_parent().get_parent().has_css_class("oe-status-legend"):
             name = dot.get_next_sibling()
@@ -514,7 +514,7 @@ def check(r, said, state: str, facts=None) -> None:
     """The hard conditions of the review in this state."""
     from gi.repository import Adw, Gtk
 
-    from openexpress.gui.window_tasks import row_subtitle
+    from openexpress.gui.window_tasks import row_label
 
     where = f"{state} ({r.language}, {r.width} px)"
     assert said == [], f"{where}: {said}"
@@ -529,7 +529,7 @@ def check(r, said, state: str, facts=None) -> None:
     check_titles(page, where)
     check_dots(page, where)
     for row in (w for w in descendants(page) if isinstance(w, Adw.ActionRow)):
-        label = row_subtitle(row)
+        label = row_label(row, "subtitle")
         if label is not None and label.get_label() and row.get_mapped():
             width = label.get_width()
             assert width >= SUBTITLE_AT_LEAST, f"{where}: {row.get_title()!r} subtitle {width}"

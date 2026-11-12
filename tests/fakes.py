@@ -510,12 +510,11 @@ def row_words(row):
 
 
 def descendants(widget):
-    """The widgets under `widget`, at any depth: its children, theirs, and so on."""
-    child = widget.get_first_child()
-    while child is not None:
-        yield child
-        yield from descendants(child)
-        child = child.get_next_sibling()
+    """The widgets under `widget`, at any depth: its children, theirs, and so on (the
+    window's own walk, window_tasks.descendants)."""
+    from openexpress.gui.window_tasks import descendants as walk
+
+    return walk(widget)
 
 
 @contextlib.contextmanager
