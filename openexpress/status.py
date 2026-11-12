@@ -30,7 +30,7 @@ FIRST_LINE_WITHIN = timedelta(hours=1)
 
 def has_diagnostics(errors_known: bool, error_logs: int | None, crashes_found: list,
                     dumps: int | None, copies: int, hidden: bool) -> bool:
-    """Whether the page shows the device's diagnostics, else "No Diagnostic Data": its error
+    """Whether the page shows the device's diagnostics, else that it keeps none: its error
     logs not read (the page says so), an error log, also one without entries (`error_logs`;
     None: not known), a crash from any source, a memory dump (`dumps`; None: not known, so not
     "none"), a copy kept here, or crash logs to copy. One rule for the device connected and

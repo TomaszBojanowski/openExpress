@@ -207,15 +207,14 @@ def test_after_a_removal_the_report_tells_the_dumps_of_now(tmp_path, clock):
 # --- whether there is diagnostic data, whether the error logs were read ------------------------
 
 
-@pytest.mark.parametrize("err, title", [(None, "No Diagnostic Data"),
-                                        ([], "No Problems Found")])
+@pytest.mark.parametrize("err, row", [(None, "No diagnostic data"), ([], "No problems found")])
 @pytest.mark.parametrize("by_the_window", [True, False])
 def test_only_a_device_without_error_logs_or_dumps_has_no_diagnostic_data(tmp_path, clock, err,
-                                                                         title, by_the_window):
-    """No error log and no dumps (an accessory, a drive): "No Diagnostic Data". Error logs that
-    hold no entries: "No Problems Found", as any device without crashes. The page and the row
-    Device Status alike, connected and from the records (the line written by the window or by
-    the command line)."""
+                                                                         row, by_the_window):
+    """No error log and no dumps (an accessory, a drive): the row Device Status says "No
+    diagnostic data" (its page says why). Error logs that hold no entries: "No problems found",
+    as any device without crashes. Connected and from the records alike (the line written by
+    the window or by the command line)."""
     from openexpress.gui.words import status_summary
 
     root = make_root(tmp_path, err=err)  # no dumps
@@ -225,9 +224,9 @@ def test_only_a_device_without_error_logs_or_dumps_has_no_diagnostic_data(tmp_pa
     history.note_connection(dev, st, found=found if by_the_window else None)
     live = status.read(session_of(st, dev, found))
     kept = status.read_kept(UNIT)
-    titles = [status_summary(f.crashes, f.errors_known, f.free, f.capacity, clock.current,
-                             f.has_diagnostics)[1] for f in (live, kept)]
-    assert titles == [title, title]
+    rows = [status_summary(f.crashes, f.errors_known, f.free, f.capacity, clock.current,
+                           f.has_diagnostics).row for f in (live, kept)]
+    assert rows == [row, row]
 
 
 def test_records_without_the_error_logs_say_they_were_not_read(clock):
@@ -619,7 +618,7 @@ def test_the_same_error_as_the_one_before_is_the_crash_just_before(clock):
 
 def test_no_diagnostic_data_means_the_same_connected_and_from_the_records(tmp_path, clock):
     """Copy Crash Logs found none on a watch that hides them, with nothing else to show: the
-    page of the device connected and the page from its records both say No Diagnostic Data."""
+    page of the device connected and the page from its records both have no diagnostic data."""
     root = make_root(tmp_path)  # no error log
     st, dev = opened(root)
     found = diagnostics.AtOpen(entries=[], hidden_logs=True, dumps=[])
@@ -1076,7 +1075,7 @@ def test_error_logs_whose_folder_cannot_be_listed_are_not_read_not_none(tmp_path
     s = session_of(st, dev, found)
     t = status.told(s)
     # The error log holds a crash; it could not be read: "Error Logs Not Read", never
-    # "no crash" (nor "No Diagnostic Data").
+    # "no crash" (nor no diagnostic data).
     assert found.errors_known is False, (found.errors_known, found.entries, t.has_diagnostics)
 
 
@@ -1122,7 +1121,7 @@ def test_dumps_not_listed_at_the_opening_but_listed_by_the_page_are_not_no_data(
     s = session_of(st, dev, found)
     facts = status.read(s)
     assert facts.dumps and len(facts.dumps) == 3
-    assert facts.has_diagnostics, ("No Diagnostic Data while the page lists 3 dumps",
+    assert facts.has_diagnostics, ("no diagnostic data while the page lists 3 dumps",
                                    found.dumps_known, found.errors_known)
 
 

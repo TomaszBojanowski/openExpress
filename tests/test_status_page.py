@@ -2021,7 +2021,7 @@ def test_the_row_of_a_device_without_diagnostic_data_says_what_its_page_says(tmp
                        diagnostics_reading=None, space=(free, 10_000_000_000),
                        client=None)
     made = status.read(s)
-    assert made.has_diagnostics is False  # the page: No Diagnostic Data
+    assert made.has_diagnostics is False  # the page without diagnostic data
     row = row_subtitle_for(s)
     assert row == "No diagnostic data", f"the row says {row!r}"
 

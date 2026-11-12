@@ -1000,17 +1000,17 @@ class Summary(NamedTuple):
 def status_summary(found, errors_known: bool, free: int | None, capacity: int | None,
                    now: datetime, has_diagnostics: bool = True) -> Summary:
     """The summary on top of the page Device Status, and the subtitle of the rows that lead to
-    it (the device page, the view of a remembered device). A device without diagnostic data: as
-    its page, "No Diagnostic Data". Else crashes of the last 30 days first (the error colour is
+    it (the device page, the view of a remembered device). A device without diagnostic data has
+    no summary (its page says why): only the words of the row. Else crashes of the last 30 days
+    first (the error colour is
     never used: a crash is a fact to know, not an alarm), then little free space
     (status.little_space), then error logs that were not read."""
     from openexpress import crashes, status
 
     if not has_diagnostics:
-        # TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
-        # "No Diagnostic Data", as a sentence
-        return Summary("none", _("No Diagnostic Data"), space_text(free, capacity),
-                       _("No diagnostic data"))
+        # TRANSLATORS: subtitle of the row Device Status of a device that keeps no error logs or
+        # memory dumps openExpress can read (its page says so in a sentence)
+        return Summary("none", "", "", _("No diagnostic data"))
 
     lately = status.recent(found, now)
     if lately:

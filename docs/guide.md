@@ -415,8 +415,9 @@ choose under Free Up Space.
 - **The summary on top:** the crashes of the last 30 days (only those that restarted the
   device), little free space (under 10 % of its capacity or 500 MB, whichever is smaller), error
   logs that could not be read (whether it crashed is then not known), or no problems found. A
-  device that keeps no error logs or memory dumps shows "No Diagnostic Data" instead; error
-  logs or dumps that could not be read are not known, never none.
+  device that keeps no error logs or memory dumps shows no summary but says so in one sentence,
+  and its row Device Status says "No diagnostic data"; error logs or dumps that could not be
+  read are not known, never none.
 - **Storage:** the space of each kind of file, counted when the device was connected (and again
   after anything was written to it or removed from it), the largest first (a kind the device holds
   none of is left out) and the free space last; the kinds with a page of their own lead to it.

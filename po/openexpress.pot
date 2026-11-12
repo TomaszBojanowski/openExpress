@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 08:42+0100\n"
+"POT-Creation-Date: 2026-11-12 09:03+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -8770,12 +8770,8 @@ msgstr ""
 msgid "no reading"
 msgstr ""
 
-#. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
-#. "No Diagnostic Data", as a sentence
-#: openexpress/gui/words.py
-msgid "No Diagnostic Data"
-msgstr ""
-
+#. TRANSLATORS: subtitle of the row Device Status of a device that keeps no error logs or
+#. memory dumps openExpress can read (its page says so in a sentence)
 #: openexpress/gui/words.py
 msgid "No diagnostic data"
 msgstr ""

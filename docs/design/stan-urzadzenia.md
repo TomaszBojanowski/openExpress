@@ -105,7 +105,8 @@ The line under it: "Last one {when} · the same error each time · {free} free" 
 crashes and little space: the crashes in the title, the space in the line. The error colour is
 not used: a device's crash is a fact to know, not an alarm. The row Device Status of the device
 page says the summary's title, from the same facts (also when the reading of the error logs
-failed); for a device without diagnostic data (D14), as its page: "No Diagnostic Data".
+failed); for a device without diagnostic data (D14), whose page has no summary: "No diagnostic
+data".
 
 ### D6. Storage by category
 
@@ -326,11 +327,13 @@ Nothing disappears but the row Device Error Log, whose content moves.
 
 ### D14. A device without diagnostic data
 
-`Adw.StatusPage` with the page's icon (an outline, dimmed by the status page as on the other
-pages), "No Diagnostic Data" / "Brak danych diagnostycznych" and one
-sentence: "This device keeps no error logs or memory dumps that openExpress can read" / "To
+`Adw.StatusPage` in the one look of every page whose device has none of what it shows
+(Activities, Courses, Music, Apps not signed in, Maps of a device without maps): the page's icon
+(an outline, dimmed by the status page) and its name, "Device Status" / "Stan urządzenia", and
+one sentence: "This device keeps no error logs or memory dumps that openExpress can read" / "To
 urządzenie nie zapisuje dzienników błędów ani zrzutów pamięci, które openExpress potrafi
-odczytać"; under it the storage card. A device that gives neither its storage nor diagnostic files:
+odczytać"; under it the storage card. The row Device Status of the device page and of the view
+of a remembered device says "No diagnostic data" / "Brak danych diagnostycznych". A device that gives neither its storage nor diagnostic files:
 the status page alone. Error logs not read and memory dumps not listed are not known, never
 none: such a device has the page, not this one.
 
@@ -393,7 +396,7 @@ f. **The remembered device** (D13): the row on the remembered view, the page fro
 | Remembered view row, step f | Device Status – "{summary} · as of {when}" | Stan urządzenia – „{summary} · stan z {when}” |
 | Banner, step f | Device not connected – as of {when}; connect it to free up space or copy its logs | Urządzenie niepodłączone – stan z {when}; podłącz je, aby zwolnić miejsce lub skopiować dzienniki |
 | Rows, step f | Category Details – "Counted at the last connection, {when}"; Memory Dumps – "{count} dumps · {size} · at the last connection" | Szczegóły kategorii – „Policzone przy ostatnim podłączeniu, {when}”; Zrzuty pamięci – „{count} zrzutów · {size} · przy ostatnim podłączeniu” |
-| Empty page (D14) | No Diagnostic Data | Brak danych diagnostycznych |
+| Empty page (D14) | Device Status – "This device keeps no error logs or memory dumps that openExpress can read"; its row: "No diagnostic data" | Stan urządzenia – „To urządzenie nie zapisuje dzienników błędów ani zrzutów pamięci, które openExpress potrafi odczytać”; jej wiersz: „Brak danych diagnostycznych” |
 
 English in header case for titles and buttons and in sentences for subtitles and descriptions, as
 the texts of the interface say (no full stop under one sentence, "…" only where more input
