@@ -485,9 +485,8 @@ class UpdatesPage:
             if waits_for is not None:
                 # TRANSLATORS: below an update whose file on the device holds another update,
                 # copied already and not installed yet by the device
-                subtitle += "\n" + _(
-                    "Can be installed once the device has installed {name}").format(
-                        name=waits_for.title)
+                waiting = _("Can be installed once the device has installed {name}")
+                subtitle += "\n" + waiting.format(name=waits_for.title)
             note = copied_update_text(u)
             if note is not None:
                 subtitle += "\n" + note

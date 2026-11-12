@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 01:39+0100\n"
+"POT-Creation-Date: 2026-11-12 04:12+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -8536,6 +8536,11 @@ msgstr "Instalowanie aktualizacji…"
 msgid "Install Updates?"
 msgstr "Zainstalować aktualizacje?"
 
+#. TRANSLATORS: marks a beta version of the device software
+#: openexpress/gui/updates_page.py
+msgid "Beta"
+msgstr "Beta"
+
 #: openexpress/gui/updates_page.py
 msgid "Available Updates"
 msgstr "Dostępne aktualizacje"
@@ -8572,11 +8577,6 @@ msgstr[1] ""
 msgstr[2] ""
 "{count} komponentów jest już na urządzeniu; przydatne przy rozwiązywaniu "
 "problemów"
-
-#. TRANSLATORS: marks a beta version of the device software
-#: openexpress/gui/updates_page.py
-msgid "Beta"
-msgstr "Beta"
 
 #. TRANSLATORS: button
 #: openexpress/gui/updates_page.py
