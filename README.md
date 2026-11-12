@@ -74,7 +74,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 
 <p align="center">
   <img src="docs/screenshots/status.png" width="700"
-       alt="The Device Status page of a fēnix 8: five crashes in the last 30 days, and its storage by kind of file, maps the largest">
+       alt="The Device Status page of a fēnix 8: four crashes in the last 30 days, and its storage by kind of file, maps the largest">
 </p>
 
 ## Supported devices
