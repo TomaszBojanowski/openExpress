@@ -41,6 +41,7 @@ from openexpress.gui.updates_page import ARROW  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     Answer,
     confirm,
+    diagnostics_state,
     inform,
     read_space,
     refresh_space,
@@ -184,11 +185,9 @@ class StatusPage:
         s = self.session
         if s is None:
             return
-        reading = getattr(s, "diagnostics_reading", None)
-        if reading is None and getattr(s, "diagnostics", None) is None:
+        if diagnostics_state(s) == "none":
             read_diagnostics(self)
-            reading = getattr(s, "diagnostics_reading", None)
-        if reading is not None and not reading.is_set():
+        if diagnostics_state(s) == "reading":
             # On the session (the window holds nothing of it): never read for another one.
             s.page_waits = True
             self.sections["status"].show("loading")

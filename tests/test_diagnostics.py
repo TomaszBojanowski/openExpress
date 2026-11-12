@@ -545,6 +545,21 @@ def test_a_task_that_writes_waits_for_them(monkeypatch, in_the_window, writes):
     assert order == ["work", "done"]
 
 
+def test_the_state_of_the_reading_is_worked_out_in_one_place():
+    """Not started, reading, or read (also when the reading failed, its event set without
+    diagnostics): the row, the page, the reading and the tasks that write ask this one."""
+    import threading
+
+    from openexpress.gui.window_tasks import diagnostics_state
+
+    reading = threading.Event()
+    assert diagnostics_state(device_session()) == "none"
+    assert diagnostics_state(device_session(diagnostics_reading=reading)) == "reading"
+    assert diagnostics_state(device_session(diagnostics=object())) == "read"
+    reading.set()  # done and failed: nothing in the session
+    assert diagnostics_state(device_session(diagnostics_reading=reading)) == "read"
+
+
 def test_any_task_of_the_device_waits_for_its_count_after_a_write(monkeypatch, in_the_window):
     """The count after a write (in the background) ends before any task of the device, also
     one that only reads it, asks the device: one thing asks it at a time."""

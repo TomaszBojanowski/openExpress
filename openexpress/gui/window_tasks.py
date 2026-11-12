@@ -219,16 +219,25 @@ def show_working(button: Gtk.Button):
 DEVICE_WAIT_S = 120
 
 
+def diagnostics_state(session) -> str:
+    """Where the reading of the open device's diagnostics is (device_page.read_diagnostics):
+    "none" (not started), "reading", or "read" (done, also when it failed)."""
+    reading = getattr(session, "diagnostics_reading", None)
+    if getattr(session, "diagnostics", None) is not None or (
+            reading is not None and reading.is_set()):
+        return "read"
+    return "none" if reading is None else "reading"
+
+
 def wait_for_the_diagnostics(session, fn) -> None:
     """A work that writes to the device (writes_to_device) waits, in its thread, until the
     device's diagnostics are read (device_page.read_diagnostics, in the background after its
     page is shown), so that their copy is of the device before any change; any other work
     goes on at once."""
-    reading = getattr(session, "diagnostics_reading", None)
-    if reading is None or reading.is_set() or not getattr(fn, "writes_to_device", False):
+    if diagnostics_state(session) != "reading" or not getattr(fn, "writes_to_device", False):
         return
     log.info("task: waits until the diagnostics of the device are read")
-    if not reading.wait(DEVICE_WAIT_S):
+    if not session.diagnostics_reading.wait(DEVICE_WAIT_S):
         log.info("task: the diagnostics still not read after %d s, it goes on",
                  DEVICE_WAIT_S)
 

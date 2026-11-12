@@ -66,6 +66,7 @@ from openexpress.gui.updates_page import update_check_failed  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
     Answer,
     confirm,
+    diagnostics_state,
     error_text,
     inform,
     log_unexpected,
@@ -210,8 +211,7 @@ def status_row(win, group=None) -> None:
     if group is None:
         return
     s = win.session
-    reading = getattr(s, "diagnostics_reading", None)
-    if getattr(s, "diagnostics", None) is not None or (reading is not None and reading.is_set()):
+    if diagnostics_state(s) == "read":
         t = status.told(s)  # as the page's summary (also when the reading failed)
         subtitle = status_summary(t.crashes, t.errors_known, t.free, t.capacity,
                                   datetime.now(), t.has_diagnostics).row
@@ -449,8 +449,7 @@ def read_diagnostics(win) -> None:
     `session.diagnostics_reading` is set once done: tasks that write to the device wait for
     it (window_tasks.wait_for_the_diagnostics)."""
     s = win.session
-    if (s is None or getattr(s, "diagnostics", None) is not None
-            or getattr(s, "diagnostics_reading", None) is not None):
+    if s is None or diagnostics_state(s) != "none":
         return
     reading = s.diagnostics_reading = threading.Event()
 
