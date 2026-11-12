@@ -14,7 +14,7 @@ the two are separate installations, see
 | `openexpress fit inspect FILE` | what a FIT file on this computer holds and whether it is whole ([details](#fit-inspect)) |
 | `openexpress report [--log]` | device report for GitHub, without serial numbers, Unit IDs or e-mail, with the device's last crashes (date, software version, error number) and its memory dumps; when no device can be opened, a report of what is connected over USB and of the system (exit code 0); `--log` prints the last 200 lines of the [log](troubleshooting.md#log-file) instead, filtered, for the form's “Log” field |
 | `openexpress diagnostics [--crash-logs] [--dumps] [--free-space] [--apply]` | what the device logged as errors, the crashes that restarted it, its memory dumps and its log of connections; copies its diagnostic files, or frees up space on it ([details](#diagnostics)) |
-| `openexpress status [--online]` | the sign-in, the Garmin devices connected (name, USB mode, whether they are on the account), the last sync of each with the activities it has to upload now, and what the window's last check of its updates found; `--online` also asks Garmin Connect and Garmin's update server now (nothing of the answers is kept); without it nothing is asked of a server |
+| `openexpress status [--online]` | the sign-in, the Garmin devices connected (name, USB mode, whether they are on the account), the last sync of each with the activities it has to upload now, what the window's last check of its updates found, and for a watch with satellite data (experimental) whether they are on and when they were last written; `--online` also asks Garmin Connect and Garmin's update server now (nothing of the answers is kept); without it nothing is asked of a server |
 | `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it, as **Forget Device** does ([what that is](guide.md#the-start-page-and-the-device-page)); files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
 | `openexpress setup --from-installer GarminExpress.exe` | one-time setup from the Garmin Express installer for Windows (only read, nothing installed); instead of it `--from-dll Networking.dll [--utilities-dll Utilities.dll]` or `--key KEY --secret SECRET` |
 | `openexpress setup [--ui-language en\|cs\|de\|pl\|system] [--diagnostics-copy on\|off] [--locale LOCALE] [--environment production\|china]` | settings: the program's language, the copy of the device's diagnostic files, the language asked of Garmin's servers (by default the program's), Garmin's servers; without options it shows them |
@@ -165,6 +165,10 @@ Garmin Connect has queued to the device.
 - A device connected as a USB drive is synced the same way when it can be (otherwise the command
   says why); its Connect IQ apps are left in Garmin Connect's queue, and the drive is ejected
   after a sync that wrote to it.
+- For a watch whose **Satellite Data** are on (experimental, turned on on its device page in the
+  window), a line says whether Garmin's current satellite data file was written, was already on
+  the watch or was not written and why; the dry run says whether it would be written.
+  `--upload-only` leaves them out.
 
 ### courses
 

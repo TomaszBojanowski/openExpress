@@ -198,6 +198,10 @@ Of the update server's answer:
   a device whose kind Garmin does not tell otherwise, the market segment and the connect support,
   always with the part number only, as it names the account's categories of such a device.
 
+With **Satellite Data** on for a watch, each sync asks `api.gcs.garmin.com` for the current
+satellite data file. The request carries no account, unit ID or other detail of the watch; the
+file is kept in the cache for up to four hours.
+
 ## How long Garmin's answers are kept
 
 What Garmin's servers answered is kept for a while, so that the program does not ask them more
