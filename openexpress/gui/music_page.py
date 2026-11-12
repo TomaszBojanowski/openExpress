@@ -136,7 +136,7 @@ class MusicPage:
                 lambda written: (self.toast(ngettext("Copied {count} file", "Copied {count} files",
                                                      len(written)).format(count=len(written))),
                                  self.load_section("music", force=True)),
-                read_again_after_failure(self, "music"))
+                read_again_after_failure(self, "music"), failed_title=_("Music Not Copied"))
 
         def ask_copy(p):
             if not p.to_copy:
@@ -149,7 +149,10 @@ class MusicPage:
                     # TRANSLATORS: button
                     Answer("ok", _("Copy"), lambda: copy(p), look="suggested"), private=True)
 
-        self.run_task(_("Scanning Files…"), plan, ask_copy)
+        self.run_task(_("Scanning Files…"), plan, ask_copy,
+                      # TRANSLATORS: heading of the error when music, podcasts or audiobooks
+                      # could not be copied to the device
+                      failed_title=_("Music Not Copied"))
 
     def choose_playlist(self) -> None:
         dialog = Gtk.FileDialog(title=_("Choose a Playlist to Add to the Device"))
@@ -233,7 +236,7 @@ class MusicPage:
                 # TRANSLATORS: toast after a playlist was added to the device
                 lambda _path: (self.toast(_("Added the playlist {name}").format(name=plan.name)),
                                self.load_section("music", force=True)),
-                read_again_after_failure(self, "music"))
+                read_again_after_failure(self, "music"), failed_title=_("Playlist Not Added"))
 
         def ask_add(plan):
             summary = self._playlist_summary(plan, in_flatpak())
@@ -249,7 +252,10 @@ class MusicPage:
                     Answer("ok", _("Add"), lambda: add(plan), look="suggested"), private=True)
 
         self.run_task(_("Reading the Playlist…"),
-                      lambda: music.plan_playlist(path, s.device, s.storage), ask_add)
+                      lambda: music.plan_playlist(path, s.device, s.storage), ask_add,
+                      # TRANSLATORS: heading of the error when a playlist could not be added to
+                      # the device
+                      failed_title=_("Playlist Not Added"))
 
     def confirm_remove_music(self, path: str, size: int | None = None) -> None:
         """The trash of a file (`size`: its size) or of a playlist (no size): asked first, as
@@ -275,4 +281,7 @@ class MusicPage:
                       writes_to_device(lambda: music.remove(s.storage, device_paths)),
                       lambda removed: (self.toast(self._removed_files(len(removed))),
                                        self.load_section("music", force=True)),
-                      read_again_after_failure(self, "music"))
+                      read_again_after_failure(self, "music"),
+                      # TRANSLATORS: heading of the error when music, a podcast, an audiobook
+                      # or a playlist could not be removed from the device
+                      failed_title=_("Music Not Removed"))

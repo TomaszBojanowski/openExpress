@@ -117,7 +117,10 @@ def _export(win, read, button: Gtk.Button) -> None:
             return  # another device opened meanwhile
         win.run_task(_("Exporting as GPX…"), lambda: _write_gpx(found, read, name, target),
                      lambda written: _saved(win, *written), button=button,
-                     device=read.activity.source is Source.DEVICE)
+                     device=read.activity.source is Source.DEVICE,
+                     # TRANSLATORS: heading of the error when an activity could not be saved
+                     # as a GPX file
+                     failed_title=_("Activity Not Exported"))
 
     dialog.save(win, None, chosen)
 
@@ -239,4 +242,6 @@ def _read_more(win, button: Gtk.Button) -> None:
         log.info("activities page: %d shown, %d more to read", len(found.read), found.left)
 
     win.run_task(_("Reading Activities…"), lambda: found.read_next(progress=win.progress),
-                 shown, button=button)
+                 shown, button=button,
+                 # TRANSLATORS: heading of the error when more activities could not be read
+                 failed_title=_("Activities Not Read"))

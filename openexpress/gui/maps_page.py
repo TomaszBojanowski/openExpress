@@ -317,7 +317,8 @@ class MapsPage:
                 _("Copying the Map…"),
                 writes_to_device(lambda: ownmaps.add(plan, s.device, s.storage,
                                                      progress=self.progress)),
-                lambda real: written(real, plan), read_again_after_failure(self, "maps", refused))
+                lambda real: written(real, plan), read_again_after_failure(self, "maps", refused),
+                failed_title=_("Map Not Added"))
 
         def ask_copy(plan):
             # Wide: room for the name of a map on one line.
@@ -328,7 +329,7 @@ class MapsPage:
 
         self.run_task(_("Checking the File…"),
                       lambda: ownmaps.plan_add(s.device, s.storage, garmin_maps, path),
-                      ask_copy, refused)
+                      ask_copy, refused, failed_title=_("Map Not Added"))
 
     def confirm_remove_own(self, m, foreign: bool = False) -> None:
         """`foreign`: a map this installation did not copy; asked about more strongly, and
@@ -367,7 +368,8 @@ class MapsPage:
                 _("Removing {name}…").format(name=m.title or m.filename),
                 writes_to_device(work), removed,
                 # Refused or failed, the page is read again: it may be out of date.
-                read_again_after_failure(self, "maps", refused))
+                read_again_after_failure(self, "maps", refused),
+                failed_title=_("Map Not Removed"))
 
         confirm(self, "own-map-remove", _("Remove {name}?").format(name=m.title or m.filename),
                 # TRANSLATORS: button that removes an own map openExpress did not copy to the device
@@ -423,7 +425,8 @@ class MapsPage:
             return self.session is not s  # gone meanwhile: the window says so already
 
         # TRANSLATORS: progress while the free space on the device is read before a map is installed
-        self.run_task(_("Checking the Space…"), work, done, failed, button=button)
+        self.run_task(_("Checking the Space…"), work, done, failed, button=button,
+                      failed_title=_("Map Not Installed"))
 
     def _ask_install_map(self, m, need: int, change: int, free: int | None,
                          removing: list[str]) -> None:
@@ -456,13 +459,12 @@ class MapsPage:
             # The words of the window ("come back to this page"), not the command line's.
             if not isinstance(e, mp.UnlockNotWritten):
                 return False
-            self.error(_("Installing {name}…").format(name=m.name), e.window_text)
+            self.error(_("Map Not Installed"), e.window_text)
             return True
 
         def install():
             self.run_task(
-                # TRANSLATORS: progress of a map install, also the heading of its error ({name}: the
-                # map)
+                # TRANSLATORS: progress of a map install ({name}: the map)
                 _("Installing {name}…").format(name=m.name),
                 writes_to_device(lambda: mp.install(
                     m, self.maps_cache, s.storage,
@@ -474,6 +476,7 @@ class MapsPage:
                                         .format(name=m.name)),
                              self.load_section("maps", force=True)),
                 read_again_after_failure(self, "maps", unlock_not_written),
+                failed_title=_("Map Not Installed"),
             )
 
         confirm(self, "map-install", heading, body,
@@ -493,7 +496,7 @@ class MapsPage:
                                                       progress=self.progress)),
                 lambda removed: (self.toast(self._removed_files(len(removed))),
                                  self.load_section("maps", force=True)),
-                read_again_after_failure(self, "maps"))
+                read_again_after_failure(self, "maps"), failed_title=_("Map Not Removed"))
 
         confirm(self, "map-remove", _("Remove {name}?").format(name=m.name),
                 _("These files will be removed from the device:") + "\n" + "\n".join(files)

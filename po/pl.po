@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 04:12+0100\n"
+"POT-Creation-Date: 2026-11-12 08:42+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -5320,6 +5320,12 @@ msgstr "Eksport do GPX"
 msgid "Exporting as GPX…"
 msgstr "Eksport do GPX…"
 
+#. TRANSLATORS: heading of the error when an activity could not be saved
+#. as a GPX file
+#: openexpress/gui/activities_page.py
+msgid "Activity Not Exported"
+msgstr "Nie wyeksportowano aktywności"
+
 #: openexpress/gui/activities_page.py
 #, python-brace-format
 msgid "This activity could not be exported: {error}"
@@ -5361,6 +5367,11 @@ msgid_plural "Show {count} More"
 msgstr[0] "Pokaż {count} więcej"
 msgstr[1] "Pokaż {count} więcej"
 msgstr[2] "Pokaż {count} więcej"
+
+#. TRANSLATORS: heading of the error when more activities could not be read
+#: openexpress/gui/activities_page.py
+msgid "Activities Not Read"
+msgstr "Nie odczytano aktywności"
 
 #. TRANSLATORS: attribution of the map data on the activity map; keep © and the name
 #. OpenStreetMap
@@ -5846,6 +5857,12 @@ msgstr ""
 msgid "The same apps with the same flags; only the order changes."
 msgstr "Te same aplikacje z tymi samymi flagami; zmienia się tylko kolejność."
 
+#. TRANSLATORS: heading of the error when the order of the apps could not
+#. be restored from a copy of the app list
+#: openexpress/gui/apps_page.py
+msgid "Order Not Restored"
+msgstr "Nie przywrócono kolejności"
+
 #: openexpress/gui/apps_page.py
 msgid ""
 "There are no copies of the app list yet. A copy is made before every change "
@@ -5875,6 +5892,12 @@ msgstr "Dalej"
 #: openexpress/gui/apps_page.py
 msgid "Reading the Copies of the App List…"
 msgstr "Odczytywanie kopii listy aplikacji…"
+
+#. TRANSLATORS: heading of the error when the copies of the app list (made
+#. before each change of the apps) could not be read
+#: openexpress/gui/apps_page.py
+msgid "Copies of the App List Not Read"
+msgstr "Nie odczytano kopii listy aplikacji"
 
 #. TRANSLATORS: heading of the confirmation before the order of the apps on the device is
 #. restored from a copy
@@ -5933,6 +5956,12 @@ msgid_plural "Allow New Permissions for {count} Apps?"
 msgstr[0] "Zezwolić na nowe uprawnienia?"
 msgstr[1] "Zezwolić na nowe uprawnienia dla {count} aplikacji?"
 msgstr[2] "Zezwolić na nowe uprawnienia dla {count} aplikacji?"
+
+#. TRANSLATORS: heading of the error when apps could not be installed or
+#. updated on the device
+#: openexpress/gui/apps_page.py
+msgid "Apps Not Installed"
+msgstr "Nie zainstalowano aplikacji"
 
 #: openexpress/gui/apps_page.py
 msgid "Queued in Garmin Connect"
@@ -6008,6 +6037,12 @@ msgstr "Usuwanie {name}…"
 msgid "Removed {name} from the app list of your Garmin account"
 msgstr "Usunięto {name} z listy aplikacji na koncie Garmin"
 
+#. TRANSLATORS: heading of the error when an app could not be removed (from the
+#. device or from the account's list of apps)
+#: openexpress/gui/apps_page.py
+msgid "App Not Removed"
+msgstr "Nie usunięto aplikacji"
+
 #. TRANSLATORS: heading of the confirmation before an app or a map is removed ({name}: its
 #. name)
 #. TRANSLATORS: heading of the confirmation before a music file or a playlist is removed
@@ -6082,6 +6117,12 @@ msgstr "{name}: wyłączona"
 #: openexpress/gui/apps_page.py
 msgid "Saving…"
 msgstr "Zapisywanie…"
+
+#. TRANSLATORS: heading of the error when an app could not be turned on or
+#. off on the device
+#: openexpress/gui/apps_page.py
+msgid "Change Not Saved"
+msgstr "Nie zapisano zmiany"
 
 #. TRANSLATORS: for a screen reader: the map in the confirmation before a GPX file is copied
 #: openexpress/gui/course_map.py
@@ -6477,6 +6518,12 @@ msgstr "Pobierz zdjęcie z konta"
 msgid "Your Garmin Connect account has no picture of this device"
 msgstr "Twoje konto Garmin nie ma zdjęcia tego urządzenia"
 
+#. TRANSLATORS: heading of the error when the device's picture could not be downloaded
+#. from the account
+#: openexpress/gui/device_page.py
+msgid "Picture Not Downloaded"
+msgstr "Nie pobrano zdjęcia"
+
 #: openexpress/gui/device_page.py
 msgid "Getting the Picture…"
 msgstr "Pobieranie zdjęcia…"
@@ -6521,7 +6568,8 @@ msgstr ""
 "Urządzenie jest podłączone w trybie pamięci masowej (jako dysk USB): "
 "aplikacje, mapy i muzyka nie są w tym trybie obsługiwane"
 
-#: openexpress/gui/device_page.py
+#. TRANSLATORS: heading of an error of a task that has no heading of its own
+#: openexpress/gui/device_page.py openexpress/gui/window_tasks.py
 msgid "Something Went Wrong"
 msgstr "Coś poszło nie tak"
 
@@ -7008,8 +7056,7 @@ msgstr "Zaktualizować {name}?"
 msgid "Install {name}?"
 msgstr "Zainstalować {name}?"
 
-#. TRANSLATORS: progress of a map install, also the heading of its error ({name}: the
-#. map)
+#. TRANSLATORS: progress of a map install ({name}: the map)
 #: openexpress/gui/maps_page.py
 #, python-brace-format
 msgid "Installing {name}…"
@@ -7110,6 +7157,12 @@ msgstr[0] "Skopiowano {count} plik"
 msgstr[1] "Skopiowano {count} pliki"
 msgstr[2] "Skopiowano {count} plików"
 
+#. TRANSLATORS: heading of the error when music, podcasts or audiobooks
+#. could not be copied to the device
+#: openexpress/gui/music_page.py
+msgid "Music Not Copied"
+msgstr "Nie skopiowano muzyki"
+
 #: openexpress/gui/music_page.py
 msgid "Nothing new to copy"
 msgstr "Brak nowych plików do skopiowania"
@@ -7197,6 +7250,12 @@ msgstr ""
 msgid "Added the playlist {name}"
 msgstr "Dodano listę odtwarzania {name}"
 
+#. TRANSLATORS: heading of the error when a playlist could not be added to
+#. the device
+#: openexpress/gui/music_page.py
+msgid "Playlist Not Added"
+msgstr "Nie dodano listy odtwarzania"
+
 #. TRANSLATORS: heading of the message when no track of a playlist can be added
 #: openexpress/gui/music_page.py
 msgid "No Tracks to Add"
@@ -7230,6 +7289,12 @@ msgstr "Plik {path} zostanie usunięty z urządzenia; jego utwory zostają."
 #: openexpress/gui/music_page.py
 msgid "Removing…"
 msgstr "Usuwanie…"
+
+#. TRANSLATORS: heading of the error when music, a podcast, an audiobook
+#. or a playlist could not be removed from the device
+#: openexpress/gui/music_page.py
+msgid "Music Not Removed"
+msgstr "Nie usunięto muzyki"
 
 #. TRANSLATORS: in the popover of the server state button, in place of the parts of
 #. Garmin's servers, while this window has asked none of them (what its pages show may
@@ -7271,6 +7336,12 @@ msgid ""
 msgstr ""
 "Kopia plików diagnostycznych urządzenia zostaje na tym komputerze; "
 "openExpress nigdy jej nie wysyła"
+
+#. TRANSLATORS: heading of the error when a switch of the preferences could not be
+#. saved
+#: openexpress/gui/preferences.py
+msgid "Setting Not Saved"
+msgstr "Nie zapisano ustawienia"
 
 #. TRANSLATORS: group in the preferences: the street map from OpenStreetMap under the track of an
 #. activity
@@ -7387,13 +7458,19 @@ msgstr "Włączono synchronizację w tle"
 msgid "Background sync disabled"
 msgstr "Wyłączono synchronizację w tle"
 
+#. TRANSLATORS: heading of the error when the sync in the background could not be
+#. turned on or off
 #: openexpress/gui/preferences.py
-msgid "Background Sync"
-msgstr "Synchronizacja w tle"
+msgid "Background Sync Not Changed"
+msgstr "Nie zmieniono synchronizacji w tle"
 
 #: openexpress/gui/preferences.py
 msgid "Background sync could not be turned on or off."
 msgstr "Nie udało się włączyć ani wyłączyć synchronizacji w tle."
+
+#: openexpress/gui/preferences.py
+msgid "Background Sync"
+msgstr "Synchronizacja w tle"
 
 #: openexpress/gui/preferences.py
 msgid "Syncs each time a device is connected, even when the window is closed"
@@ -7418,6 +7495,12 @@ msgstr "Domyślny systemu"
 #: openexpress/gui/preferences.py
 msgid "Interface Language"
 msgstr "Język interfejsu"
+
+#. TRANSLATORS: heading of the error when the language of the interface could not
+#. be saved
+#: openexpress/gui/preferences.py
+msgid "Language Not Changed"
+msgstr "Nie zmieniono języka"
 
 #: openexpress/gui/preferences.py
 msgid "Restart the application to change the language"

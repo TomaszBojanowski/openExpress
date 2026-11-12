@@ -437,7 +437,9 @@ def get_picture_from_account(win, button=None) -> None:
         # The server's own words are no help here; the button stays for a later try.
         log.info("device picture: the account refused, asked on request (HTTP %s)",
                  e.status if e.status is not None else "none")
-        win.error(_("Device Picture"), account_picture_refused_text(e.status))
+        # TRANSLATORS: heading of the error when the device's picture could not be downloaded
+        # from the account
+        win.error(_("Picture Not Downloaded"), account_picture_refused_text(e.status))
         return True
 
     win.run_task(_("Getting the Picture…"), work, done, failed, device=False, button=button)

@@ -74,7 +74,9 @@ def diagnostics_switch(win) -> Adw.SwitchRow:
             row.handler_block_by_func(toggled)
             row.set_active(not wanted)
             row.handler_unblock_by_func(toggled)
-            win.error(_("Diagnostics"), str(e))
+            # TRANSLATORS: heading of the error when a switch of the preferences could not be
+            # saved
+            win.error(_("Setting Not Saved"), str(e))
             return
         log.info("diagnostics: the copy at each connection turned %s", "on" if wanted else "off")
 
@@ -318,7 +320,9 @@ class Preferences:
                 if self.session is not None:
                     self.show_overview()
             else:
-                self.error(_("Background Sync"),
+                # TRANSLATORS: heading of the error when the sync in the background could not be
+                # turned on or off
+                self.error(_("Background Sync Not Changed"),
                            error or _("Background sync could not be turned on or off."))
             if on_result:
                 on_result(ok)
@@ -406,7 +410,9 @@ class Preferences:
             try:
                 save_ui_language(code)
             except (OSError, ValueError) as e:
-                self.error(_("Language"), str(e))
+                # TRANSLATORS: heading of the error when the language of the interface could not
+                # be saved
+                self.error(_("Language Not Changed"), str(e))
                 return
             shown = self._preferences
             if shown is not None:

@@ -69,7 +69,11 @@ def test_an_error_failed_does_not_take_can_be_recorded_or_shown():
     shown = []
     RunNow(error=lambda title, text: shown.append((title, text)))(
         "Copying…", raising(Failed()))
-    assert shown == [("Copying…", "Failed")]  # an error without words: its class, as the window
+    RunNow(error=lambda title, text: shown.append((title, text)))(
+        "Copying…", raising(Failed("gone")), failed_title="File Not Copied")
+    # Under the task's own heading, else a general one, never the words of its progress; an
+    # error without words: its class, as the window.
+    assert shown == [("Something Went Wrong", "Failed"), ("File Not Copied", "gone")]
 
 
 def test_the_hooks_come_before_the_work_and_between_it_and_done():

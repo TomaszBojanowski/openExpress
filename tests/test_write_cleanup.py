@@ -420,7 +420,7 @@ def test_the_window_says_the_text_of_the_window(device_root, monkeypatch):
         load_section=lambda key, force=False: None)
     app.MainWindow._ask_install_map(win, m, 0, 0, 0, [])
     questions[0].emit("response", "ok")
-    assert errors == [("Installing Test Map…", WINDOW_TEXT)]
+    assert errors == [("Map Not Installed", WINDOW_TEXT)]
 
 
 # --- music: a file of the wrong size stops the copy ----------------------------------------------

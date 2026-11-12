@@ -346,10 +346,10 @@ class AppsPage:
             state, choices, note = result
             blocked = self._order_blocked(state)
             if blocked:
-                self.error(_("Restore the Order From a Copy"), blocked)
+                self.error(_("Order Not Restored"), blocked)
                 return
             if not choices:
-                self.error(_("Restore the Order From a Copy"),
+                self.error(_("Order Not Restored"),
                            _("There are no copies of the app list yet. A copy is made before "
                              "every change of the apps on the device."))
                 return
@@ -391,7 +391,10 @@ class AppsPage:
                     extra=scroller, keep_as="_order_dialog")
             GLib.idle_add(order_list_at_its_top, box)
 
-        self.run_task(_("Reading the Copies of the App List…"), work, show, button=button)
+        self.run_task(_("Reading the Copies of the App List…"), work, show, button=button,
+                      # TRANSLATORS: heading of the error when the copies of the app list (made
+                      # before each change of the apps) could not be read
+                      failed_title=_("Copies of the App List Not Read"))
 
     def confirm_order(self, copy, plan, note: str) -> None:
         """`note`: what happens before the change (ciq.copy_note), told by choose_order with
@@ -423,7 +426,10 @@ class AppsPage:
         self.run_task(_("Restoring the Order…"),
                       writes_to_device(lambda: ciq.restore_order(s.device, s.storage,
                                                                  copy.state)), done,
-                      read_again_after_failure(self, "apps"))
+                      read_again_after_failure(self, "apps"),
+                      # TRANSLATORS: heading of the error when the order of the apps could not
+                      # be restored from a copy of the app list
+                      failed_title=_("Order Not Restored"))
 
     def install_apps(self, apps) -> None:
         """Install or update these apps; those with new permissions only once the user
@@ -479,10 +485,11 @@ class AppsPage:
             if rep.failed:
                 # What was written first, then each app that was not (the USB connection
                 # to renew, if any, comes last).
-                self.error("Connect IQ", "\n".join(
+                self.error(_("Apps Not Installed"), "\n".join(
                     [*AppsPage._written_apps(rep), *(f"{n}: {e}" for n, e in rep.failed)]))
             elif rep.for_phone and not rep.installed:
-                self.error(_("Queued in Garmin Connect"), self._for_phone_text(
+                # Not an error: Garmin Connect on the phone installs them.
+                inform(self, "apps-queued", _("Queued in Garmin Connect"), self._for_phone_text(
                     rep.for_phone, rep.sandboxed, rep.sandboxed_updates, rep.no_app_list))
             elif rep.installed and all(n in rep.updated for n in rep.installed):
                 self.toast(ciq.update_written_text(rep.installed))
@@ -497,7 +504,10 @@ class AppsPage:
             self.load_section("apps", force=True)
 
         self.run_task(_("Installing Apps…"), writes_to_device(work), done,
-                      read_again_after_failure(self, "apps"))
+                      read_again_after_failure(self, "apps"),
+                      # TRANSLATORS: heading of the error when apps could not be installed or
+                      # updated on the device
+                      failed_title=_("Apps Not Installed"))
 
     @staticmethod
     def _written_apps(rep) -> list[str]:
@@ -559,7 +569,10 @@ class AppsPage:
                 lambda _r: (self.toast(_("Removed {name} from the app list of your Garmin "
                                          "account").format(name=app.name)),
                             self.load_section("apps", force=True)),
-                read_again_after_failure(self, "apps"), device=False)
+                read_again_after_failure(self, "apps"), device=False,
+                # TRANSLATORS: heading of the error when an app could not be removed (from the
+                # device or from the account's list of apps)
+                failed_title=_("App Not Removed"))
 
         # TRANSLATORS: heading of the confirmation before an app or a map is removed ({name}: its
         # name)
@@ -600,7 +613,8 @@ class AppsPage:
                 self.load_section("apps", force=True)
 
             self.run_task(_("Removing {name}…").format(name=app.name),
-                          writes_to_device(work), done, read_again_after_failure(self, "apps"))
+                          writes_to_device(work), done, read_again_after_failure(self, "apps"),
+                          failed_title=_("App Not Removed"))
 
         confirm(self, "app-remove", _("Remove {name}?").format(name=app.name), body,
                 # TRANSLATORS: answer: removes the app from the device and also from the account's
@@ -647,4 +661,7 @@ class AppsPage:
         self.run_task(_("Saving…"),
                       writes_to_device(lambda: ciq.set_enabled(s.device, s.storage, app.app_id,
                                                                enabled, app.app_type)),
-                      done, read_again_after_failure(self, "apps", failed))
+                      done, read_again_after_failure(self, "apps", failed),
+                      # TRANSLATORS: heading of the error when an app could not be turned on or
+                      # off on the device
+                      failed_title=_("Change Not Saved"))

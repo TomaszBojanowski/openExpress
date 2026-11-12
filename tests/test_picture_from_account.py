@@ -154,6 +154,6 @@ def test_a_refusal_of_the_account_is_said_in_short(pictures, status, words):
     client = OffAccountClient(off_account_url=refusal)
     win, shown_tiles, toasts, rows = _clicking_window(client, monkeypatch)
     get_picture_from_account(win)
-    assert win.errors == [("Device Picture", words)]
+    assert win.errors == [("Picture Not Downloaded", words)]
     assert rows == [] and win.account_picture_offer is win.session  # the button stays
     assert _cache(xdg) == [] and toasts == [] and shown_tiles == []

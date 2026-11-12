@@ -1501,7 +1501,7 @@ def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatc
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
     ((title, text),) = errors
     lines = text.splitlines()
-    assert title == "Connect IQ" and lines[-1] == ": ".join(REMOUNT)
+    assert title == "Apps Not Installed" and lines[-1] == ": ".join(REMOUNT)
     if broken:
         assert len(lines) == 2 and lines[0].startswith("Face It: ")
     else:
@@ -2003,7 +2003,7 @@ def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeyp
     MainWindow.confirm_remove_app(win, ciq.read_installed(dev, st).find(FACE))
     ((title, text),) = errors
     lines = text.splitlines()
-    assert title == "Removing Face It…" and len(lines) == 2
+    assert title == "App Not Removed" and len(lines) == 2
     assert lines[0].startswith(LIST_LEFT) and lines[1] == REMOUNT[1]
     assert reads == ["apps"]  # the page is read again (read_again_after_failure)
 
@@ -3664,7 +3664,7 @@ def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
         run_task=RunNow())
     win._install_apps = lambda apps, allowed=(): MainWindow._install_apps(win, apps, allowed)
     MainWindow.install_apps(win, [store_app(FACE, "Face It")])
-    assert errors == [("Connect IQ", f"Face It: {NO_SLOT}")]
+    assert errors == [("Apps Not Installed", f"Face It: {NO_SLOT}")]
     assert store.requested == [] and client.downloads == 0
 
 

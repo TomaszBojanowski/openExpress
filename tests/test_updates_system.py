@@ -1915,7 +1915,7 @@ def test_the_window_gives_the_download_its_bar(device_root, monkeypatch):
         updates_cache=updates.parse_updates(lower_keys(server_answer())), maps_cache=[m],
         progress=lambda text: None, fraction=lambda done, total: None)
 
-    def run_task(title, fn, done=None, failed=None, button=None):
+    def run_task(title, fn, done=None, failed=None, button=None, failed_title=None):
         tasks.append(fn)
         if title == "Checking the Space…":  # the question of the map comes after it
             done(fn())

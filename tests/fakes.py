@@ -11,7 +11,7 @@ import types
 from collections import namedtuple
 from dataclasses import dataclass
 
-Call =namedtuple("Call", "title fn done failed device in_page button")
+Call = namedtuple("Call", "title fn done failed device in_page button failed_title")
 
 
 def device_session(**fields):
@@ -52,7 +52,8 @@ class Waits:
 class RunNow:
     """The window's run_task (gui/window_tasks.py), run at once: the work (in a thread,
     waited for, with `thread=True`), then done or failed; an error `failed` does not take goes
-    to `error`: "raise" (default), "record" (into `errors`) or a function (title, words).
+    to `error`: "raise" (default), "record" (into `errors`) or a function (heading, words: the
+    heading as the window's, error_heading).
     WindowClosed ends the task quietly; `button` spins during the work. Leaves `calls`,
     `titles` and `written` (writes_to_device works)."""
 
@@ -68,9 +69,9 @@ class RunNow:
         return [call.title for call in self.calls]
 
     def __call__(self, title, fn, done=None, failed=None, device=True, in_page=False,
-                 button=None):
+                 button=None, failed_title=None):
         # Unlike the window: no check of `busy`, no bar, no pending refresh afterwards.
-        call = Call(title, fn, done, failed, device, in_page, button)
+        call = Call(title, fn, done, failed, device, in_page, button, failed_title)
         self.calls.append(call)
         if self.on_call is not None:
             self.on_call(call)
@@ -103,14 +104,14 @@ class RunNow:
             if raised and isinstance(raised[0], WindowClosed):
                 pass  # stopped as the window closed: nothing to tell
             elif raised:
-                self._failed(title, raised[0], failed)
+                self._failed(failed_title, raised[0], failed)
             elif done is not None:
                 done(result[0])  # an error of done is not caught, as in the window
         finally:
             if getattr(fn, "writes_to_device", False):
                 self.written.append(title)
 
-    def _failed(self, title, error, failed) -> None:
+    def _failed(self, failed_title, error, failed) -> None:
         if failed is not None and failed(error):
             return
         if self.error == "raise":
@@ -119,7 +120,9 @@ class RunNow:
         if self.error == "record":
             self.errors.append(words)
         else:
-            self.error(title, words)
+            from openexpress.gui.window_tasks import error_heading
+
+            self.error(error_heading(failed_title), words)
 
 
 class SyncClient:

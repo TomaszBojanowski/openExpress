@@ -96,7 +96,7 @@ def test_a_map_whose_unlock_file_failed_is_shown_waiting_to_be_loaded(maps_page,
     assert "TopoActive Japan" not in _on_the_device(section)
     _install(win, "TopoActive Japan")
     assert reads == ["maps", "maps"]
-    assert win.errors == [("Installing TopoActive Japan…", error.window_text)]
+    assert win.errors == [("Map Not Installed", error.window_text)]
     assert win.toasts == []  # not "Another operation is in progress"
     subtitle = _on_the_device(section)["TopoActive Japan"]
     assert subtitle.endswith("\u00a0· will be loaded after the device is unplugged")
@@ -114,7 +114,7 @@ def test_a_map_whose_download_failed_reads_the_page_again_too(maps_page, monkeyp
     monkeypatch.setattr(maps, "install", install)
     _install(win, "TopoActive Japan")
     assert reads == ["maps", "maps"]
-    assert win.errors == [("Installing TopoActive Japan…", "Download failed: the server is gone")]
+    assert win.errors == [("Map Not Installed", "Download failed: the server is gone")]
     assert "TopoActive Japan" not in _on_the_device(section)
 
 
@@ -209,7 +209,7 @@ def restore_order(win, monkeypatch):
 
     monkeypatch.setattr(ciq, "restore_order", win.fails)
     MainWindow.restore_order(win, types.SimpleNamespace(state=None))
-    return "apps", "Restoring the Order…"
+    return "apps", "Order Not Restored"
 
 
 def install_apps(win, monkeypatch):
@@ -218,7 +218,7 @@ def install_apps(win, monkeypatch):
     _account(monkeypatch)
     monkeypatch.setattr(ciq, "install_apps", win.fails)
     MainWindow.install_apps(win, [APP])
-    return "apps", "Installing Apps…"
+    return "apps", "Apps Not Installed"
 
 
 def remove_app(win, monkeypatch):
@@ -226,7 +226,7 @@ def remove_app(win, monkeypatch):
 
     monkeypatch.setattr(ciq, "remove", win.fails)
     MainWindow.confirm_remove_app(win, APP)
-    return "apps", "Removing Face It…"
+    return "apps", "App Not Removed"
 
 
 def remove_and_forget(win, monkeypatch):
@@ -237,7 +237,7 @@ def remove_and_forget(win, monkeypatch):
     _account(monkeypatch, types.SimpleNamespace(forget=win.fails))
     monkeypatch.setattr(ciq, "remove", lambda device, storage, app: ["GARMIN/APPS/MEDIA/X.PRG"])
     MainWindow.confirm_remove_app(win, APP)
-    return "apps", "Removing Face It…"
+    return "apps", "App Not Removed"
 
 
 def forget_app(win, monkeypatch):
@@ -246,7 +246,7 @@ def forget_app(win, monkeypatch):
     Answering.answer = "forget"
     _account(monkeypatch, types.SimpleNamespace(forget=win.fails))
     MainWindow.confirm_forget_app(win, APP)
-    return "apps", "Removing Face It…"
+    return "apps", "App Not Removed"
 
 
 def switch_app(win, monkeypatch):
@@ -257,7 +257,7 @@ def switch_app(win, monkeypatch):
     row = Switch(active=True)  # turned on; the app is off
     MainWindow.toggle_app(win, APP, row, 0)
     assert row.active is False
-    return "apps", "Saving…"
+    return "apps", "Change Not Saved"
 
 
 def copy_music(win, monkeypatch):
@@ -268,7 +268,7 @@ def copy_music(win, monkeypatch):
     monkeypatch.setattr(music, "plan_copy", lambda tracks, device, storage: plan)
     monkeypatch.setattr(music, "copy", win.fails)
     MainWindow.add_music(win, [Path("one.mp3")], "track")
-    return "music", "Copying Music…"
+    return "music", "Music Not Copied"
 
 
 def add_playlist(win, monkeypatch):
@@ -278,7 +278,7 @@ def add_playlist(win, monkeypatch):
     monkeypatch.setattr(music, "plan_playlist", lambda path, device, storage: plan)
     monkeypatch.setattr(music, "add_playlist", win.fails)
     MainWindow.add_playlist(win, Path("Morning run.m3u8"))
-    return "music", "Copying Music…"
+    return "music", "Playlist Not Added"
 
 
 def remove_music(win, monkeypatch):
@@ -286,7 +286,7 @@ def remove_music(win, monkeypatch):
 
     monkeypatch.setattr(music, "remove", win.fails)
     MainWindow.remove_music(win, ["Music/one.mp3"])
-    return "music", "Removing…"
+    return "music", "Music Not Removed"
 
 
 def install_map(win, monkeypatch):
@@ -296,7 +296,7 @@ def install_map(win, monkeypatch):
     win.maps_cache = [m]
     monkeypatch.setattr(maps, "install", win.fails)
     MainWindow._ask_install_map(win, m, 1000, 1000, 10**9, [])
-    return "maps", "Installing Test Map…"
+    return "maps", "Map Not Installed"
 
 
 def remove_map(win, monkeypatch):
@@ -306,7 +306,7 @@ def remove_map(win, monkeypatch):
     win.maps_cache = [m]
     monkeypatch.setattr(maps, "uninstall", win.fails)
     MainWindow.confirm_remove(win, m)
-    return "maps", "Removing Test Map…"
+    return "maps", "Map Not Removed"
 
 
 CASES = [restore_order, install_apps, remove_app, remove_and_forget, forget_app, switch_app,
@@ -352,7 +352,7 @@ def test_a_switch_whose_waiting_list_is_lost_reads_the_apps_page_again(iq_device
     MainWindow.toggle_app(win, store, Switch(active=False), 0)  # turned off
     assert win.reads == [("apps", False)]
     ((title, text),) = win.errors
-    assert title == "Saving…" and "are lost. Make them again." in text
+    assert title == "Change Not Saved" and "are lost. Make them again." in text
 
 
 class SecondFails(LocalStorage):
@@ -380,4 +380,4 @@ def test_music_copied_in_part_reads_the_music_page_again(iq_device, library, mon
     songs = [library.parent / "one.mp3", library.parent / "sub" / "two.mp3"]
     MainWindow.add_music(win, songs, "track")
     assert win.reads == [("music", ["one.mp3"])]
-    assert win.errors == [("Copying Music…", GONE)]
+    assert win.errors == [("Music Not Copied", GONE)]

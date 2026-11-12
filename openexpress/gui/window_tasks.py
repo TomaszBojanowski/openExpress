@@ -247,6 +247,13 @@ def diagnostics_state(session) -> str:
     return "none" if reading is None else "reading"
 
 
+def error_heading(failed_title: str | None) -> str:
+    """The heading of the error of a task: its own (`failed_title`, "<Thing> Not <Done>": what
+    did not happen), else a general one; never the words of its progress ("Saving…")."""
+    # TRANSLATORS: heading of an error of a task that has no heading of its own
+    return failed_title or _("Something Went Wrong")
+
+
 def wait_for_the_diagnostics(session, fn) -> None:
     """A work that writes to the device (writes_to_device) waits, in its thread, until the
     device's diagnostics are read (device_page.read_diagnostics, in the background after its
@@ -624,12 +631,14 @@ class TaskRunner:
             self._waiting = 0
 
     def run_task(self, title: str, fn, on_done=None, on_error=None, device: bool = True,
-                 in_page: bool = False, button: Gtk.Button | None = None) -> None:
+                 in_page: bool = False, button: Gtk.Button | None = None,
+                 failed_title: str | None = None) -> None:
         """Run `fn()` in a thread, then `on_done(result)` or `on_error(e)` on the GUI thread
         after the bar and `button` are restored; the error is shown unless `on_error`
-        returns true. While busy: a toast only. `device`: False when the task writes nothing to
-        the device (no "keep it plugged in"). `in_page`: as set_busy. `button`: spins at once,
-        the bar with `title` after TEXT_AFTER_MS."""
+        returns true, under `failed_title` (error_heading). While busy: a toast only.
+        `device`: False when the task writes nothing to the device (no "keep it plugged in").
+        `in_page`: as set_busy. `button`: spins at once, the bar with `title` after
+        TEXT_AFTER_MS."""
         if self.busy:
             log.info("task %s: not started, another one is running", task_name(fn))
             self.toast(_("Another operation is in progress"))
@@ -714,7 +723,7 @@ class TaskRunner:
             try:
                 with stalled.telling(self, e):  # a stall: the banner, no error dialog
                     if not (on_error and on_error(e)):
-                        self.error(title, error_text(e))
+                        self.error(error_heading(failed_title), error_text(e))
             finally:
                 self._run_pending_refresh()
             return False

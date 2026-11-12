@@ -470,7 +470,8 @@ class CoursesPage:
             self.run_task(_("Removing {name}…").format(name=plan.title),
                           writes_to_device(lambda: courses.remove(plan, s.device, s.storage)
                                            or plan),
-                          removed, read_again_after_failure(self, "courses", refused))
+                          removed, read_again_after_failure(self, "courses", refused),
+                          failed_title=_("Course Not Removed"))
 
         def ask(plan):
             confirm(self, "course-remove", remove_heading(plan.title), courses.removal_note(plan),
@@ -479,7 +480,8 @@ class CoursesPage:
 
         self.run_task(_("Checking the File…"),
                       lambda: courses.plan_remove(s.device, s.storage, shown), ask,
-                      read_again_after_failure(self, "courses", refused))
+                      read_again_after_failure(self, "courses", refused),
+                      failed_title=_("Course Not Removed"))
 
     def add_course(self, path: Path) -> None:
         """The file checked and planned with the device, then the question; Copy copies it
@@ -497,7 +499,8 @@ class CoursesPage:
             self.run_task(
                 _("Copying the Course…"),
                 writes_to_device(lambda: _copy(s, path, name, self.progress)),
-                copied, read_again_after_failure(self, "courses", self._course_refused))
+                copied, read_again_after_failure(self, "courses", self._course_refused),
+                failed_title=_("Course Not Added"))
 
         def ask(plan):
             entered = {"name": None}
@@ -508,4 +511,4 @@ class CoursesPage:
 
         self.run_task(_("Checking the File…"),
                       lambda: courses.plan_add(s.device, s.storage, path), ask,
-                      self._course_refused)
+                      self._course_refused, failed_title=_("Course Not Added"))

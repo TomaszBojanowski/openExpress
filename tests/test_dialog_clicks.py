@@ -316,8 +316,9 @@ def test_closing_while_a_task_runs_asks_to_wait(click):
 # here fails test_every_dialog_has_an_escape_case.
 
 INFORMS = {"close-busy", "order-none-differs", "ejected", "error", "backup-incomplete",
-           "add-to-account-refused", "added-not-listed", "added-not-checked", "update-done",
-           "update-finish", "free-not-removed", "free-stopped", "free-device-changed"}
+           "apps-queued", "add-to-account-refused", "added-not-listed", "added-not-checked",
+           "update-done", "update-finish", "free-not-removed", "free-stopped",
+           "free-device-changed"}
 AFTER_ESCAPE = {}
 
 
@@ -368,6 +369,20 @@ def _app_permissions(ctx):
                                    permissions_changed=True, permissions=("Positioning",))
     win = _escape_window(ctx, _install_apps=_note(ctx, "install_apps"))
     MainWindow.confirm_permissions(win, [plain, asking], [asking])
+
+
+def _apps_queued(ctx):
+    """Apps that only Garmin Connect on the phone installs: a message, not an error."""
+    from openexpress.gui.app import MainWindow
+
+    ctx.monkeypatch.setattr(service, "require_account_device", _note(ctx, "owner"))
+    ctx.monkeypatch.setattr(ciq, "StoreApi", lambda client: object())
+    ctx.monkeypatch.setattr(ciq, "install_apps", lambda *a, **kw: types.SimpleNamespace(
+        needs_consent=[], updated_ids=[], failed=[], for_phone=["Face It"], installed=[],
+        sandboxed=[], sandboxed_updates=[], no_app_list=False))
+    win = _escape_window(ctx, progress=lambda message: None,
+                         _for_phone_text=MainWindow._for_phone_text)
+    MainWindow._install_apps(win, [types.SimpleNamespace(name="Face It")])
 
 
 def _app_calls(ctx):
@@ -725,6 +740,7 @@ OPENERS = {
     "close-busy": _close_busy, "order-none-differs": lambda ctx: _order(ctx, False),
     "order-choose": lambda ctx: _order(ctx, True), "order-restore": _order_restore,
     "app-permissions": _app_permissions, "app-forget": _app_forget, "app-remove": _app_remove,
+    "apps-queued": _apps_queued,
     "primary-wearable": _primary_wearable, "primary-training": _primary_training,
     "add-to-account": _add_to_account,
     "add-to-account-refused": lambda ctx: _added(ctx, refusal=OtherOwner("made up", False)),
