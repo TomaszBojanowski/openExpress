@@ -211,27 +211,39 @@ def _utf16_strings(blob: bytes, min_len: int = 8) -> list[str]:
     return out
 
 
-def extract_consumer_from_dll(dll: Path) -> Consumer:
-    """Read the consumer key from Garmin Express's Networking.dll.
-
-    In the library the key (UUID) and secret appear as consecutive string
-    literals, right after the Connect host URLs.
-    """
-    strings = _utf16_strings(dll.read_bytes())
+def find_consumer(blob: bytes) -> Consumer | None:
+    """The consumer key in the bytes of Garmin Express's Networking.dll: the key (UUID) and
+    secret appear as consecutive string literals, right after the Connect host URLs. None when
+    they are not there."""
+    strings = _utf16_strings(blob)
     for i, s in enumerate(strings[:-1]):
         if (_UUID_RE.match(s) and _SECRET_RE.match(strings[i + 1])
                 and i > 0 and strings[i - 1].startswith("https://")):
             return Consumer(s, strings[i + 1])
-    raise SetupError(_("Application key not found in {path}").format(path=dll))
+    return None
 
 
-def extract_url_salt_from_dll(dll: Path) -> str:
-    """Read the download URL signing salt from Garmin Express's Utilities.dll.
-
-    In the library it appears as a literal right before "{0}_{1}" and "garmindlm".
-    """
-    strings = _utf16_strings(dll.read_bytes(), min_len=5)
+def find_url_salt(blob: bytes) -> str | None:
+    """The download URL signing salt in the bytes of Garmin Express's Utilities.dll: a literal
+    right before "{0}_{1}" and "garmindlm". None when it is not there."""
+    strings = _utf16_strings(blob, min_len=5)
     for i, s in enumerate(strings[:-2]):
         if strings[i + 1] == "{0}_{1}" and strings[i + 2] == "garmindlm" and s.isalnum():
             return s
-    raise SetupError(_("URL signing data not found in {path}").format(path=dll))
+    return None
+
+
+def extract_consumer_from_dll(dll: Path) -> Consumer:
+    """Read the consumer key from Garmin Express's Networking.dll."""
+    consumer = find_consumer(dll.read_bytes())
+    if consumer is None:
+        raise SetupError(_("Application key not found in {path}").format(path=dll))
+    return consumer
+
+
+def extract_url_salt_from_dll(dll: Path) -> str:
+    """Read the download URL signing salt from Garmin Express's Utilities.dll."""
+    salt = find_url_salt(dll.read_bytes())
+    if salt is None:
+        raise SetupError(_("URL signing data not found in {path}").format(path=dll))
+    return salt

@@ -30,8 +30,6 @@ from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # n
 from openexpress.settings import (  # noqa: E402
     Settings,
     SetupError,
-    extract_consumer_from_dll,
-    extract_url_salt_from_dll,
     has_consumer,
     save_consumer,
 )
@@ -317,7 +315,7 @@ class Preferences:
                 # the start page) stays.
                 self.gui_settings = update_gui_settings(background=enabled)
                 self.toast(_("Background sync enabled") if enabled
-                           else _("Background sync disabled"))
+                           else _("Background sync disabled"), on_preferences=True)
                 if self.session is not None:
                     self.show_overview()
             else:
@@ -431,7 +429,7 @@ class Preferences:
             title=_("Garmin Express Installer for Windows"),
             subtitle=_("GarminExpress.exe from garmin.com: the application key is read from it "
                        "again, nothing is installed"))
-        row.add_suffix(self._button(_("Choose File…"), self.choose_dll))
+        row.add_suffix(self._button(_("Choose File…"), self.choose_dll, with_button=True))
         g.add(row)
         page.add(g)
         page.add(self._cache_group())
@@ -445,20 +443,21 @@ class Preferences:
         with Log out, or nobody with Log In; drawn again when the account changes."""
         g = Adw.PreferencesGroup(title=_("Garmin Connect Account"))
         row = Adw.ActionRow()
-        button = self._button("", self._account_action)
+        button = self._button("", self._account_action, with_button=True)
         row.add_suffix(button)
         g.add(row)
         self._account_row = (row, button)
         render_account_row(self)
         return g
 
-    def _account_action(self) -> None:
+    def _account_action(self, button: Gtk.Button | None = None) -> None:
         """Log out or Log In in the preferences: the same as in the device view; without the
-        application key, Choose Installer… first."""
+        application key, Choose Installer… first (`button`, the row's, spins while it is
+        read)."""
         if logged_in_auth() is not None:
             self.logout()
         elif not has_consumer():
-            self.choose_dll()
+            self.choose_dll(button)
         else:
             self.login()
 
@@ -536,21 +535,19 @@ class Preferences:
         dialog.add(section)
         dialog.present(self)
 
-    def choose_dll(self) -> None:
+    def choose_dll(self, button: Gtk.Button | None = None) -> None:
+        """Garmin Express's installer chosen and its application key saved. What follows is
+        told where the user is: on the preferences while they are open, where `button` (the
+        one clicked there) spins while the installer is read; else on the window (the banner
+        of the device page). A failure is a dialog over both."""
         dialog = Gtk.FileDialog(
             title=_("Choose the Garmin Express Installer for Windows (GarminExpress.exe)"))
 
         def read(path: Path):
-            from openexpress.installer import consumer_from_installer, refuse_macos_installer
+            from openexpress.installer import consumer_from_installer
 
-            refuse_macos_installer(path)
-            if path.suffix.lower() == ".exe":
-                return consumer_from_installer(path)
-            consumer = extract_consumer_from_dll(path)
-            util = path.with_name("Utilities.dll")
-            if util.exists():
-                consumer.url_salt = extract_url_salt_from_dll(util)
-            return consumer
+            # The installer of either layout, or Networking.dll itself: told by its bytes.
+            return consumer_from_installer(path)
 
         def chosen(dlg, res):
             try:
@@ -558,16 +555,23 @@ class Preferences:
             except GLib.Error:
                 return
             if f.get_path() is None:
-                self.toast(_("Choose a file stored on this computer"))
+                self.toast(_("Choose a file stored on this computer"), on_preferences=True)
+                return
+            if self.busy:
+                # A task began while the file was being chosen: run_task would say so on the
+                # window, under the preferences.
+                log.info("setup: the installer not read: another task is running")
+                self.toast(_("Another operation is in progress"), on_preferences=True)
                 return
             path = Path(f.get_path())
 
             def saved(consumer):
                 save_consumer(consumer)
-                self.toast(_("Application key saved"))
+                self.toast(_("Application key saved"), on_preferences=True)
                 account_changed(self)
 
             self.run_task(_("Reading the Installer…"), lambda: read(path), saved, device=False,
+                          button=button,
                           # TRANSLATORS: heading of the error when the application key could not
                           # be read from Garmin Express's installer
                           failed_title=_("Installer Not Read"))
@@ -575,6 +579,10 @@ class Preferences:
         dialog.open(self, None, chosen)
 
     def login(self) -> None:
+        """Garmin's sign-in page (a window of its own), then the ticket exchanged for the
+        token. Told where the user is: with the preferences open, the account's button there
+        spins while the ticket is exchanged and the toast is on them; else the bar and the
+        toast of the window."""
         if not has_consumer():
             # Garmin's sign-in would be opened for nothing: the ticket cannot be exchanged
             # without the key.
@@ -616,14 +624,19 @@ class Preferences:
             def done(result):
                 auth, profile_ok = result
                 self.toast(_("Signed in as {account}").format(account=auth.display) if profile_ok
-                           else _("Signed in, but the account details could not be loaded"))
+                           else _("Signed in, but the account details could not be loaded"),
+                           on_preferences=True)
                 self._want_account()
                 account_changed(self)
 
             def start():
                 if self.busy:
                     return True  # the ticket expires only after minutes: wait for the task
+                # The account's button of the preferences open now, found now: one held from
+                # the click would keep closed preferences while Garmin's page is open.
+                shown = self._account_row
                 self.run_task(_("Signing In…"), work, done, device=False,
+                              button=shown[1] if shown is not None else None,
                               # TRANSLATORS: heading of the error when signing in to Garmin
                               # Connect did not end
                               failed_title=_("Sign-In Not Finished"))
@@ -641,7 +654,7 @@ class Preferences:
 
     def logout(self) -> None:
         store.delete()
-        self.toast(_("Signed out"))
+        self.toast(_("Signed out"), on_preferences=True)
         self._account = None  # the start page lists no device of the account any more
         self._account_why = "logged-out"  # and says so
         account_changed(self, Cause.LOGGED_OUT)

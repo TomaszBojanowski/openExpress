@@ -592,6 +592,26 @@ def window(**changes):
     return win
 
 
+def window_picture(win, path) -> None:
+    """The window as it is drawn now, its dialogs and toasts too, at twice its size: a PNG
+    at `path` (its folder made)."""
+    from pathlib import Path
+
+    from gi.repository import Graphene, Gtk
+
+    w, h = win.get_width(), win.get_height()
+    snap = Gtk.Snapshot()
+    snap.scale(2, 2)
+    _found, bounds = win.compute_bounds(win)
+    snap.save()
+    snap.translate(Graphene.Point().init(bounds.get_x(), bounds.get_y()))
+    Gtk.WidgetPaintable.new(win).snapshot(snap, bounds.get_width(), bounds.get_height())
+    snap.restore()
+    texture = win.get_native().get_renderer().render_texture(
+        snap.to_node(), Graphene.Rect().init(0, 0, w * 2, h * 2))
+    Path(path).parent.mkdir(parents=True, exist_ok=True)
+    texture.save_to_png(str(path))
+
 def window_methods(win, names):
     """Returns the stand-in window `win` with these methods of MainWindow bound to it, each
     looked up along MainWindow's MRO as the window finds it (in app.py or a mixin), so a method

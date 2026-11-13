@@ -1,10 +1,16 @@
-"""Reading the installer of Garmin Express (setup --from-installer) up to its two DLLs: the
-container attached to the bootstrapper, the MSI in it, the streams of the DLLs, and what is
-said when one is missing. No installer or data of Garmin's is used: the files are made up,
-and 7z is stood in for."""
+"""Reading the installer of Garmin Express (setup --from-installer) up to its two DLLs, in
+either of its layouts: the archive a Velopack installer attaches to its program (Garmin
+Express 8 and later), or the container attached to the WiX bootstrapper, the MSI in it and
+the streams of the DLLs (before). What is said, and logged, when a file is neither or one is
+missing. No installer or data of Garmin's is used: the files are made up, and 7z is stood
+in for; the test of the real installers reads them from testdata/ and is skipped without."""
 
+import io
+import json
+import re
 import struct
 import subprocess
+import zipfile
 from pathlib import Path
 
 import pytest
@@ -42,14 +48,20 @@ def test_the_largest_cabinet_of_the_bootstrapper_is_its_payload(tmp_path):
     assert out.read_bytes() == payload
 
 
+NOT_AN_INSTALLER = ("{file} is not the Garmin Express installer for Windows. Download "
+                    "GarminExpress.exe from garmin.com/express and choose it.")
+KEY_NOT_READ = ("{file} is a Garmin Express installer, but openExpress cannot read the "
+                "application key from it: Garmin may have changed the installer. Please report "
+                "this on GitHub.")
+
+
 @pytest.mark.parametrize("content", [b"", b"MZ nothing attached",
                                      installer.CAB_MAGIC + struct.pack("<I", 1 << 30)])
 def test_a_file_without_a_payload_is_not_an_installer(tmp_path, content):
     """Empty, no cabinet, or one whose size goes past the end of the file."""
     exe = tmp_path / "Other.exe"
     exe.write_bytes(content)
-    with pytest.raises(SetupError, match="Other.exe does not look like a Garmin Express "
-                                         "installer"):
+    with pytest.raises(SetupError, match=re.escape(NOT_AN_INSTALLER.format(file="Other.exe"))):
         installer._attached_container(exe, tmp_path / "payload.cab")
     assert not (tmp_path / "payload.cab").exists()
 
@@ -119,7 +131,8 @@ def test_the_two_dlls_are_taken_out_of_the_installer(monkeypatch, tmp_path):
 def test_a_dll_missing_from_the_installer_is_named(monkeypatch, tmp_path):
     _stand_in_7z(monkeypatch, {"NetworkingDLL": b"made-up networking"})
     exe = _bootstrapper(tmp_path, _cabinet(installer.MIN_CONTAINER + 10, b"p"))
-    with pytest.raises(SetupError, match="Utilities.dll was not found in the installer"):
+    with pytest.raises(SetupError, match=re.escape(KEY_NOT_READ.format(
+            file="GarminExpress.exe"))):
         installer.extract_dlls(exe, tmp_path / "dlls")
 
 
@@ -183,8 +196,7 @@ def test_other_files_are_refused_as_not_a_garmin_express_installer(tmp_path):
     other = tmp_path / "notes.txt"
     other.write_bytes(b"made-up notes " * 100)
     assert not installer.is_macos_installer(other)
-    with pytest.raises(SetupError, match="notes.txt does not look like a Garmin Express "
-                                         "installer"):
+    with pytest.raises(SetupError, match=re.escape(NOT_AN_INSTALLER.format(file="notes.txt"))):
         installer.consumer_from_installer(other)
 
 
@@ -354,3 +366,241 @@ def test_the_preferences_say_which_installer(monkeypatch):
     assert rows == [("Garmin Express Installer for Windows",
                      ("GarminExpress.exe from garmin.com: the application key is read from it "
                       "again, nothing is installed"))]
+
+
+# --- the Velopack layout (Garmin Express 8 and later) ---------------------------------------------
+# The installer is a signed Windows program with a zip archive attached to it, before its
+# signature; the two DLLs are in it under lib/app/. Told by its bytes, never by its name.
+
+KEY = "00000000-1111-2222-3333-444444444444"
+SECRET = "MadeUpSecret0123456789"
+SALT = "MadeUpSalt42"
+
+
+def _dll(*strings: str) -> bytes:
+    """A made-up DLL with these string literals (UTF-16, as .NET keeps them)."""
+    return b"MZ made-up dll\0\0" + b"\0\0".join(t.encode("utf-16-le") for t in strings) + b"\0\0"
+
+
+NETWORKING = _dll("https://connect.example.invalid/", KEY, SECRET)
+UTILITIES = _dll(SALT, "{0}_{1}", "garmindlm")
+DLLS = {"lib/app/Networking.dll": NETWORKING, "lib/app/Utilities.dll": UTILITIES}
+
+
+def _program(signature_at: int, signature_size: int) -> bytes:
+    """The start of a made-up signed Windows program (PE32+): its header names where the
+    signature is (the security directory)."""
+    head = bytearray(4096)
+    head[0:2] = b"MZ"
+    struct.pack_into("<I", head, 0x3C, 0x80)
+    head[0x80:0x84] = b"PE\0\0"
+    optional = 0x80 + 24
+    struct.pack_into("<H", head, optional, 0x20B)
+    struct.pack_into("<I", head, optional + 108, 16)  # number of data directories
+    struct.pack_into("<II", head, optional + 112 + 4 * 8, signature_at, signature_size)
+    return bytes(head)
+
+
+def _velopack(tmp_path: Path, entries: dict | None = None, name: str = "GarminExpress.exe",
+              signature: bytes = b"made-up signature " * 600,
+              nuspec: str = "Garmin.Express.nuspec", how: int = zipfile.ZIP_DEFLATED) -> Path:
+    archive = io.BytesIO()
+    with zipfile.ZipFile(archive, "w", compression=how) as z:
+        z.writestr(nuspec, "<package>made up</package>")
+        z.writestr("lib/app/express.exe", b"MZ made-up program")
+        for path, data in (DLLS if entries is None else entries).items():
+            z.writestr(path, data)
+    data = archive.getvalue()
+    exe = tmp_path / name
+    exe.write_bytes(_program(4096 + len(data), len(signature)) + data + signature)
+    return exe
+
+
+def _no_7z(monkeypatch):
+    monkeypatch.setattr(installer.shutil, "which", lambda name: None)
+
+
+def test_a_velopack_installer_gives_the_key_and_salt_without_7z(monkeypatch, tmp_path):
+    _no_7z(monkeypatch)
+    consumer = installer.consumer_from_installer(_velopack(tmp_path))
+    found = (consumer.key, consumer.secret, consumer.url_salt) == (KEY, SECRET, SALT)
+    assert found
+
+
+def test_a_signature_larger_than_zipfile_looks_through_is_no_matter(tmp_path):
+    """zipfile looks for the end of an archive in the last 64 KiB: the archive is read only up
+    to where the program's header says the signature begins."""
+    exe = _velopack(tmp_path, signature=b"made-up signature " * 8000)  # about 140 KiB
+    assert not zipfile.is_zipfile(exe)
+    assert installer.consumer_from_installer(exe).key == KEY
+
+
+@pytest.mark.parametrize("name", ["setup.bin", "Garmin Express (1).EXE", "GarminExpress"])
+def test_the_installer_is_told_by_its_bytes_not_its_name(tmp_path, name, in_the_window):
+    exe = _velopack(tmp_path, name=name)
+    assert installer.consumer_from_installer(exe).url_salt == SALT
+    assert _chosen_in_the_window(exe, in_the_window).key == KEY
+
+
+def test_the_command_line_reads_it_too(tmp_path, capsys):
+    from openexpress import paths
+    from openexpress.cli import main
+
+    exe = _velopack(tmp_path, name="GarminExpress(1).exe")
+    assert main(["setup", "--from-installer", str(exe)]) == 0
+    saved = json.loads((paths.config_dir() / "consumer.json").read_text())
+    same = saved == {"key": KEY, "secret": SECRET, "url_salt": SALT}
+    assert same
+    assert "Read the application key and download signing data from GarminExpress(1).exe" in (
+        capsys.readouterr().out)
+
+
+@pytest.mark.parametrize("entries, check", [
+    ({"lib/app/Networking.dll": NETWORKING}, "lib/app/Utilities.dll missing from the archive"),
+    ({"lib/app/Networking.dll": _dll("nothing here"), "lib/app/Utilities.dll": UTILITIES},
+     "no application key in Networking.dll"),
+], ids=["a-dll-missing", "no-key"])
+def test_an_installer_without_what_is_needed_says_so_and_logs_which_check(
+        tmp_path, caplog, entries, check):
+    exe = _velopack(tmp_path, entries)
+    with caplog.at_level("INFO", logger="openexpress.installer"), \
+            pytest.raises(SetupError) as refused:
+        installer.consumer_from_installer(exe)
+    assert str(refused.value) == KEY_NOT_READ.format(file="GarminExpress.exe")
+    said = [r.getMessage() for r in caplog.records if r.name == "openexpress.installer"]
+    assert said == [f"setup: installer not read: {check} ({installer.applog.size(exe.stat().st_size)})"]
+    assert "GarminExpress" not in said[0]  # the name the user gave the file is not logged
+
+
+def test_an_entry_too_large_or_packed_otherwise_is_not_read(tmp_path, monkeypatch):
+    monkeypatch.setattr(installer, "MAX_ENTRY", 1000)
+    big = {"lib/app/Networking.dll": NETWORKING + bytes(2000),
+           "lib/app/Utilities.dll": UTILITIES}
+    with pytest.raises(SetupError, match="cannot read the application key"):
+        installer.consumer_from_installer(_velopack(tmp_path, big))
+    monkeypatch.setattr(installer, "MAX_ENTRY", 16 * 1024 * 1024)
+    with pytest.raises(SetupError, match="cannot read the application key"):
+        installer.consumer_from_installer(_velopack(tmp_path, how=zipfile.ZIP_BZIP2))
+
+
+def test_a_download_cut_short_is_not_an_installer(tmp_path, caplog):
+    """Stopped half-way through the archive, which is nearly all of a real installer."""
+    signature = b"made-up signature " * 600
+    exe = _velopack(tmp_path, signature=signature)
+    whole = exe.read_bytes()
+    exe.write_bytes(whole[:(4096 + len(whole) - len(signature)) // 2])
+    with caplog.at_level("INFO", logger="openexpress.installer"), \
+            pytest.raises(SetupError) as refused:
+        installer.consumer_from_installer(exe)
+    assert str(refused.value) == NOT_AN_INSTALLER.format(file="GarminExpress.exe")
+    said = [r.getMessage() for r in caplog.records if r.name == "openexpress.installer"]
+    assert len(said) == 1 and said[0].startswith("setup: installer not read: neither ")
+
+
+def test_another_program_or_another_velopack_installer_is_not_one(tmp_path):
+    other = tmp_path / "other.exe"
+    other.write_bytes(_program(0, 0) + b"made-up program")
+    for path in (other, _velopack(tmp_path, name="OtherApp.exe", nuspec="Other.App.nuspec")):
+        with pytest.raises(SetupError) as refused:
+            installer.consumer_from_installer(path)
+        assert str(refused.value) == NOT_AN_INSTALLER.format(file=path.name)
+
+
+def test_networking_dll_itself_still_does(tmp_path, in_the_window):
+    dll = tmp_path / "Networking.dll"
+    dll.write_bytes(NETWORKING)
+    (tmp_path / "Utilities.dll").write_bytes(UTILITIES)
+    consumer = installer.consumer_from_installer(dll)
+    window = _chosen_in_the_window(dll, in_the_window)
+    same = [(c.key, c.secret, c.url_salt) for c in (consumer, window)] == [(KEY, SECRET, SALT)] * 2
+    assert same
+
+
+def test_the_wix_layout_still_gives_both(monkeypatch, tmp_path):
+    _stand_in_7z(monkeypatch, {"NetworkingDLL": NETWORKING, "UtilitiesDLL": UTILITIES})
+    exe = _bootstrapper(tmp_path, _cabinet(installer.MIN_CONTAINER + 10, b"p"))
+    consumer = installer.consumer_from_installer(exe)
+    found = (consumer.key, consumer.secret, consumer.url_salt) == (KEY, SECRET, SALT)
+    assert found
+
+
+def test_the_two_new_texts_in_polish(tmp_path):
+    from openexpress import i18n
+
+    other = tmp_path / "inny.exe"
+    other.write_bytes(_program(0, 0))
+    i18n.setup("pl")
+    try:
+        with pytest.raises(SetupError) as not_one:
+            installer.consumer_from_installer(other)
+        with pytest.raises(SetupError) as not_read:
+            installer.consumer_from_installer(_velopack(tmp_path, {
+                "lib/app/Networking.dll": NETWORKING}))
+    finally:
+        i18n.setup("en")
+    assert str(not_one.value) == (
+        "inny.exe to nie instalator Garmin Express dla Windows. Pobierz GarminExpress.exe ze "
+        "strony garmin.com/express i\u00a0wybierz go.")
+    assert str(not_read.value) == (
+        "GarminExpress.exe to instalator Garmin Express, ale openExpress nie może odczytać "
+        "z\u00a0niego klucza aplikacji: Garmin mógł zmienić instalator. Zgłoś to na GitHubie.")
+
+
+def _chosen_in_the_window(path: Path, in_the_window):
+    """What the window saves when this file is chosen in its file dialog."""
+    import types
+
+    from fakes import RunNow
+
+    from openexpress.gui import app
+
+    saved = []
+
+    class ChosenFile:
+        def get_path(self):
+            return str(path)
+
+    class FileDialog:
+        def __init__(self, title):
+            self.title = title
+
+        def open(self, parent, cancellable, callback):
+            callback(self, None)
+
+        def open_finish(self, result):
+            return ChosenFile()
+
+    in_the_window("Gtk", types.SimpleNamespace(FileDialog=FileDialog))
+    in_the_window("save_consumer", saved.append)
+    in_the_window("account_changed", lambda win: None)
+    run = RunNow(error="record")
+    app.MainWindow.choose_dll(stand_in(run_task=run, toast=lambda text, **kw: None))
+    assert run.errors == []
+    return saved[0]
+
+
+# --- the real installers, when testdata/ has them -------------------------------------------------
+
+REAL = Path(__file__).resolve().parent.parent / "testdata" / "installers.json"
+
+
+def _real_installers() -> list[Path]:
+    try:
+        listed = json.loads(REAL.read_text())["installers"]
+    except (OSError, ValueError, KeyError):
+        return []
+    return [REAL.parent / name for name in listed]
+
+
+@pytest.mark.parametrize("path", _real_installers() or [None], ids=lambda p: p and p.parent.name)
+def test_the_real_installers_are_read(path):
+    """Each installer of Garmin's listed in testdata/installers.json gives a key of the form
+    the setup expects. Its values are never compared or shown, only their form."""
+    if path is None or not path.exists():
+        pytest.skip("no real installer in testdata/")
+    if not zipfile.is_zipfile(path) and installer.shutil.which("7z") is None:
+        pytest.skip("7z is needed for an installer before Garmin Express 8")
+    consumer = installer.consumer_from_installer(path)
+    form = (re.fullmatch(r"[0-9a-f]{8}(-[0-9a-f]{4}){3}-[0-9a-f]{12}", consumer.key) is not None,
+            consumer.secret.isalnum(), bool(consumer.url_salt) and consumer.url_salt.isalnum())
+    assert form == (True, True, True)

@@ -30,7 +30,7 @@ from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import descendants, gtk_complaints, make_client, program_style
+from fakes import descendants, gtk_complaints, make_client, program_style, window_picture
 
 from openexpress.status import SHOWN_EVENTS
 
@@ -593,27 +593,12 @@ def shot(r, state: str) -> None:
     """A picture of the window in this state, when the review gathers them."""
     if not SHOTS:
         return
-    from gi.repository import Graphene, Gtk
-
-    win = r.win
     iterate(0.2)
-    w, h = win.get_width(), win.get_height()
-    snap = Gtk.Snapshot()
-    snap.scale(2, 2)
-    _found, bounds = win.compute_bounds(win)
-    snap.save()
-    snap.translate(Graphene.Point().init(bounds.get_x(), bounds.get_y()))
-    Gtk.WidgetPaintable.new(win).snapshot(snap, bounds.get_width(), bounds.get_height())
-    snap.restore()
-    texture = win.get_native().get_renderer().render_texture(
-        snap.to_node(), Graphene.Rect().init(0, 0, w * 2, h * 2))
-    folder = Path(SHOTS)
-    folder.mkdir(parents=True, exist_ok=True)
     width = "narrow" if r.width == NARROWEST else "wide"
     shape = getattr(r, "shape", "")
     n = getattr(r, "taken", 0) + 1
     r.taken = n
-    texture.save_to_png(str(folder / f"{shape}-{r.language}-{width}-{n:02d}-{state}.png"))
+    window_picture(r.win, Path(SHOTS) / f"{shape}-{r.language}-{width}-{n:02d}-{state}.png")
 
 
 # --- the review -------------------------------------------------------------------------------

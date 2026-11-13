@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 21:41+0100\n"
+"POT-Creation-Date: 2026-11-12 22:49+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -5394,7 +5394,7 @@ msgstr "Ta aktywność nie ma pozycji GPS"
 #: openexpress/gui/activities_page.py openexpress/gui/activity_page.py
 #: openexpress/gui/app.py openexpress/gui/apps_page.py
 #: openexpress/gui/detection.py openexpress/gui/device_page.py
-#: openexpress/gui/window_tasks.py
+#: openexpress/gui/preferences.py openexpress/gui/window_tasks.py
 msgid "Another operation is in progress"
 msgstr "Trwa inna operacja"
 
@@ -9893,6 +9893,30 @@ msgstr " "
 msgid "{minutes} min {seconds} s"
 msgstr "{minutes} min {seconds} s"
 
+#. TRANSLATORS: setup: the file chosen is not Garmin Express's installer for Windows;
+#. {file} is its name
+#: openexpress/installer.py
+#, python-brace-format
+msgid ""
+"{file} is not the Garmin Express installer for Windows. Download "
+"GarminExpress.exe from garmin.com/express and choose it."
+msgstr ""
+"{file} to nie instalator Garmin Express dla Windows. Pobierz "
+"GarminExpress.exe ze strony garmin.com/express i wybierz go."
+
+#. TRANSLATORS: setup: the file chosen is Garmin Express's installer, but the application key
+#. could not be read from it; {file} is its name
+#: openexpress/installer.py
+#, python-brace-format
+msgid ""
+"{file} is a Garmin Express installer, but openExpress cannot read the "
+"application key from it: Garmin may have changed the installer. Please "
+"report this on GitHub."
+msgstr ""
+"{file} to instalator Garmin Express, ale openExpress nie może odczytać "
+"z niego klucza aplikacji: Garmin mógł zmienić instalator. Zgłoś to na "
+"GitHubie."
+
 #: openexpress/installer.py
 msgid "The 7z tool is required (package p7zip or 7zip)."
 msgstr "Wymagane jest narzędzie 7z (pakiet p7zip lub 7zip)."
@@ -9916,18 +9940,8 @@ msgstr ""
 "instaluje."
 
 #: openexpress/installer.py
-#, python-brace-format
-msgid "{file} does not look like a Garmin Express installer."
-msgstr "{file} nie wygląda na instalator Garmin Express."
-
-#: openexpress/installer.py
 msgid "The installer does not contain the expected MSI package."
 msgstr "Instalator nie zawiera oczekiwanego pakietu MSI."
-
-#: openexpress/installer.py
-#, python-brace-format
-msgid "{name} was not found in the installer."
-msgstr "Nie znaleziono {name} w instalatorze."
 
 #. TRANSLATORS: kept to recognise the records of older versions, which said it after every
 #. sync whose device had no new file (the row says it already: "nothing to upload")
