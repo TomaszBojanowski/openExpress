@@ -269,20 +269,21 @@ INREACH = ("inReach Mini 2", "5.05", "006-B3968-00")
 # made-up values below).
 NAVIGATOR = ("Drive 53", "8.50", "006-B4449-00")
 # Its free space and capacity, the same on its Maps page and its Device Status.
-NAVIGATOR_SPACE = (8_900_000_000, 15_500_000_000)
+NAVIGATOR_SPACE = (6_700_000_000, 14_800_000_000)
 
 
 def _navigator_updates(read: bool = False):
-    """Its software and its time-zone map in .System, which the listing does not show, a voice
-    and a vehicle it does not have (add-ons), and a component already on it. `read`: .System
-    read through openExpress's own session: the software there of another size, the time-zone
-    map at the size offered."""
+    """As a Drive 53 EX is offered: its software and its time-zone map in
+    .System, which the listing does not show, 140 voices and vehicles it does not have
+    (add-ons) and 27 components already on it. `read`: .System read through openExpress's own
+    session, both files there of another size than offered."""
     from openexpress import hidden_folders
 
     def offered(name, version, path, size, part, hidden=None, add_on=False, reinstall=False,
-                same=None):
+                same=None, installed=None, severity="Recommended"):
         u = _update(name, version, path, size, system=part == NAVIGATOR[2], reinstall=reinstall)
         u.part_number, u.model_part_number, u.hidden_folder = part, NAVIGATOR[2], hidden
+        u.installed_version, u.severity = installed, severity
         if hidden and read:
             u.hidden_session, u.hidden_size_same = hidden_folders.READ, same
             u.on_device = same is True and not u.is_system
@@ -290,29 +291,31 @@ def _navigator_updates(read: bool = False):
             u.severity, u.product_installed = "Optional", False
         return u
 
+    add_ons = [offered(f"Made-up Voice {n}", "2.00", f"Voice/Voice_{n}.vpm", 4_100_000,
+                       f"006-D0{400 + n:03d}-00", add_on=True) for n in range(140)]
+    reinstalls = [offered(f"Made-up Component {n}", "2.20", f"Vehicle/Component_{n}.srf", 52_000,
+                          f"006-D1{100 + n:03d}-00", reinstall=True) for n in range(27)]
     return [
-        offered("Drive 53 Software", "9.00", ".System/B444900.update", 64_655_360,
-                NAVIGATOR[2], hidden=".System", same=False),
-        offered("Time Zone Map", "43.00", ".System/gmaptz.img", 699_392, "006-D1074-00",
-                hidden=".System", same=True),
-        offered("English American Voice", "2.00", "Voice/English_American_.vpm", 4_100_000,
-                "006-D0397-00", add_on=True),
-        offered("Compact Red Vehicle", "2.20", "Vehicle/Vehicle_Compact-Red_220.srf", 52_000,
-                "006-D0578-07", add_on=True),
-        offered("Garmin Help", "3.10", "Help/Help.txt", 120_000, "006-D0999-00",
-                reinstall=True)]
+        offered("Drive 53", "9.00", ".System/B444900.update", 64_655_360, NAVIGATOR[2],
+                hidden=".System", same=False, installed="8.50", severity="Critical"),
+        offered("Time Zone Map", "43.00", ".System/gmaptz.img", 582_656, "006-D1074-00",
+                hidden=".System", same=False, installed="41.00"),
+        *add_ons, *reinstalls]
 
 
 def _navigator_maps(read: bool = False):
-    """Its City Navigator, listed by Garmin's server, its files in .System/Map, which the
-    listing does not show; `read`: read through openExpress's own session, its file there."""
+    """Its City Navigator as a Drive 53 EX has it: listed by Garmin's server with
+    an update (2027.20, 8.3 GB of files), its files in four folders of .System, which the
+    listing does not show; `read`: read through openExpress's own session."""
     from openexpress.maps import MapFile, UniversalMap
 
+    files = [MapFile(f".System/{folder}/{name}", "u", None, size) for folder, name, size in (
+        ("Map", "D0000001A.img", 5_260_000_000), ("JCV", "D0000001B.jcv", 2_100_000_000),
+        ("SID", "D0000001C.sid", 400_000_000), ("SQLite", "D0000001D.db", 540_000_000))]
     m = UniversalMap(name="City Navigator North America NT", map_type="City Navigator",
-                     state=1, is_reinstall=True, can_uninstall=True, version="2026.20",
-                     region="Americas", identifier={},
-                     files=[MapFile(".System/Map/D0000001A.img", "u", None, 5_260_000_000)],
-                     files_to_remove=[], hosts=[], unseen=not read, hidden_folder=".System")
+                     state=1, is_reinstall=False, can_uninstall=True, version="2027.20",
+                     region="Americas", identifier={}, files=files, files_to_remove=[], hosts=[],
+                     unseen=not read, hidden_folder=".System")
     return ([m], 1), None
 
 
@@ -326,7 +329,7 @@ def _navigator_status_facts():
     now = datetime(2026, 10, 21, 12, 0)
     return status.Facts(
         free=NAVIGATOR_SPACE[0], capacity=NAVIGATOR_SPACE[1],
-        categories={"maps": 5_260_000_000, "updates": 65_344_512, "system": 1_274_655_488},
+        categories={"maps": 5_260_000_000, "updates": 65_344_512, "system": 2_774_655_488},
         counted_at=now - timedelta(minutes=2), crashes=[], errors_known=False, dumps=None,
         events=[], hidden_logs=False, copies=(0, 0, None), has_diagnostics=False,
         recounted=True)
