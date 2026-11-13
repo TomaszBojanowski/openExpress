@@ -1208,13 +1208,8 @@ def _satellite_status(unit_id: int | None, now) -> str | None:
     # TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned on
     on = pgettext("satellite data", "on")
     if state.stopped and not state.on:
-        text = caption(
-            # TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned
-            # off
-            pgettext("satellite data", "off"),
-            # TRANSLATORS: `openexpress status` and `sync`: the watch renamed the file written
-            # to CPE_BAD.bin
-            _("the device rejected the last file (CPE_BAD.bin)"))
+        # TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned off
+        text = caption(pgettext("satellite data", "off"), words.satellite_stop_reason(state.why))
     elif not state.on:
         # TRANSLATORS: `openexpress status`, after "Satellite data (experimental):"
         text = pgettext("satellite data", "off (the switch is on the device page in the window)")
@@ -1222,7 +1217,8 @@ def _satellite_status(unit_id: int | None, now) -> str | None:
         text = caption(on, pgettext("satellite data", "not updated: {reason}").format(
             reason=words.satellite_reason(state.error)))
     elif state.written_at is None:
-        text = caption(on, _("the next sync updates it"))
+        text = caption(on, _("the data on the device is current") if state.current
+                       else _("the next sync updates it"))
     else:
         when = relative_time(datetime.fromtimestamp(state.written_at), now)
         text = caption(on, pgettext("satellite data", "updated {when}").format(when=when))
@@ -1247,7 +1243,7 @@ def _satellite_result(result) -> str | None:
     if result.kind == "current":
         # TRANSLATORS: `openexpress sync`: the device has Garmin's current file already
         return _("Satellite data already current")
-    reason = (_("the device rejected the last file (CPE_BAD.bin)") if result.kind == "stopped"
+    reason = (words.satellite_stop_reason(result.reason) if result.kind == "stopped"
               else words.satellite_reason(result.reason))
     # TRANSLATORS: `openexpress sync`; {reason} says why
     return _("Satellite data not updated: {reason}").format(reason=reason)

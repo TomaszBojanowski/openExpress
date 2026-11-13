@@ -199,8 +199,10 @@ Of the update server's answer:
   always with the part number only, as it names the account's categories of such a device.
 
 With **Satellite Data** on for a watch, each sync asks `api.gcs.garmin.com` for the current
-satellite data file. The request carries no account, unit ID or other detail of the watch; the
-file is kept in the cache for up to four hours.
+satellite data file (for a fēnix 8, each of its two files when the watch's is old enough). The
+requests carry no account, unit ID or other detail of the watch (Garmin Express sends the unit ID
+and the software version with some of them); each file is kept in the cache for up to four hours,
+and after the server asks to wait (HTTP 429), nothing is asked until the time it gives.
 
 ## How long Garmin's answers are kept
 

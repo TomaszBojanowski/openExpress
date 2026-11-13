@@ -384,6 +384,12 @@ def forgotten(unit_id: int) -> None:
     _noted.difference_update({n for n in _noted if n[0].startswith(folder)})
 
 
+def connection_key(device: GarminDevice, storage: Storage) -> str:
+    """What tells this connection of the device from the next one, as its line in the device
+    log has it: the same for every opening while the device stays plugged in."""
+    return _key(device, storage, _via(storage))
+
+
 def note_connection(device: GarminDevice, storage: Storage | None, found=None,
                     now: datetime | None = None) -> bool:
     """The line of this connection added to the device's log, unless it has one already (an

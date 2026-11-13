@@ -1574,8 +1574,11 @@ class DevicePage:
         def done(summary: service.SyncSummary):
             self.toast(_("Sync finished") if not summary.errors
                        else _("Sync finished with errors"))
-            if s.satellite is not None:  # what the sync did of them, as kept
-                s.satellite = satellite.load(s.device.unit_id) or s.satellite
+            # What the sync did of them, as kept; a watch found with them by the sync shows its
+            # row now.
+            kept = satellite.load(s.device.unit_id)
+            if kept is not None or s.satellite is not None:
+                s.satellite = kept or s.satellite
                 show_satellite(self)
             self._show_last_sync()
             self._count_activities_again()

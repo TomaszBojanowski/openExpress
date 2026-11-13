@@ -999,15 +999,58 @@ def satellite_reason(reason: str | None) -> str:
     if reason == satellite.WRITE:
         # TRANSLATORS: why the satellite data was not updated, after "not updated: "
         return _("the file could not be written to the device")
+    if reason == satellite.HIDDEN:
+        # TRANSLATORS: why the satellite data was not updated, after "not updated: ": the watch
+        # keeps them hidden from the file manager and the app cannot open its own connection to
+        # the watch here (e.g. a Flatpak without access to USB)
+        return _("the device's hidden files cannot be reached here")
+    if reason and reason.startswith(satellite.WAIT):
+        try:
+            until = datetime.fromtimestamp(float(reason[len(satellite.WAIT):]))
+        except (ValueError, OverflowError, OSError):
+            return ""
+        # TRANSLATORS: why the satellite data was not updated, after "not updated: ": Garmin's
+        # server answered that it was asked too often; {time} is when it may be asked again,
+        # e.g. "14:05"
+        return _("Garmin's server asks to wait until {time}").format(time=f"{until:%H:%M}")
     if reason and reason.startswith(satellite.NETWORK):
         return reason[len(satellite.NETWORK):]  # the network error, as the log tells it
     return reason or ""
 
 
+def satellite_stop_reason(why: str | None) -> str:
+    """Why the device's satellite data turned itself off (satellite.State.why), for `openexpress
+    status` and `sync`: the device did not take a file written."""
+    from openexpress import satellite
+
+    if why == satellite.NOT_TAKEN:
+        # TRANSLATORS: `openexpress status` and `sync`: the watch did not take the satellite
+        # data file written (left it as written after it was unplugged, or renamed it)
+        return _("the device did not take the last file")
+    if why == satellite.GONE_TWICE:
+        # TRANSLATORS: `openexpress status` and `sync`: the satellite data file written was not
+        # on the watch twice in a row
+        return _("the written file disappeared twice")
+    # TRANSLATORS: `openexpress status` and `sync`: the watch renamed the file written to
+    # CPE_BAD.bin
+    return _("the device rejected the last file (CPE_BAD.bin)")
+
+
 def satellite_subtitle(state, now: datetime) -> str:
     """The subtitle of the row Satellite Data of the device page (satellite.State): off, on
     and what the last sync did, or turned off by the device's rejection of the file."""
+    from openexpress import satellite
+
     if state.stopped and not state.on:
+        if state.why == satellite.NOT_TAKEN:
+            # TRANSLATORS: subtitle of the row Satellite Data: the watch did not take the file
+            # written (left it as written after it was unplugged, or renamed it), so the switch
+            # was turned off
+            return _("Turned off: the device did not take the last file")
+        if state.why == satellite.GONE_TWICE:
+            # TRANSLATORS: subtitle of the row Satellite Data: the file written was not on the
+            # watch twice in a row, so the switch was turned off
+            return _("Turned off: the written file disappeared twice")
         # TRANSLATORS: subtitle of the row Satellite Data: the watch renamed the file written to
         # CPE_BAD.bin, so the switch was turned off
         return _("Turned off: the device rejected the last file (CPE_BAD.bin)")
@@ -1023,6 +1066,10 @@ def satellite_subtitle(state, now: datetime) -> str:
         return caption(first, pgettext("satellite data", "not updated: {reason}").format(
             reason=satellite_reason(state.error)))
     if state.written_at is None:
+        if state.current:
+            # TRANSLATORS: in the subtitle of the row Satellite Data: on, nothing written yet,
+            # as the watch's own satellite data (e.g. from the phone) is current
+            return caption(first, _("the data on the device is current"))
         # TRANSLATORS: in the subtitle of the row Satellite Data: on, not written yet
         return caption(first, _("the next sync updates it"))
     when = relative_time(datetime.fromtimestamp(state.written_at), now)

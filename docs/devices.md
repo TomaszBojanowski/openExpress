@@ -2,7 +2,7 @@
 
 | Device | Connection | Checked by | What works | Report: system, version |
 |---|---|---|---|---|
-| fēnix 8 (47 mm, Solar) | MTP | the developer, on its Garmin account; [#13](https://github.com/TomaszBojanowski/openExpress/issues/13) | sync, software update downloads, a component update, maps, Connect IQ apps, music, activities, courses and Device Status: [what was checked](#fēnix-8-47-mm-solar). In #13 it works once gvfs-mtp is installed and Dolphin's MTP service no longer holds the watch (see [System requirements](../README.md#system-requirements)); map downloads and copying work | developer: Fedora 44, GNOME; courses: Fedora 45, GNOME, the version from source after 0.8.7; #13: CachyOS, KDE Plasma, Flatpak 0.6.15 |
+| fēnix 8 (47 mm, Solar) | MTP | the developer, on its Garmin account; [#13](https://github.com/TomaszBojanowski/openExpress/issues/13) | sync, software update downloads, a component update, maps, Connect IQ apps, music, activities, courses, Device Status and satellite data (experimental): [what was checked](#fēnix-8-47-mm-solar). In #13 it works once gvfs-mtp is installed and Dolphin's MTP service no longer holds the watch (see [System requirements](../README.md#system-requirements)); map downloads and copying work | developer: Fedora 44, GNOME; courses: Fedora 45, GNOME, the version from source after 0.8.7; #13: CachyOS, KDE Plasma, Flatpak 0.6.15 |
 | Edge 1050 | MTP | the developer, on the same account | sync, system software updates, the primary training device, Connect IQ apps, courses and Device Status: [what was checked](#edge-1050) | developer: Fedora 44, GNOME; the second update and courses: Fedora 45, GNOME, Flatpak 0.8.7 and the version from source after it |
 | Varia RTL515 (part 006-B3592-03) | USB drive | the developer; [#9](https://github.com/TomaszBojanowski/openExpress/issues/9) | detected as a USB drive; sign-in and checking for software updates; shown on the start page as the remembered Varia before its drive is mounted; a component update copied to it and the drive ejected in the window | developer: Fedora 44, GNOME on Wayland; #9: Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.4 |
 | epix (Gen 2; part 006-B3943) | MTP | the developer | read-only commands and backup; it is not registered to the account used for testing, so sync and Connect IQ apps are refused with a message, and the window says why | developer: Fedora 44, GNOME |
@@ -50,6 +50,9 @@ Checked by the developer over MTP:
   on the command line; in the Flatpak with its USB permission.
 - Music and playlists copied.
 - The primary training device set; the watch's diagnostic files copied.
+- Satellite data (experimental): with **Satellite Data** turned on, a sync wrote `GPE.bin` and
+  `GPES.bin` as Garmin's server sends them; the watch unpacked both once unplugged, their
+  contents the same as Garmin's files.
 - Activities: the **Activities** page and `openexpress activities`; GPX export in the window and
   with `openexpress activities export`; `openexpress fit inspect`.
 - The page of an activity:
