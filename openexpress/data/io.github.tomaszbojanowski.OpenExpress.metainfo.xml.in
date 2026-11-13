@@ -99,6 +99,21 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.3" date="2026-11-13">
+      <description translate="no">
+        <p>A maintenance release for the one-time setup.</p>
+        <ul>
+          <li>The installer of Garmin Express 8.0 uses a new format; the one-time setup reads it
+          now, and older installers still work.</li>
+          <li>When the chosen file is not the installer, the message says what to download
+          instead.</li>
+          <li>The installer chosen in Preferences is confirmed there, and the button shows that the
+          installer is being read.</li>
+        </ul>
+        <p>Thanks to @dgel for the report, for finding the new installer layout and for the first
+        patch.</p>
+      </description>
+    </release>
     <release version="0.10.2" date="2026-11-12">
       <description translate="no">
         <p>A maintenance release: consistent words and dialogs.</p>
