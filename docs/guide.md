@@ -460,6 +460,14 @@ Space, copying its crash logs and memory dumps, the report) is left out until it
   the device is not on it, or the list cannot be fetched, nothing is uploaded and nothing is
   written to the device. `openexpress baseline` needs a login too. Features without the account
   (backup, software updates, maps, music) work with any device.
+- **Satellite data (experimental).** Some older watches, such as the Forerunner 45, keep the
+  satellite data that speeds up their first GPS fix in `GARMIN/REMOTESW/CPE.BIN`, which Garmin
+  Express or the phone app refreshes. When a watch already holds that file in the format
+  openExpress knows, its device page shows **Satellite Data**; turned on, each sync downloads
+  Garmin's current file and writes it when it differs from the watch's. The file is written as
+  Garmin sends it, never changed. If the watch rejects it (it renames it to `CPE_BAD.bin`),
+  openExpress turns the switch off for that watch and says so; turned on again, the next sync
+  tries once more.
 - Adding a device to the account (experimental): a device the account does not list can be
   added from openExpress, as Garmin Express adds one: **Add to Account** on the banner or on the
   device page, or `openexpress register` (a dry run; `--apply` adds it). The confirmation dialog

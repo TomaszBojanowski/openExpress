@@ -16,7 +16,7 @@ def _session(stopped: bool):
     s = types.SimpleNamespace(
         device=types.SimpleNamespace(part_number="006-B0000-00", unit_id=1234, description="Test watch"),
         storage=None, client=None, mass_storage=False, logged_in=True, ownership_error=None,
-        first_sync=False, stop_waiting=threading.Event())
+        first_sync=False, stop_waiting=threading.Event(), satellite=None)
     if stopped:
         s.stop_waiting.set()
     return s

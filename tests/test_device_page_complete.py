@@ -469,3 +469,89 @@ def test_a_device_only_on_the_account_says_it_too():
     win._show_account(entry)
     assert [(r.get_title(), r.get_subtitle()) for r in win.remembered.account_rows] == [
         ("Primary Wearable", "This device")]
+
+
+# --- the row "Satellite Data" -------------------------------------------------------------------
+
+
+def _satellite_row(win):
+    return win.satellite_row if win.satellite_row.get_visible() else None
+
+
+@pytest.mark.needs_display
+def test_a_device_without_the_satellite_data_file_has_no_row(clock):
+    win, _section = _page(satellite=None)
+    assert _satellite_row(win) is None
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_satellite_data_row_says_off_updated_and_turned_off(clock, language):
+    from datetime import timedelta
+
+    from openexpress import satellite
+
+    i18n.setup(language)
+    try:
+        written = (clock.current - timedelta(days=1)).timestamp()
+        said = {}
+        for name, state in (
+                ("off", satellite.State()),
+                ("updated", satellite.State(on=True, written_at=written, written_sha="0" * 64)),
+                ("stopped", satellite.State(stopped=True))):
+            win, _section = _page(satellite=state)
+            row = _satellite_row(win)
+            said[name] = (row.get_title(), row.get_active(), row.get_subtitle())
+    finally:
+        i18n.setup("en")
+    at = datetime.fromtimestamp(written).strftime("%H:%M")
+    if language == "en":
+        assert said == {
+            "off": ("Satellite Data", False, f"Experimental{NB}· when on, each sync updates it"),
+            "updated": ("Satellite Data", True, f"Experimental{NB}· updated yesterday, {at}"),
+            "stopped": ("Satellite Data", False,
+                        "Turned off: the device rejected the last file (CPE_BAD.bin)")}
+    else:
+        assert said == {
+            "off": ("Dane satelitarne", False,
+                    f"Eksperymentalne{NB}· po włączeniu aktualizuje je każda synchronizacja"),
+            "updated": ("Dane satelitarne", True,
+                        f"Eksperymentalne{NB}· zaktualizowane wczoraj, {at}"),
+            "stopped": ("Dane satelitarne", False,
+                        "Wyłączone: urządzenie odrzuciło ostatni plik (CPE_BAD.bin)")}
+
+
+@pytest.mark.needs_display
+def test_the_satellite_data_switch_turns_them_on_and_off_for_the_device(clock):
+    from openexpress import satellite
+
+    satellite.save(UNIT, satellite.State(stopped=True))
+    win, _section = _page(satellite=satellite.load(UNIT))
+    row = _satellite_row(win)
+    row.set_active(True)  # turned on again after a rejection: the next sync tries once more
+    assert satellite.load(UNIT) == satellite.State(on=True)
+    assert row.get_subtitle() == f"Experimental{NB}· the next sync updates it"
+    row.set_active(False)
+    assert satellite.load(UNIT) == satellite.State()
+
+
+def test_the_opening_reads_whether_the_device_has_the_file(tmp_path, clock):
+    from fakes import made_up_cpe
+
+    from openexpress import satellite
+    from openexpress.device.storage import LocalStorage
+    from openexpress.gui.device_page import read_satellite
+
+    found = {}
+    for name, files in (("like a forerunner", {"GARMIN/REMOTESW/CPE.BIN": made_up_cpe()}),
+                        ("like an edge", {"GARMIN/RemoteSW/GPES.bin": b"made up"})):
+        root = tmp_path / name
+        for path, data in files.items():
+            (root / path).parent.mkdir(parents=True)
+            (root / path).write_bytes(data)
+        unit = UNIT + len(found)
+        s = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit, part_number="x"),
+                                  storage=LocalStorage(root), satellite=None)
+        read_satellite(s)
+        found[name] = s.satellite
+    assert found == {"like a forerunner": satellite.State(), "like an edge": None}

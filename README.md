@@ -98,7 +98,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 | Forerunner 55 | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) |
 | Forerunner 920XT | USB drive | [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) |
 | Instinct 2S Solar | USB drive | [#24](https://github.com/TomaszBojanowski/openExpress/issues/24) |
-| Forerunner 45 | USB drive | [#36](https://github.com/TomaszBojanowski/openExpress/issues/36) |
+| Forerunner 45 | USB drive | [#36](https://github.com/TomaszBojanowski/openExpress/issues/36), [#30](https://github.com/TomaszBojanowski/openExpress/issues/30) |
 | zūmo 595LM | – | [#15](https://github.com/TomaszBojanowski/openExpress/issues/15) |
 | Other Garmin watches and bike computers over USB (MTP) | MTP | expected to work, untested |
 
@@ -172,8 +172,9 @@ changes anything only shows its plan until you add `--apply`. Every command:
   service (the window and `openexpress maps` say so, and the Maps page names the map update type
   Garmin gives the device, which helps a report). Maps go only to the device's internal memory,
   not to a memory card.
-- GPS satellite data (ephemerides), which Garmin Express writes to the device when it syncs and
-  which helps the device find its position faster, is not written.
+- GPS satellite data is written only to watches that already keep it as `CPE.BIN` in the format
+  of the Forerunner 45, and only when **Satellite Data** is turned on for them (experimental);
+  other watches get it from the phone app as before.
 - ECG recordings are not uploaded: they go to Garmin Health, which needs a sign-in of its own. A
   sync leaves them on the device and says how many there are.
 - The privacy-policy consents are not checked before a sync; the upload consent is

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 17:44+0100\n"
+"POT-Creation-Date: 2026-11-12 22:49+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1790,6 +1790,82 @@ msgstr ""
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Device software: {text}"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned on
+#: openexpress/cli.py
+msgctxt "satellite data"
+msgid "on"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned
+#. off
+#: openexpress/cli.py
+msgctxt "satellite data"
+msgid "off"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status` and `sync`: the watch renamed the file written
+#. to CPE_BAD.bin
+#: openexpress/cli.py
+msgid "the device rejected the last file (CPE_BAD.bin)"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):"
+#: openexpress/cli.py
+msgctxt "satellite data"
+msgid "off (the switch is on the device page in the window)"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: the last sync did not update
+#. them; {reason} says why
+#: openexpress/cli.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "satellite data"
+msgid "not updated: {reason}"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: on, not written yet
+#: openexpress/cli.py openexpress/gui/words.py
+msgid "the next sync updates it"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: when the last sync wrote them,
+#. e.g. "updated yesterday, 20:39"
+#: openexpress/cli.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "satellite data"
+msgid "updated {when}"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status`: the GPS satellite data of a watch that keeps it as
+#. CPE.BIN; {text} says whether it is on and what the last sync did
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Satellite data (experimental): {text}"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync --apply`: the satellite data written to the device
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Satellite data updated ({size})"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync` (the dry run)
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Satellite data: would be updated ({size})"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync`: the device has Garmin's current file already
+#: openexpress/cli.py
+msgid "Satellite data already current"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync`; {reason} says why
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Satellite data not updated: {reason}"
 msgstr ""
 
 #: openexpress/cli.py
@@ -5936,6 +6012,12 @@ msgstr ""
 msgid "Garmin Connect could not be asked for the picture. Try again later."
 msgstr ""
 
+#. TRANSLATORS: row of the device page, with a switch: the GPS satellite data of a watch
+#. that keeps it as CPE.BIN, written with each sync while on
+#: openexpress/gui/device_page.py
+msgid "Satellite Data"
+msgstr ""
+
 #. TRANSLATORS: subtitle of "Primary Training Device" while not logged in
 #: openexpress/gui/device_page.py
 msgid "Sign in to see"
@@ -8832,6 +8914,34 @@ msgstr ""
 #. TRANSLATORS: beside the chart of an activity, where its cursor is on a gap or a pause
 #: openexpress/gui/words.py
 msgid "no reading"
+msgstr ""
+
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: "
+#: openexpress/gui/words.py
+msgid "Garmin's file is not in the format the device has"
+msgstr ""
+
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: "
+#: openexpress/gui/words.py
+msgid "the file could not be written to the device"
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row Satellite Data: the watch renamed the file written to
+#. CPE_BAD.bin, so the switch was turned off
+#: openexpress/gui/words.py
+msgid "Turned off: the device rejected the last file (CPE_BAD.bin)"
+msgstr ""
+
+#. TRANSLATORS: the first part of the subtitle of the row Satellite Data: the feature is
+#. experimental (in Polish plural, as "dane satelitarne")
+#: openexpress/gui/words.py
+msgctxt "satellite data"
+msgid "Experimental"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data while its switch is off
+#: openexpress/gui/words.py
+msgid "when on, each sync updates it"
 msgstr ""
 
 #. TRANSLATORS: under the summary of the page Device Status of a watch that hides its crash
