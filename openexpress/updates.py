@@ -450,14 +450,16 @@ def read_only_software_text(folder: str) -> str:
 
 def other_size_text(u: SoftwareUpdate) -> str:
     # TRANSLATORS: `openexpress updates`, under an update: a file of its name is on the device,
-    # of another size than the one offered; {file}: e.g. B444900.update
-    return _("On the device: {file} of another size.").format(file=u.filename)
+    # of another size than the one offered, which is only noted; {file}: e.g. B444900.update
+    return _("The device already has a file named {file}, of another size than the new one; no "
+             "action is needed.").format(file=u.filename)
 
 
-def same_size_text() -> str:
-    # TRANSLATORS: `openexpress updates`: a file in a folder the device hides, found by name and
-    # size only
-    return _("On the device at the same size; its contents not compared.")
+def same_size_text(u: SoftwareUpdate) -> str:
+    # TRANSLATORS: `openexpress updates`: a file of the update's name in a folder the device
+    # hides, found by name and size only; {file}: e.g. gmaptz.img
+    return _("The device already has a file named {file} of the same size; openExpress does not "
+             "read its contents to compare them.").format(file=u.filename)
 
 
 def not_read_text(u: SoftwareUpdate) -> str | None:

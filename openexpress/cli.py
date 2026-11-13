@@ -1870,7 +1870,7 @@ def _print_hidden(updates_shown, add_ons, lines: bool = False) -> None:
     if system.hidden_read:
         print(upd.read_only_software_text(system.hidden_folder))
         if system.hidden_size_same is not None:
-            print(upd.same_size_text() if system.hidden_size_same
+            print(upd.same_size_text(system) if system.hidden_size_same
                   else upd.other_size_text(system))
         return
     print(upd.hidden_software_text(system.hidden_folder))

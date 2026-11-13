@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 22:23+0100\n"
+"POT-Creation-Date: 2026-11-13 22:32+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -8698,18 +8698,27 @@ msgstr ""
 "openExpress odczytuje folder {folder} przez własne połączenie USB, ale "
 "jeszcze niczego w nim nie instaluje."
 
-#. TRANSLATORS: on the Updates page, without a full stop: a file in a folder the device
-#. hides, found by name and size only
-#: openexpress/gui/updates_page.py
-msgid "On the device at the same size; its contents not compared"
-msgstr "Na urządzeniu w tym samym rozmiarze; zawartości nie porównano"
-
-#. TRANSLATORS: on the Updates page, without a full stop: a file of the update's name is on
-#. the device, of another size than offered; {file}: e.g. B444900.update
+#. TRANSLATORS: on the Updates page, without a full stop: a file of the update's name in a
+#. folder the device hides, found by name and size only; {file}: e.g. gmaptz.img
 #: openexpress/gui/updates_page.py
 #, python-brace-format
-msgid "On the device: {file} of another size"
-msgstr "Na urządzeniu: {file} o innym rozmiarze"
+msgid ""
+"The device already has a file named {file} of the same size; openExpress "
+"does not read its contents to compare them"
+msgstr ""
+"Na urządzeniu jest już plik {file} tego samego rozmiaru; openExpress nie "
+"odczytuje jego zawartości, aby ją porównać"
+
+#. TRANSLATORS: on the Updates page, without a full stop: a file of the update's name is on
+#. the device, of another size than offered, which is only noted; {file}: e.g. B444900.update
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgid ""
+"The device already has a file named {file}, of another size than the new "
+"one; no action is needed"
+msgstr ""
+"Na urządzeniu jest już plik {file} o innym rozmiarze niż nowy; nic nie "
+"trzeba robić"
 
 #. TRANSLATORS: on the Updates page; {folder}: a folder the device hides from the
 #. ordinary USB connection, e.g. .System
@@ -11575,17 +11584,26 @@ msgstr ""
 "jeszcze niczego w nim nie instaluje."
 
 #. TRANSLATORS: `openexpress updates`, under an update: a file of its name is on the device,
-#. of another size than the one offered; {file}: e.g. B444900.update
+#. of another size than the one offered, which is only noted; {file}: e.g. B444900.update
 #: openexpress/updates.py
 #, python-brace-format
-msgid "On the device: {file} of another size."
-msgstr "Na urządzeniu: {file} o innym rozmiarze."
+msgid ""
+"The device already has a file named {file}, of another size than the new "
+"one; no action is needed."
+msgstr ""
+"Na urządzeniu jest już plik {file} o innym rozmiarze niż nowy; nic nie "
+"trzeba robić."
 
-#. TRANSLATORS: `openexpress updates`: a file in a folder the device hides, found by name and
-#. size only
+#. TRANSLATORS: `openexpress updates`: a file of the update's name in a folder the device
+#. hides, found by name and size only; {file}: e.g. gmaptz.img
 #: openexpress/updates.py
-msgid "On the device at the same size; its contents not compared."
-msgstr "Na urządzeniu w tym samym rozmiarze; zawartości nie porównano."
+#, python-brace-format
+msgid ""
+"The device already has a file named {file} of the same size; openExpress "
+"does not read its contents to compare them."
+msgstr ""
+"Na urządzeniu jest już plik {file} tego samego rozmiaru; openExpress nie "
+"odczytuje jego zawartości, aby ją porównać."
 
 #. TRANSLATORS: `openexpress updates`: items Garmin offers to add to the device (voices,
 #. vehicles) that it does not have

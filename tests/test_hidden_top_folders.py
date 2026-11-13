@@ -786,7 +786,8 @@ def test_the_updates_page_says_what_was_read_and_installs_nothing_there(navigato
     hidden_folders.read(storage, [".System"], "test")
     status, available, advanced = _updates_page(_offered_from(storage))
     top = _texts(status.rows[0])
-    assert READ_NOTICE in top and "On the device: B000000.update of another size" in top
+    assert READ_NOTICE in top and ("The device already has a file named B000000.update, of "
+                                   "another size than the new one; no action is needed") in top
     assert NOTICE not in top and "Install" not in top
     assert [r.get_title() for r in available.rows] == ["New Part"]
     # The time zone map at the size offered is among the components on the device, with no
@@ -796,7 +797,8 @@ def test_the_updates_page_says_what_was_read_and_installs_nothing_there(navigato
              if isinstance(r, Adw.ActionRow) and r.get_title() == "Time zone map"]
     assert tz.get_subtitle().endswith(
         "\nNot installed yet: it goes to .System, which openExpress only reads"
-        "\nOn the device at the same size; its contents not compared")
+        "\nThe device already has a file named gmaptz.img of the same size; openExpress does not "
+        "read its contents to compare them")
     assert not [w for w in descendants(tz) if isinstance(w, Gtk.Button)]
 
 
@@ -842,7 +844,8 @@ def test_the_command_line_reads_the_folder_once_and_says_what_it_read(offered_to
     assert "Available updates: 2" in out and "Already on the device: 1" in out
     assert ("      Not installed yet: Made-up Drive 9.00 goes to .System, which openExpress only "
             "reads.") in out
-    assert READ_NOTICE in out and "On the device: B000000.update of another size." in out
+    assert READ_NOTICE in out and ("The device already has a file named B000000.update, of "
+                                   "another size than the new one; no action is needed.") in out
     assert fake.sent(ptp.SEND_OBJECT_INFO) == fake.sent(ptp.DELETE_OBJECT) == 0
 
 
@@ -889,7 +892,9 @@ def test_the_words_of_a_folder_read_in_both_languages(language):
         i18n.setup("en")
     expected = {
         "en": [("Not installed yet: Made-up Drive 9.00 goes to .System, which openExpress only "
-                "reads."), READ_NOTICE, "On the device: B000000.update of another size.",
+                "reads."), READ_NOTICE,
+               ("The device already has a file named B000000.update, of another size than the new "
+                "one; no action is needed."),
                "Reading the folder .System…", NO_SESSION_LINE,
                "Not installed yet: it goes to .System, which openExpress only reads",
                "openExpress does not install into .System yet",
@@ -899,7 +904,8 @@ def test_the_words_of_a_folder_read_in_both_languages(language):
                 "który openExpress tylko odczytuje."),
                ("openExpress odczytuje folder .System przez własne połączenie USB, ale jeszcze "
                 "niczego w\u00a0nim nie instaluje."),
-               "Na urządzeniu: B000000.update o\u00a0innym rozmiarze.",
+               ("Na urządzeniu jest już plik B000000.update o\u00a0innym rozmiarze niż nowy; nic "
+                "nie trzeba robić."),
                "Odczytywanie folderu .System…",
                ("openExpress nie może otworzyć własnej sesji USB z\u00a0tym urządzeniem, więc nie "
                 "odczyta folderu .System."),
