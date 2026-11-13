@@ -473,10 +473,12 @@ Space, copying its crash logs and memory dumps, the report) is left out until it
   them. openExpress finds them at a sync in a USB session of its own (the watch leaves the file
   manager for a moment; a Flatpak needs access to USB devices) and, with the switch on, writes
   each when the watch's is older than a day (`GPE.bin`) or four hours (`GPES.bin`); the phone app
-  refreshes them too. A file the watch does not take is said, and the switch turns off.
+  refreshes them too. A file the watch does not take is said, and the switch turns off. On a
+  watch that hides these files, such as the fēnix 8, the row appears after the first sync, once
+  openExpress has found them.
   The watch itself decides which satellite data it uses and in which format; openExpress only
-  refreshes the files the watch already keeps, as Garmin's server sends them, and never adds one
-  it does not have.
+  refreshes the files the watch already keeps, downloaded from Garmin's server as it sends them,
+  without your account or any detail of the watch, and never adds one it does not have.
 - Adding a device to the account (experimental): a device the account does not list can be
   added from openExpress, as Garmin Express adds one: **Add to Account** on the banner or on the
   device page, or `openexpress register` (a dry run; `--apply` adds it). The confirmation dialog

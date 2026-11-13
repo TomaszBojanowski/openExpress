@@ -44,6 +44,10 @@ devices that connect over USB (MTP) should work too – reports are welcome.
   on your account can be added from openExpress (experimental).
 - Installs and updates software and free maps (TopoActive, CourseView, Ski…), checked by MD5
   before they are written, and copies maps of your own.
+- Keeps the GPS satellite data of the Forerunner 45 and the fēnix 8 current when they sync,
+  without the phone: it only refreshes the files the watch already keeps, downloaded from
+  Garmin's server without your account or any detail of the watch (experimental, off by
+  default).
 - Copies courses from GPX files to the device, which turns them into courses when it is
   unplugged, without Garmin Connect; lists and removes them (experimental).
 - Installs, updates and removes Connect IQ apps, turns them on or off and puts them back in
