@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 17:44+0100\n"
+"POT-Creation-Date: 2026-11-13 18:33+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6258,6 +6258,13 @@ msgstr ""
 msgid "Check Again"
 msgstr ""
 
+#. TRANSLATORS: on the Maps page, under a map whose files are in a folder the device hides
+#. from the ordinary USB connection (a car navigator's .System), without a full stop
+#: openexpress/gui/maps_page.py
+msgid ""
+"Cannot be read: openExpress cannot see the folder of its files on this device"
+msgstr ""
+
 #. TRANSLATORS: title of the Maps page when map updates of the device are not
 #. supported
 #: openexpress/gui/maps_page.py
@@ -7868,6 +7875,39 @@ msgid_plural "{count} activities on the device have not been uploaded yet."
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: subtitle of an update on the Updates page that openExpress does not install,
+#. without a full stop; {folder}: the folder of the device's top level its file goes to
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgid ""
+"Cannot be installed: openExpress cannot see its folder {folder} on this "
+"device"
+msgstr ""
+
+#. TRANSLATORS: on the Updates page, under the device's software that openExpress does not
+#. install; {folder}: the folder of the device's top level, e.g. .System
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgctxt "updates page"
+msgid ""
+"openExpress cannot see the folder {folder}, where this device keeps its "
+"software, so it installs nothing there. Some devices, such as car "
+"navigators, hide it from the ordinary USB connection."
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row "Add-Ons" on the Updates page: items Garmin offers to
+#. add to the device (voices, vehicles) that it does not have, without a full stop
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgid ""
+"{count} add-on that is not on the device; openExpress does not install add-"
+"ons yet"
+msgid_plural ""
+"{count} add-ons that are not on the device; openExpress does not install add-"
+"ons yet"
+msgstr[0] ""
+msgstr[1] ""
+
 #: openexpress/gui/updates_page.py
 msgid "License Agreement (EULA)"
 msgstr ""
@@ -7939,6 +7979,12 @@ msgstr ""
 #. components already on the device
 #: openexpress/gui/updates_page.py
 msgid "Advanced"
+msgstr ""
+
+#. TRANSLATORS: title of a row on the Updates page: items Garmin offers to add to the
+#. device (voices, vehicles of a car navigator) that it does not have
+#: openexpress/gui/updates_page.py
+msgid "Add-Ons"
 msgstr ""
 
 #. TRANSLATORS: title of an expandable row on the Updates page that lists components
@@ -9034,6 +9080,12 @@ msgstr ""
 msgid "Errors: {errors}"
 msgstr ""
 
+#. TRANSLATORS: map status (`openexpress maps`): the device hides the folder of the
+#. map's files from MTP
+#: openexpress/maps.py
+msgid "cannot be read: openExpress cannot see the folder of its files"
+msgstr ""
+
 #. TRANSLATORS: map status
 #: openexpress/maps.py
 msgid "will be loaded after the device is unplugged"
@@ -9190,6 +9242,14 @@ msgstr ""
 #: openexpress/maps.py
 #, python-brace-format
 msgid "Map “{name}” cannot be removed"
+msgstr ""
+
+#. TRANSLATORS: error of a map removal: the device hides the folder of the map's files
+#: openexpress/maps.py
+#, python-brace-format
+msgid ""
+"Map “{name}” cannot be read: openExpress cannot see the folder of its files "
+"on the device."
 msgstr ""
 
 #. TRANSLATORS: a step of a map removal; {name}: the map ("… · 2 of 5")
@@ -10335,6 +10395,38 @@ msgstr ""
 #: openexpress/updates.py
 msgid "Unspecified"
 msgstr ""
+
+#. TRANSLATORS: `openexpress updates`: an update openExpress does not install; {folder}: the
+#. folder of the device's top level its file goes to, e.g. .System
+#: openexpress/updates.py
+#, python-brace-format
+msgid ""
+"Not installed: {name} {version} goes to {folder}, which openExpress cannot "
+"see on the device."
+msgstr ""
+
+#. TRANSLATORS: `openexpress updates`: the device keeps its software in a folder openExpress
+#. cannot see over MTP; {folder}: e.g. .System
+#: openexpress/updates.py
+#, python-brace-format
+msgid ""
+"openExpress cannot see the folder {folder}, where this device keeps its "
+"software, so it installs nothing there. Some devices, such as car "
+"navigators, hide it from the ordinary USB connection."
+msgstr ""
+
+#. TRANSLATORS: `openexpress updates`: items Garmin offers to add to the device (voices,
+#. vehicles) that it does not have
+#: openexpress/updates.py
+#, python-brace-format
+msgid ""
+"{count} add-on not on the device is not offered: openExpress does not "
+"install add-ons yet."
+msgid_plural ""
+"{count} add-ons not on the device are not offered: openExpress does not "
+"install add-ons yet."
+msgstr[0] ""
+msgstr[1] ""
 
 #: openexpress/updates.py
 #, python-brace-format

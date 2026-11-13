@@ -97,7 +97,8 @@ PRIMARY_FIELDS = frozenset({"deviceid"})
 SOFTWARE_FIELDS = frozenset({
     "updates", "accesslevel", "partnumber", "productname", "description", "displayversion",
     "semanticversion", "version", "severity", "isprimaryfirmware", "installation",
-    "isreinstall", "isrestartrequired", "path", "filename", "order", "deliverable",
+    "isreinstall", "isproductinstalled", "isrestartrequired", "path", "filename", "order",
+    "deliverable",
     "securedownloadurl", "downloadurl", "md5", "sizeinbytes", "eulaurl", "releasenotes",
     "changelog", "datatype", "releasestate"})
 # What maps.read_maps reads of the map check; never unlock data ("gma": that is the answer of

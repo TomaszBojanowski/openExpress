@@ -99,6 +99,9 @@ class UniversalMap:
     # WAIT_INSTALL or WAIT_REMOVE: written to or removed from the device, which takes it in
     # only when it is unplugged (see mark_waiting); None otherwise.
     waiting: str | None = None
+    # Listed by the server, and no folder of its files is seen on the device (a car navigator
+    # hides its .System from MTP): its state cannot be read, and nothing is done with it.
+    unseen: bool = False
     # The country Garmin does not offer the map in ("restriction", type "Country"; upper
     # case), and whether that is the account's country (apply_country): True, False (no
     # restriction, or another country), None (restricted, the account's country not known).
@@ -124,14 +127,15 @@ class UniversalMap:
     @property
     def incomplete(self) -> bool:
         """Partly on the device: shown there, to be installed again (never an update)."""
-        return self.state == 2 and self.waiting is None
+        return self.state == 2 and self.waiting is None and not self.unseen
 
     @property
     def would_update(self) -> bool:
         """The server has a version of an installed map (not one partly there) that the device
         does not have; never a newer version on the device, which an update would replace
         with the older one."""
-        return self.state == 1 and not self.is_reinstall and self.waiting is None
+        return (self.state == 1 and not self.is_reinstall and self.waiting is None
+                and not self.unseen)
 
     @property
     def update_available(self) -> bool:
@@ -164,6 +168,10 @@ class UniversalMap:
 
     @property
     def status(self) -> str:
+        if self.unseen:
+            # TRANSLATORS: map status (`openexpress maps`): the device hides the folder of the
+            # map's files from MTP
+            return _("cannot be read: openExpress cannot see the folder of its files")
         if self.waiting == WAIT_INSTALL:
             # TRANSLATORS: map status
             return _("will be loaded after the device is unplugged")
@@ -606,10 +614,15 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
     nothing remembered; none is marked when the files cannot be listed."""
     for m in maps:
         m.waiting = None
+        m.unseen = False
     wanted = {p for m in maps for p in m.all_paths}
     present: dict[str, int] = {}  # casefolded path -> size, one listing per folder
+    unseen: set[str] = set()  # casefolded folders the listing does not show
     try:
         for folder in {posixpath.dirname(p) for p in wanted}:
+            if storage.resolve(folder, strict=True) is None:
+                unseen.add(folder.casefold())
+                continue
             for e in storage.listdir(folder):
                 if not e.is_dir:
                     present[posixpath.join(folder, e.name).casefold()] = e.size
@@ -638,6 +651,10 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
         # is on the device.
         own = {p.casefold() for p in m.all_paths}
         own -= protected_files(maps, m)
+        if own and all(posixpath.dirname(p) in unseen for p in own):
+            # No folder of its files is seen: that says nothing of the map.
+            m.unseen = True
+            continue
         if own and not any(p in present for p in own):
             removed.append(m)
     for m in removed:
@@ -647,6 +664,8 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap]) -> None:
 
 def _state_words(m: UniversalMap) -> str:
     """The state of a map in the words of the log (status says it in the window's)."""
+    if m.unseen:
+        return "cannot be read, no folder of its files seen"
     if m.waiting == WAIT_INSTALL:
         return "written, loaded when the device is unplugged"
     if m.waiting == WAIT_REMOVE:
@@ -924,6 +943,10 @@ def cannot_remove_message(m: UniversalMap) -> str:
 def uninstall(m: UniversalMap, all_maps: list[UniversalMap], storage: Storage,
               progress: Callable[[str], None] | None = None) -> list[str]:
     progress = say_to(progress)
+    if m.unseen:
+        # TRANSLATORS: error of a map removal: the device hides the folder of the map's files
+        raise MapError(_("Map “{name}” cannot be read: openExpress cannot see the folder of "
+                         "its files on the device.").format(name=m.name))
     if not m.can_uninstall:
         raise MapError(cannot_remove_message(m))
     removed = []

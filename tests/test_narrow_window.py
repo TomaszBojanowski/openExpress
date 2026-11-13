@@ -4,6 +4,7 @@ device view and the start page fit, in English and in the longer Polish.
 The real window, on the tests' hidden display, holds stand-ins: an Edge 1050 with a beta
 update, long component names, maps, apps and music. Nothing asks a device or a server."""
 
+import os
 import re
 import time
 import types
@@ -22,6 +23,7 @@ from fakes import (
     program_style,
     record_sync,
     start_section,
+    window_picture,
 )
 
 NARROWEST = 360  # the width of gui_settings.MIN_WINDOW
@@ -263,6 +265,45 @@ def _tiles():
 EDGE = ("Edge 1050", "33.11", "006-B4440-00")
 FENIX = ("fēnix 8 - 47mm, Solar", "23.39", "006-B4532-00")
 INREACH = ("inReach Mini 2", "5.05", "006-B3968-00")
+# A car navigator that hides its .System from MTP: what its pages show (the listing of one in the
+# made-up values below).
+NAVIGATOR = ("Drive 53", "8.50", "006-B4449-00")
+
+
+def _navigator_updates():
+    """Its software and its time-zone map in .System, which the listing does not show, a voice
+    and a vehicle it does not have (add-ons), and a component already on it."""
+    def offered(name, version, path, size, part, hidden=None, add_on=False, reinstall=False):
+        u = _update(name, version, path, size, system=part == NAVIGATOR[2], reinstall=reinstall)
+        u.part_number, u.model_part_number, u.hidden_folder = part, NAVIGATOR[2], hidden
+        if add_on:
+            u.severity, u.product_installed = "Optional", False
+        return u
+
+    return [
+        offered("Drive 53 Software", "9.00", ".System/B444900.update", 64_655_360,
+                NAVIGATOR[2], hidden=".System"),
+        offered("Time Zone Map", "43.00", ".System/gmaptz.img", 699_392, "006-D1074-00",
+                hidden=".System"),
+        offered("English American Voice", "2.00", "Voice/English_American_.vpm", 4_100_000,
+                "006-D0397-00", add_on=True),
+        offered("Compact Red Vehicle", "2.20", "Vehicle/Vehicle_Compact-Red_220.srf", 52_000,
+                "006-D0578-07", add_on=True),
+        offered("Garmin Help", "3.10", "Help/Help.txt", 120_000, "006-D0999-00",
+                reinstall=True)]
+
+
+def _navigator_maps():
+    """Its City Navigator, listed by Garmin's server, its files in .System/Map, which the
+    listing does not show."""
+    from openexpress.maps import MapFile, UniversalMap
+
+    m = UniversalMap(name="City Navigator North America NT", map_type="City Navigator",
+                     state=1, is_reinstall=True, can_uninstall=True, version="2026.20",
+                     region="Americas", identifier={},
+                     files=[MapFile(".System/Map/D0000001A.img", "u", None, 5_260_000_000)],
+                     files_to_remove=[], hosts=[], unseen=True)
+    return ([m], 1), None
 
 
 def _fill(win, page: str) -> str:
@@ -271,7 +312,8 @@ def _fill(win, page: str) -> str:
     from openexpress.gui.app import MainWindow
 
     drive = page.endswith("-drive")
-    model = INREACH if drive else EDGE if page.startswith(("device", "updates")) else FENIX
+    model = (INREACH if drive else NAVIGATOR if page.endswith("-navigator")
+             else EDGE if page.startswith(("device", "updates")) else FENIX)
     win.session = _session(_device(*model), drive=drive)
     if page == "device-refused-drive":
         # Not synced, with the longest of the reasons in place of the sync.
@@ -295,10 +337,16 @@ def _fill(win, page: str) -> str:
     key = {"device": "watch"}.get(page.split("-")[0], page.split("-")[0])
     if key == "watch":
         MainWindow.show_overview(win)
+    elif page == "updates-navigator":
+        MainWindow.show_updates(win, _navigator_updates())
     elif key == "updates":
         MainWindow.show_updates(win, _updates(copied="copied" in page), beta=True)
     elif page == "maps-none":
         MainWindow.show_maps(win, ([], 0), None)
+    elif page == "maps-navigator":
+        storage = win.session.storage
+        MainWindow.show_maps(win, *_navigator_maps(),
+                             space=(storage.free_space(), storage.capacity()))
     elif key == "maps":
         # With the row of the space, as the page has it once the maps are read.
         storage = win.session.storage
@@ -369,9 +417,9 @@ def _iterate(seconds):
 
 @pytest.fixture
 def narrow_window(monkeypatch):
-    """A function that gives the real window, folded (narrower than its breakpoint), in the
-    language asked for; nothing is detected, loaded or asked. GTK's settings and the language
-    are put back afterwards."""
+    """A function that gives the real window in the language asked for, folded (narrower than
+    its breakpoint) unless a wider `width` is asked for; nothing is detected, loaded or asked.
+    GTK's settings and the language are put back afterwards."""
     from gi.repository import Gtk
 
     from openexpress import i18n
@@ -396,19 +444,20 @@ def narrow_window(monkeypatch):
                "gtk-decoration-layout": DECORATION}
     windows = []
 
-    def make(language):
+    def make(language, width=400):
         i18n.setup(language)
         for name, value in changed.items():
             settings.set_property(name, value)
         program_style()
         win = MainWindow(None)
         windows.append(win)
-        win.set_default_size(400, 800)
+        win.set_default_size(width, 800)
         win.present()
+        folded = width <= 400  # wider: the side panel stays beside the page
         deadline = time.monotonic() + 5
-        while time.monotonic() < deadline and not win.split.get_collapsed():
+        while time.monotonic() < deadline and win.split.get_collapsed() is not folded:
             _iterate(0.01)
-        assert win.split.get_collapsed(), "the window did not fold"
+        assert win.split.get_collapsed() is folded, "the window did not take its width"
         return win
 
     try:
@@ -430,7 +479,8 @@ def _min_width(widget) -> int:
 DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "device-drive",
                 "device-refused-drive", "updates-beta",
                 "updates-beta-drive",
-                "updates-beta-copied", "updates-beta-copied-drive", "maps", "maps-none", "apps",
+                "updates-beta-copied", "updates-beta-copied-drive", "updates-navigator", "maps",
+                "maps-none", "maps-navigator", "apps",
                 "music", "activities", "courses", "courses-empty",
                 "courses-uncounted", "status"]
 
@@ -1292,3 +1342,51 @@ def test_the_page_from_the_records_fits_the_narrowest_window(narrow_window, lang
     _iterate(0.3)
     width = _min_width(win.kept_status.page)
     assert width <= NARROWEST, width
+
+
+# --- a car navigator that hides its .System from MTP --------------------------------------------
+
+# A folder: a picture of each page of the made-up navigator goes there.
+NAVIGATOR_SHOTS = os.environ.get("OPENEXPRESS_NAVIGATOR_SHOTS")
+NAVIGATOR_WORDS = {
+    "updates-navigator": {
+        "en": "openExpress cannot see the folder .System, where this device keeps its software, so "
+              "it installs nothing there. Some devices, such as car navigators, hide it from the "
+              "ordinary USB connection.",
+        "pl": "openExpress nie widzi folderu .System, w którym to urządzenie trzyma swoje "
+              "oprogramowanie, więc niczego tam nie instaluje. Niektóre urządzenia, np. "
+              "nawigacje samochodowe, ukrywają go przed zwykłym połączeniem USB."},
+    "maps-navigator": {
+        "en": "Cannot be read: openExpress cannot see the folder of its files on this device",
+        "pl": "Nie można odczytać: openExpress nie widzi na tym urządzeniu folderu jej plików"},
+}
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("width", [NARROWEST, 1000], ids=["360", "wide"])
+@pytest.mark.parametrize("page", ["updates-navigator", "maps-navigator"])
+def test_a_navigator_page_says_why_nothing_is_done(narrow_window, language, width, page):
+    """Its Updates page has no Install for what goes to .System and says why; its Maps page
+    shows the City Navigator without a button and says why, in the narrowest window and a wide
+    one. With OPENEXPRESS_NAVIGATOR_SHOTS, a picture of each."""
+    from pathlib import Path
+
+    from gi.repository import Gtk
+
+    win = narrow_window(language, width=width)
+    key = _fill(win, page)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.3)
+    page_widgets = descendants(win.sections[key].stack)
+    texts = [w.get_label() for w in page_widgets if isinstance(w, Gtk.Label) and w.get_label()]
+    texts += [w.get_subtitle() for w in page_widgets if hasattr(w, "get_subtitle")
+              and isinstance(w, Gtk.Widget) and w.get_subtitle()]
+    assert any(NAVIGATOR_WORDS[page][language] in t for t in texts)
+    buttons = {w.get_label() for w in page_widgets if isinstance(w, Gtk.Button)}
+    assert not buttons & {"Install", "Zainstaluj", "Install All", "Zainstaluj wszystkie",
+                          "Update", "Aktualizuj"}
+    if NAVIGATOR_SHOTS:
+        window_picture(win, Path(NAVIGATOR_SHOTS)
+                       / f"{page}-{language}-{'360' if width == NARROWEST else 'wide'}.png")

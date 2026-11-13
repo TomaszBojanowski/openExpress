@@ -59,6 +59,12 @@ def _no_maps(win, sec, text: str, detail: str | None = None) -> None:
     sec.group().add(box)
 
 
+def unseen_map_text() -> str:
+    # TRANSLATORS: on the Maps page, under a map whose files are in a folder the device hides
+    # from the ordinary USB connection (a car navigator's .System), without a full stop
+    return _("Cannot be read: openExpress cannot see the folder of its files on this device")
+
+
 class MapsPage:
     """The Maps page and its tasks, for Garmin's maps and maps of your own."""
 
@@ -160,6 +166,14 @@ class MapsPage:
         for m in installed:
             row = Adw.ActionRow(title=GLib.markup_escape_text(m.name),
                                 subtitle=GLib.markup_escape_text(self._map_subtitle(m)))
+            if m.unseen:
+                # The device hides the folder of its files: no state, nothing to do, and why.
+                kind = m.map_type.strip()
+                row.set_subtitle(GLib.markup_escape_text(
+                    caption(kind if kind.casefold() != m.name.strip().casefold() else "",
+                            m.version, human_size(m.size)) + "\n" + unseen_map_text()))
+                g.add(row)
+                continue
             if m.waiting:
                 # Nothing to do until the device is unplugged, as for apps waiting there.
                 row.set_sensitive(m.waiting != mp.WAIT_REMOVE)

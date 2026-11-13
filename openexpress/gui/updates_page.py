@@ -43,7 +43,7 @@ from openexpress.gui.words import (  # noqa: E402
     software_text,
     update_state_text,
 )
-from openexpress.i18n import SEPARATOR, _, caption, human_size, ngettext  # noqa: E402
+from openexpress.i18n import SEPARATOR, _, caption, human_size, ngettext, pgettext  # noqa: E402
 from openexpress.updates import FINISH_STEPS_WINDOW  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -76,6 +76,31 @@ def data_loss_text(session) -> str:
                                "{count} activities on the device have not been uploaded yet.",
                                count).format(count=count)
     return text
+
+
+def hidden_folder_text(folder: str) -> str:
+    # TRANSLATORS: subtitle of an update on the Updates page that openExpress does not install,
+    # without a full stop; {folder}: the folder of the device's top level its file goes to
+    return _("Cannot be installed: openExpress cannot see its folder {folder} on this "
+             "device").format(folder=folder)
+
+
+def hidden_software_text(folder: str) -> str:
+    # TRANSLATORS: on the Updates page, under the device's software that openExpress does not
+    # install; {folder}: the folder of the device's top level, e.g. .System
+    text = pgettext("updates page", "openExpress cannot see the folder {folder}, where this "
+                    "device keeps its software, so it installs nothing there. Some devices, such "
+                    "as car navigators, hide it from the ordinary USB connection.")
+    return text.format(folder=folder)
+
+
+def add_ons_row_text(count: int) -> str:
+    # TRANSLATORS: subtitle of the row "Add-Ons" on the Updates page: items Garmin offers to
+    # add to the device (voices, vehicles) that it does not have, without a full stop
+    return ngettext("{count} add-on that is not on the device; openExpress does not install "
+                    "add-ons yet",
+                    "{count} add-ons that are not on the device; openExpress does not install "
+                    "add-ons yet", count).format(count=count)
 
 
 def update_check_failed(win) -> None:
@@ -331,7 +356,7 @@ class UpdatesPage:
         waiting = {w.device_path.casefold(): w for w in staged}
         self._updates_status(sec, system, len(new), beta, ready=staged,
                              only=new[0] if len(new) == 1 else None,
-                             installable=[u for u in new
+                             installable=[u for u in upd.installable(new)
                                           if u.device_path.casefold() not in waiting],
                              untaken=untaken)
         rest = [u for u in new if u is not system]
@@ -351,10 +376,16 @@ class UpdatesPage:
         # install.
         re = [u for u in items if (u.is_reinstall or u.on_device) and not u.is_metadata
               and not any(u is w for w in staged) and not any(u is n for n in untaken)]
-        if re:
+        extra = upd.add_ons(items)
+        if re or extra:
             # TRANSLATORS: heading of a group on the Updates page that holds the reinstall of
             # components already on the device
             g = sec.group(_("Advanced"))
+        if extra:
+            # TRANSLATORS: title of a row on the Updates page: items Garmin offers to add to the
+            # device (voices, vehicles of a car navigator) that it does not have
+            g.add(Adw.ActionRow(title=_("Add-Ons"), subtitle=add_ons_row_text(len(extra))))
+        if re:
             exp = Adw.ExpanderRow(
                 # TRANSLATORS: title of an expandable row on the Updates page that lists components
                 # already on the device, each with a Reinstall button
@@ -401,10 +432,14 @@ class UpdatesPage:
             detail = caption(system.title, system.severity_text, system.filename)
             # Copied before and offered again: the device has not installed it.
             note = copied_update_text(system)
-            # TRANSLATORS: button
-            buttons.append(self._button(_("Install") if note is None else _("Reinstall"),
-                                        lambda u=system: self.confirm_update(u),
-                                        "suggested-action" if note is None else None))
+            if system.hidden_folder is not None:
+                # Its folder is not seen: nothing to install, and why.
+                note = hidden_software_text(system.hidden_folder)
+            else:
+                # TRANSLATORS: button
+                buttons.append(self._button(_("Install") if note is None else _("Reinstall"),
+                                            lambda u=system: self.confirm_update(u),
+                                            "suggested-action" if note is None else None))
         elif ready:
             # What to do is in the title (as on the row "Device Software"), with how many are
             # still to install (listed below); under it the versions of the one copied (of
@@ -491,7 +526,9 @@ class UpdatesPage:
             if note is not None:
                 subtitle += "\n" + note
                 reinstall = True
-            button = waits_for is None
+            button = waits_for is None and u.hidden_folder is None
+            if u.hidden_folder is not None:
+                subtitle += "\n" + hidden_folder_text(u.hidden_folder)
         row = Adw.ActionRow(
             # TRANSLATORS: title of the row of an update of the device's own software (firmware), on
             # the Updates page

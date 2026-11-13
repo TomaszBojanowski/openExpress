@@ -22,7 +22,7 @@ from typing import NamedTuple
 from openexpress import answers, applog, cache, download, known_devices, paths
 from openexpress.device.storage import MAIN_FOLDERS, DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
-from openexpress.i18n import N_, _
+from openexpress.i18n import N_, _, ngettext
 from openexpress.progress import (
     Step,
     byte_steps,
@@ -139,6 +139,12 @@ class SoftwareUpdate:
     # The size and time of its file on the device when Free Up Space listed it
     # (freeing.updates_not_installed); None: not listed.
     listed_file: tuple | None = None
+    # The server's word whether the device has this product ("isProductInstalled"); None: not
+    # said.
+    product_installed: bool | None = None
+    # The folder of the device's top level its file goes to when the ordinary listing does not
+    # show it (mark_present): openExpress neither looks into it nor writes there.
+    hidden_folder: str | None = None
 
     @property
     def key(self) -> str:
@@ -191,6 +197,15 @@ class SoftwareUpdate:
         return self.filename.upper() in SYSTEM_FILES and folder in MAIN_FOLDERS
 
     @property
+    def is_add_on(self) -> bool:
+        """Something the device does not have that Garmin offers to add to it (a voice, a
+        vehicle of a car navigator): the server says it is not installed, it is not the device's
+        own software, and it is below "Recommended", the importance from which Garmin Express
+        installs an item by itself. A new part the server recommends stays an update."""
+        return (self.product_installed is False and not self.is_system
+                and self.severity.casefold() not in ("critical", "recommended"))
+
+    @property
     def installs_when_disconnected(self) -> bool:
         """An update that the device installs itself once it is disconnected, perhaps with a
         restart: the device's own software or the software of a part of it. Copied last, and
@@ -226,6 +241,7 @@ SEVERITY_NAMES = {
 # Whether the file of an offered update is on the device, as the log says it.
 MATCHES = "matches"
 NOT_ON_THE_DEVICE = "not on the device"
+TOP_FOLDER_NOT_SEEN = "its top folder not seen"
 MD5_DIFFERS = "MD5 differs"
 
 
@@ -304,9 +320,12 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
 
     `components`: how many components the device's GarminDevice.xml lists, for the log."""
     offered = [u for u in updates if u.is_offer]
+    tops = top_folders(storage)
     found = []
     for u in offered:
-        found.append(presence(storage, u))
+        u.hidden_folder = top_folder_not_seen(u, tops)
+        found.append(presence(storage, u) if u.hidden_folder is None
+                     else Presence(TOP_FOLDER_NOT_SEEN))
         u.on_device = found[-1].why == MATCHES
         u.changed_on_device = found[-1].why == MD5_DIFFERS
     # For each: where its file goes on the device, from the device's folder, and whether it
@@ -318,7 +337,70 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
     log.info("updates: %d offered%s, %d of them already on the device%s", len(offered),
              f" ({named})" if named else "", sum(1 for u in offered if u.on_device),
              f"; {components} components listed" if components is not None else "")
+    hidden = sorted({u.hidden_folder for u in offered if u.hidden_folder})
+    extra = [u for u in offered if u.is_add_on]
+    if hidden or extra:
+        log.info("updates: %d in a top folder not seen (%s), %d add-ons (not installed: %s)",
+                 sum(1 for u in offered if u.hidden_folder), ", ".join(hidden) or "none",
+                 len(extra), ", ".join(sorted({u.severity or "no importance" for u in extra}))
+                 or "none")
     return updates
+
+
+def top_folders(storage: Storage) -> set[str] | None:
+    """The names of the folders of the device's top level that the ordinary listing shows,
+    in lower case; None when they cannot be listed (then no folder is taken for unseen)."""
+    try:
+        return {e.name.casefold() for e in storage.listdir("") if e.is_dir}
+    except DeviceNotResponding:
+        raise
+    except DeviceError:
+        return None
+
+
+def top_folder_not_seen(u: SoftwareUpdate, tops: set[str] | None) -> str | None:
+    """The folder of the device's top level the file of `u` goes to when the listing does not
+    show it (a car navigator hides its .System from MTP); None when it is seen, when the file
+    goes to the top level itself, or when the top level could not be listed. A folder inside
+    a folder that is seen is made for the write like any other."""
+    parts = [p for p in u.device_path.split("/") if p]
+    if len(parts) < 2 or tops is None:
+        return None
+    return None if parts[0].casefold() in tops else parts[0]
+
+
+def not_installed_here_text(u: SoftwareUpdate) -> str:
+    # TRANSLATORS: `openexpress updates`: an update openExpress does not install; {folder}: the
+    # folder of the device's top level its file goes to, e.g. .System
+    return _("Not installed: {name} {version} goes to {folder}, which openExpress cannot see "
+             "on the device.").format(name=u.title, version=u.version, folder=u.hidden_folder)
+
+
+def hidden_software_text(folder: str) -> str:
+    # TRANSLATORS: `openexpress updates`: the device keeps its software in a folder openExpress
+    # cannot see over MTP; {folder}: e.g. .System
+    return _("openExpress cannot see the folder {folder}, where this device keeps its software, "
+             "so it installs nothing there. Some devices, such as car navigators, hide it from "
+             "the ordinary USB connection.").format(folder=folder)
+
+
+def add_ons_text(count: int) -> str:
+    # TRANSLATORS: `openexpress updates`: items Garmin offers to add to the device (voices,
+    # vehicles) that it does not have
+    return ngettext("{count} add-on not on the device is not offered: openExpress does not "
+                    "install add-ons yet.",
+                    "{count} add-ons not on the device are not offered: openExpress does not "
+                    "install add-ons yet.", count).format(count=count)
+
+
+def installable(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+    """Those openExpress may write: none whose top folder it cannot see."""
+    return [u for u in updates if u.hidden_folder is None]
+
+
+def add_ons(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
+    """The add-ons offered (is_add_on): not updates, and not installed by openExpress yet."""
+    return [u for u in updates if u.is_offer and u.is_add_on and not u.on_device]
 
 
 def staged(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
@@ -336,7 +418,8 @@ def staged(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
 def pending(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     """The real updates: not reinstalls, not metadata, not on the device already, and not
     copied before and not installed by the device (not_installed)."""
-    return [u for u in updates if u.is_offer and not u.on_device and not _not_installed(u)]
+    return [u for u in updates if u.is_offer and not u.on_device and not _not_installed(u)
+            and not u.is_add_on]
 
 
 def not_installed(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
@@ -452,6 +535,8 @@ def parse_updates(response: dict, device=None) -> list[SoftwareUpdate]:
                 datatype=u.get("datatype") or "",
                 release_state=str(u.get("releasestate") or ""),
                 model_part_number=model,
+                product_installed=(inst.get("isproductinstalled")
+                                   if isinstance(inst.get("isproductinstalled"), bool) else None),
             )
         )
         new = out[-1]
@@ -627,6 +712,15 @@ def _install(
     updates for one file: one of them is copied (one_per_file). `report` is filled as it goes:
     what was written before a failure is in it."""
     updates = one_per_file(updates)[0]  # the others are told in the log
+    # Never a folder of the device's top level: one the listing does not show may be hidden
+    # (a car navigator's .System), and nothing is downloaded for an update refused.
+    tops = top_folders(storage)
+    for u in updates:
+        u.hidden_folder = top_folder_not_seen(u, tops)
+        if u.hidden_folder is not None:
+            log.info("software update: %s %s not installed: its top folder %s is not seen",
+                     u.part_number, u.version, u.hidden_folder)
+            raise UpdateError(not_installed_here_text(u))
     need, free = check_space(storage, updates)
     storage.require_space(need, space_margin(storage), error=UpdateError, free=free,
                           margin_said=True)

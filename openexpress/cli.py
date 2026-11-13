@@ -1819,6 +1819,22 @@ def _print_present(present, verbose: bool) -> None:
             print(f"      -> {u.device_path}")
 
 
+def _print_hidden(updates_shown, add_ons, lines: bool = False) -> None:
+    """Under the updates: the add-ons not offered, and, when the device's own software goes to a
+    folder of its top level the listing does not show, why nothing is installed there.
+    `lines`: also a line for each update refused (`updates --install`)."""
+    from openexpress import updates as upd
+
+    if lines:
+        for u in updates_shown:
+            print(upd.not_installed_here_text(u))
+    if add_ons:
+        print(upd.add_ons_text(len(add_ons)))
+    system = next((u for u in updates_shown if u.is_system and u.hidden_folder), None)
+    if system is not None:
+        print(upd.hidden_software_text(system.hidden_folder))
+
+
 def cmd_updates(args) -> int:
     from openexpress import updates as upd
 
@@ -1842,9 +1858,12 @@ def cmd_updates(args) -> int:
         device=dev.description, version=dev.software_version_str))
     if upd.beta_offered(resp):
         print(_(upd.BETA_OFFERED))
+    # Offered to add to the device (a voice, a vehicle): not updates, not installed yet.
+    extra = [] if args.reinstalls else upd.add_ons(items)
     if not args.install:
         listed = items if args.reinstalls else [u for u in items if not u.on_device
-                                                and not any(u is n for n in untaken)]
+                                                and not any(u is n for n in untaken)
+                                                and not u.is_add_on]
         if not listed:
             if staged:
                 _print_staged(staged, st)  # not up to date: the update waits for the device
@@ -1853,6 +1872,7 @@ def cmd_updates(args) -> int:
                       else _("The server returned no items."))
             _print_not_installed(untaken)
             _print_present(present, args.verbose)
+            _print_hidden(listed, extra)
             return 0
         visible = [u for u in listed if not u.is_metadata or args.verbose]
         # TRANSLATORS: `openexpress updates --reinstalls`: how many items the server offers to
@@ -1862,6 +1882,8 @@ def cmd_updates(args) -> int:
         for u in sorted(visible, key=lambda x: (not x.is_system, x.severity.lower() != "critical",
                                                 x.name)):
             print("  " + _update_line(u) + _flags(u))
+            if u.hidden_folder is not None:
+                print("      " + upd.not_installed_here_text(u))
             note = _copied_note(u)
             if note:
                 print("      " + note)
@@ -1873,6 +1895,7 @@ def cmd_updates(args) -> int:
             _print_present(present, args.verbose)
             _print_staged(staged, st)
             _print_not_installed(untaken)
+        _print_hidden(visible, extra)
         # TRANSLATORS: `openexpress updates`, under the list: {command} is the command that installs
         # an update (not translated)
         print("\n" + _("Install: {command}").format(
@@ -1882,6 +1905,14 @@ def cmd_updates(args) -> int:
     # "all" means the updates: a file the device already has is not written again, unless
     # the reinstalls were asked for. A part number given by name is always taken.
     chosen = upd.select(items, args.install, keep_present=args.reinstalls)
+    if args.install == ["all"]:
+        chosen = [u for u in chosen if not u.is_add_on]  # said with the hidden ones below
+    # Nothing goes to a folder of the device's top level the listing does not show.
+    refused = [u for u in chosen if u.hidden_folder is not None]
+    chosen = [u for u in chosen if u.hidden_folder is None]
+    _print_hidden(refused, extra if args.install == ["all"] else [], lines=True)
+    if refused and not chosen:
+        return 1
     skipped = [u for u in upd.present_with_metadata(items) if not u.is_metadata
                and not any(u is c for c in chosen)] if args.install == ["all"] else []
     if skipped:
@@ -1939,7 +1970,7 @@ def cmd_updates(args) -> int:
         return 1  # the cable must stay in: no steps that begin with unplugging it
     if n:
         print(_(FINISH_STEPS))
-    return 0
+    return 1 if refused else 0
 
 
 def _drive_synced(client, dev) -> bool:
