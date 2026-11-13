@@ -270,21 +270,29 @@ INREACH = ("inReach Mini 2", "5.05", "006-B3968-00")
 NAVIGATOR = ("Drive 53", "8.50", "006-B4449-00")
 
 
-def _navigator_updates():
+def _navigator_updates(read: bool = False):
     """Its software and its time-zone map in .System, which the listing does not show, a voice
-    and a vehicle it does not have (add-ons), and a component already on it."""
-    def offered(name, version, path, size, part, hidden=None, add_on=False, reinstall=False):
+    and a vehicle it does not have (add-ons), and a component already on it. `read`: .System
+    read through openExpress's own session: the software there of another size, the time-zone
+    map at the size offered."""
+    from openexpress import hidden_folders
+
+    def offered(name, version, path, size, part, hidden=None, add_on=False, reinstall=False,
+                same=None):
         u = _update(name, version, path, size, system=part == NAVIGATOR[2], reinstall=reinstall)
         u.part_number, u.model_part_number, u.hidden_folder = part, NAVIGATOR[2], hidden
+        if hidden and read:
+            u.hidden_session, u.hidden_size_same = hidden_folders.READ, same
+            u.on_device = same is True and not u.is_system
         if add_on:
             u.severity, u.product_installed = "Optional", False
         return u
 
     return [
         offered("Drive 53 Software", "9.00", ".System/B444900.update", 64_655_360,
-                NAVIGATOR[2], hidden=".System"),
+                NAVIGATOR[2], hidden=".System", same=False),
         offered("Time Zone Map", "43.00", ".System/gmaptz.img", 699_392, "006-D1074-00",
-                hidden=".System"),
+                hidden=".System", same=True),
         offered("English American Voice", "2.00", "Voice/English_American_.vpm", 4_100_000,
                 "006-D0397-00", add_on=True),
         offered("Compact Red Vehicle", "2.20", "Vehicle/Vehicle_Compact-Red_220.srf", 52_000,
@@ -293,17 +301,33 @@ def _navigator_updates():
                 reinstall=True)]
 
 
-def _navigator_maps():
+def _navigator_maps(read: bool = False):
     """Its City Navigator, listed by Garmin's server, its files in .System/Map, which the
-    listing does not show."""
+    listing does not show; `read`: read through openExpress's own session, its file there."""
     from openexpress.maps import MapFile, UniversalMap
 
     m = UniversalMap(name="City Navigator North America NT", map_type="City Navigator",
                      state=1, is_reinstall=True, can_uninstall=True, version="2026.20",
                      region="Americas", identifier={},
                      files=[MapFile(".System/Map/D0000001A.img", "u", None, 5_260_000_000)],
-                     files_to_remove=[], hosts=[], unseen=True)
+                     files_to_remove=[], hosts=[], unseen=not read, hidden_folder=".System")
     return ([m], 1), None
+
+
+def _navigator_status_facts():
+    """Device Status of the navigator once .System was read: its maps and its update files
+    counted from what the session read, the rest of the used space "system"; no diagnostics."""
+    from datetime import datetime, timedelta
+
+    from openexpress import status
+
+    now = datetime(2026, 10, 21, 12, 0)
+    return status.Facts(
+        free=8_900_000_000, capacity=15_500_000_000,
+        categories={"maps": 5_260_000_000, "updates": 65_344_512, "system": 1_274_655_488},
+        counted_at=now - timedelta(minutes=2), crashes=[], errors_known=False, dumps=None,
+        events=[], hidden_logs=False, copies=(0, 0, None), has_diagnostics=False,
+        recounted=True)
 
 
 def _fill(win, page: str) -> str:
@@ -337,15 +361,15 @@ def _fill(win, page: str) -> str:
     key = {"device": "watch"}.get(page.split("-")[0], page.split("-")[0])
     if key == "watch":
         MainWindow.show_overview(win)
-    elif page == "updates-navigator":
-        MainWindow.show_updates(win, _navigator_updates())
+    elif page in ("updates-navigator", "updates-read-navigator"):
+        MainWindow.show_updates(win, _navigator_updates(read="read" in page))
     elif key == "updates":
         MainWindow.show_updates(win, _updates(copied="copied" in page), beta=True)
     elif page == "maps-none":
         MainWindow.show_maps(win, ([], 0), None)
-    elif page == "maps-navigator":
+    elif page in ("maps-navigator", "maps-read-navigator"):
         storage = win.session.storage
-        MainWindow.show_maps(win, *_navigator_maps(),
+        MainWindow.show_maps(win, *_navigator_maps(read="read" in page),
                              space=(storage.free_space(), storage.capacity()))
     elif key == "maps":
         # With the row of the space, as the page has it once the maps are read.
@@ -360,6 +384,8 @@ def _fill(win, page: str) -> str:
     elif key == "courses":
         MainWindow.show_courses(win, _courses(empty=page == "courses-empty",
                                               uncounted=page == "courses-uncounted"))
+    elif page == "status-navigator":
+        MainWindow.show_status(win, _navigator_status_facts())
     elif key == "status":
         MainWindow.show_status(win, _status_facts())
     win.sections[key].show("content")
@@ -479,7 +505,8 @@ def _min_width(widget) -> int:
 DEVICE_PAGES = ["device", "device-update-copied", "device-off-account", "device-drive",
                 "device-refused-drive", "updates-beta",
                 "updates-beta-drive",
-                "updates-beta-copied", "updates-beta-copied-drive", "updates-navigator", "maps",
+                "updates-beta-copied", "updates-beta-copied-drive", "updates-navigator",
+                "updates-read-navigator", "maps-read-navigator", "status-navigator", "maps",
                 "maps-none", "maps-navigator", "apps",
                 "music", "activities", "courses", "courses-empty",
                 "courses-uncounted", "status"]
@@ -976,7 +1003,8 @@ def test_captions_break_only_where_they_should(narrow_window, language, page):
     texts = list(_texts(root))
     # The pages without a caption of several parts.
     assert any("\u00a0·" in t for t in texts) or page in (
-        "maps-none", "music", "courses-empty", "device-off-account", "device-refused-drive")
+        "maps-none", "music", "courses-empty", "device-off-account", "device-refused-drive",
+        "status-navigator")
     assert _breaks_badly(texts) == []
 
 
@@ -1359,16 +1387,27 @@ NAVIGATOR_WORDS = {
     "maps-navigator": {
         "en": "Cannot be read: openExpress cannot see the folder of its files on this device",
         "pl": "Nie można odczytać: openExpress nie widzi na tym urządzeniu folderu jej plików"},
+    "updates-read-navigator": {
+        "en": "openExpress reads the folder .System through its own USB connection, but does not "
+              "install into it yet.",
+        "pl": "openExpress odczytuje folder .System przez własne połączenie USB, ale jeszcze "
+              "niczego w\u00a0nim nie instaluje."},
+    "maps-read-navigator": {
+        "en": "openExpress does not install into .System yet",
+        "pl": "openExpress jeszcze nie instaluje w\u00a0folderze .System"},
+    "status-navigator": {"en": "5.3\u00a0GB", "pl": "5,3\u00a0GB"},  # its maps
 }
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
 @pytest.mark.parametrize("width", [NARROWEST, 1000], ids=["360", "wide"])
-@pytest.mark.parametrize("page", ["updates-navigator", "maps-navigator"])
+@pytest.mark.parametrize("page", ["updates-navigator", "maps-navigator", "updates-read-navigator",
+                                  "maps-read-navigator", "status-navigator"])
 def test_a_navigator_page_says_why_nothing_is_done(narrow_window, language, width, page):
     """Its Updates page has no Install for what goes to .System and says why; its Maps page
-    shows the City Navigator without a button and says why, in the narrowest window and a wide
-    one. With OPENEXPRESS_NAVIGATOR_SHOTS, a picture of each."""
+    shows the City Navigator without a button and says why; once .System is read through
+    openExpress's own session, they say what was read, and Device Status counts its maps; in the
+    narrowest window and a wide one. With OPENEXPRESS_NAVIGATOR_SHOTS, a picture of each."""
     from pathlib import Path
 
     from gi.repository import Gtk

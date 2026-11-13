@@ -44,6 +44,7 @@ from openexpress.gui.add_to_account import (  # noqa: E402
     offers_adding,
 )
 from openexpress.gui.apps_page import note_apps_count  # noqa: E402
+from openexpress.gui.hidden_reading import note_needed  # noqa: E402
 from openexpress.gui.music_page import note_music_count  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
 from openexpress.gui.pictures import (  # noqa: E402
@@ -1326,12 +1327,15 @@ class DevicePage:
             if self.session is not s:
                 return
             self._set_update_state(*result)
+            # What goes to a folder of the top level ordinary MTP does not show: read once.
+            note_needed(self, s, upd.hidden_needed(result[0]))
 
         def failed(_e):
             if self._update_check_session is s:
                 self._update_check_session = None
             if self.session is s:
                 update_check_failed(self)
+                note_needed(self, s, [])  # the map check may need a folder
 
         self.in_background(work, done, failed)
 
@@ -1404,6 +1408,9 @@ class DevicePage:
                 else:
                     self._set_map_state(result)
             self._map_check_session = None
+            # Its maps' files in a folder of the top level ordinary MTP does not show: read once.
+            note_needed(self, s, mp.hidden_needed(result[0])
+                        if result is not None and result is not NO_MAPS else [])
 
         def failed(_e):
             if self._map_check_session is not s:
@@ -1412,6 +1419,7 @@ class DevicePage:
             if self.session is s and self.map_state is None:
                 self.map_state = "failed"
                 self._render_map_state()
+            note_needed(self, s, [])  # the update check may need a folder
 
         def work():
             try:

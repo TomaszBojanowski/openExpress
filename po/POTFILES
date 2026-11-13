@@ -44,6 +44,7 @@ openexpress/gui/status_page.py
 openexpress/gui/updates_page.py
 openexpress/gui/window_tasks.py
 openexpress/gui/words.py
+openexpress/hidden_folders.py
 openexpress/i18n.py
 openexpress/installer.py
 openexpress/last_sync.py

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 18:33+0100\n"
+"POT-Creation-Date: 2026-11-13 20:27+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -7895,6 +7895,59 @@ msgid ""
 "navigators, hide it from the ordinary USB connection."
 msgstr ""
 
+#. TRANSLATORS: subtitle of an update on the Updates page that openExpress does not install
+#. yet, without a full stop; {folder}: a folder the device hides, e.g. .System, which
+#. openExpress reads through a USB session of its own
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgid "Not installed yet: it goes to {folder}, which openExpress only reads"
+msgstr ""
+
+#. TRANSLATORS: on the Updates page, under the device's software: the device keeps it in a
+#. folder hidden from the ordinary USB connection ({folder}, e.g. .System), which openExpress
+#. reads through a USB session of its own
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgctxt "updates page"
+msgid ""
+"openExpress reads the folder {folder} through its own USB connection, but "
+"does not install into it yet."
+msgstr ""
+
+#. TRANSLATORS: on the Updates page, without a full stop: a file in a folder the device
+#. hides, found by name and size only
+#: openexpress/gui/updates_page.py
+msgid "On the device at the same size; its contents not compared"
+msgstr ""
+
+#. TRANSLATORS: on the Updates page, without a full stop: a file of the update's name is on
+#. the device, of another size than offered; {file}: e.g. B444900.update
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgid "On the device: {file} of another size"
+msgstr ""
+
+#. TRANSLATORS: on the Updates page; {folder}: a folder the device hides from the
+#. ordinary USB connection, e.g. .System
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgctxt "updates page"
+msgid ""
+"The Flatpak version has no access to USB devices, so it cannot read the "
+"folder {folder}. Give it the permission (see the README) or use the version "
+"from source."
+msgstr ""
+
+#. TRANSLATORS: on the Updates page; {folder}: a folder the device hides from the
+#. ordinary USB connection, e.g. .System
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgctxt "updates page"
+msgid ""
+"openExpress cannot open its own USB session with this device, so it cannot "
+"read the folder {folder}."
+msgstr ""
+
 #. TRANSLATORS: subtitle of the row "Add-Ons" on the Updates page: items Garmin offers to
 #. add to the device (voices, vehicles) that it does not have, without a full stop
 #: openexpress/gui/updates_page.py
@@ -8949,6 +9002,32 @@ msgstr ""
 msgid "No Problems Found"
 msgstr ""
 
+#. TRANSLATORS: a step: openExpress reads a folder the device hides from the ordinary USB
+#. connection; {folder}: e.g. .System
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid "Reading the folder {folder}…"
+msgstr ""
+
+#. TRANSLATORS: {folder}: a folder the device hides from the ordinary USB connection,
+#. e.g. .System
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"The Flatpak version has no access to USB devices, so it cannot read the "
+"folder {folder}. Give it the permission (see the README) or use the version "
+"from source."
+msgstr ""
+
+#. TRANSLATORS: {folder}: a folder the device hides from the ordinary USB connection, e.g.
+#. .System
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"openExpress cannot open its own USB session with this device, so it cannot "
+"read the folder {folder}."
+msgstr ""
+
 #. TRANSLATORS: the name of your language in your language ("Polski", "Deutsch",
 #. "Français"), as the list of languages in the Preferences shows it
 #: openexpress/i18n.py
@@ -9154,6 +9233,13 @@ msgstr ""
 msgid "openExpress does not remove these files yet."
 msgstr ""
 
+#. TRANSLATORS: on the Maps page, under a map whose files go to a folder the device hides
+#. ({folder}, e.g. .System), without a full stop
+#: openexpress/maps.py
+#, python-brace-format
+msgid "openExpress does not install into {folder} yet"
+msgstr ""
+
 #: openexpress/maps.py
 msgid ""
 "Cannot be installed: Garmin does not offer this map in your account's country"
@@ -9166,6 +9252,15 @@ msgstr ""
 
 #: openexpress/maps.py
 msgid "Cannot be installed: the server did not provide all of its files"
+msgstr ""
+
+#. TRANSLATORS: {folder}: a folder the device hides from the ordinary USB connection,
+#. e.g. .System
+#: openexpress/maps.py
+#, python-brace-format
+msgid ""
+"Map “{name}” cannot be installed: openExpress does not install into {folder} "
+"yet."
 msgstr ""
 
 #: openexpress/maps.py
@@ -9192,6 +9287,13 @@ msgstr ""
 #: openexpress/maps.py
 #, python-brace-format
 msgid "No map named “{name}”"
+msgstr ""
+
+#. TRANSLATORS: `openexpress maps`, under a map whose files are in a folder the device hides
+#. ({folder}, e.g. .System), which openExpress only reads
+#: openexpress/maps.py
+#, python-brace-format
+msgid "openExpress does not install into {folder} yet."
 msgstr ""
 
 #: openexpress/maps.py
@@ -9250,6 +9352,15 @@ msgstr ""
 msgid ""
 "Map “{name}” cannot be read: openExpress cannot see the folder of its files "
 "on the device."
+msgstr ""
+
+#. TRANSLATORS: error of a map removal; {folder}: a folder the device hides from the
+#. ordinary USB connection, e.g. .System
+#: openexpress/maps.py
+#, python-brace-format
+msgid ""
+"Map “{name}” cannot be removed: openExpress does not change the folder "
+"{folder} yet."
 msgstr ""
 
 #. TRANSLATORS: a step of a map removal; {name}: the map ("… · 2 of 5")
@@ -10396,6 +10507,15 @@ msgstr ""
 msgid "Unspecified"
 msgstr ""
 
+#. TRANSLATORS: `openexpress updates`: an update openExpress does not install yet; its
+#. folder ({folder}, e.g. .System) the device hides, and openExpress only reads it
+#: openexpress/updates.py
+#, python-brace-format
+msgid ""
+"Not installed yet: {name} {version} goes to {folder}, which openExpress only "
+"reads."
+msgstr ""
+
 #. TRANSLATORS: `openexpress updates`: an update openExpress does not install; {folder}: the
 #. folder of the device's top level its file goes to, e.g. .System
 #: openexpress/updates.py
@@ -10413,6 +10533,29 @@ msgid ""
 "openExpress cannot see the folder {folder}, where this device keeps its "
 "software, so it installs nothing there. Some devices, such as car "
 "navigators, hide it from the ordinary USB connection."
+msgstr ""
+
+#. TRANSLATORS: `openexpress updates`: the device keeps its software in a folder hidden from
+#. the ordinary USB connection ({folder}, e.g. .System), which openExpress reads through a
+#. USB session of its own
+#: openexpress/updates.py
+#, python-brace-format
+msgid ""
+"openExpress reads the folder {folder} through its own USB connection, but "
+"does not install into it yet."
+msgstr ""
+
+#. TRANSLATORS: `openexpress updates`, under an update: a file of its name is on the device,
+#. of another size than the one offered; {file}: e.g. B444900.update
+#: openexpress/updates.py
+#, python-brace-format
+msgid "On the device: {file} of another size."
+msgstr ""
+
+#. TRANSLATORS: `openexpress updates`: a file in a folder the device hides, found by name and
+#. size only
+#: openexpress/updates.py
+msgid "On the device at the same size; its contents not compared."
 msgstr ""
 
 #. TRANSLATORS: `openexpress updates`: items Garmin offers to add to the device (voices,

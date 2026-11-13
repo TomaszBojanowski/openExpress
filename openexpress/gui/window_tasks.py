@@ -257,9 +257,13 @@ def error_heading(failed_title: str | None) -> str:
 def wait_for_the_diagnostics(session, fn) -> None:
     """A work that writes to the device (writes_to_device) waits, in its thread, until the
     device's diagnostics are read (device_page.read_diagnostics, in the background after its
-    page is shown), so that their copy is of the device before any change; any other work
-    goes on at once."""
-    if diagnostics_state(session) != "reading" or not getattr(fn, "writes_to_device", False):
+    page is shown), so that their copy is of the device before any change; so does one that
+    takes the device from the file manager for a session of its own
+    (leaves_the_file_manager), which the reading would not survive; any other work goes on at
+    once."""
+    if diagnostics_state(session) != "reading" or not (
+            getattr(fn, "writes_to_device", False)
+            or getattr(fn, "leaves_the_file_manager", False)):
         return
     log.info("task: waits until the diagnostics of the device are read")
     if not session.diagnostics_reading.wait(DEVICE_WAIT_S):

@@ -86,16 +86,35 @@ def _kind(datatype: str) -> str | None:
 
 class _Folders:
     """The device's folders, each listed once for all the kinds (over MTP each listing is a
-    round trip)."""
+    round trip). The folders of its top level ordinary MTP does not show come from what
+    openExpress's own session read of them on this connection (hidden_folders.kept); one of
+    them it did not read is taken for empty, so that what it holds stays in "system"."""
 
     def __init__(self, storage: Storage):
+        from openexpress import hidden_folders
+
         self.storage = storage
         self.listed: dict[str, list[Entry]] = {}
+        listing = hidden_folders.kept(storage)
+        self.hidden = listing if listing is not None and listing.state == hidden_folders.READ \
+            else None
 
     def entries(self, real: str) -> list[Entry]:
         if real not in self.listed:
-            self.listed[real] = self.storage.list_at(real)
+            self.listed[real] = self._list(real)
         return self.listed[real]
+
+    def _list(self, real: str) -> list[Entry]:
+        if self.hidden is None:
+            return self.storage.list_at(real)
+        if not real:
+            found = self.storage.list_at(real)
+            seen = {e.name.casefold() for e in found}
+            return found + [Entry(top, True) for top in self.hidden.tops()
+                            if top.casefold() not in seen]
+        if real.split("/")[0].casefold() in {t.casefold() for t in self.hidden.tops()}:
+            return self.hidden.entries(real) or []
+        return self.storage.list_at(real)
 
     def resolve(self, folder: str) -> str | None:
         real = ""

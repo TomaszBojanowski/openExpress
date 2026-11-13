@@ -100,7 +100,7 @@ def _tasks():
 # The tasks that keep the general heading: they only read, or their own handler heads every
 # error (an update not installed, a device not ejected).
 GENERAL = {("activity_page", "open_activity"), ("detection", "refresh_device"),
-           ("detection", "open_choice"), ("device_page", "_load"),
+           ("detection", "open_choice"), ("device_page", "_load"), ("hidden_reading", "_start"),
            ("updates_page", "install"), ("updates_page", "eject_device")}
 
 

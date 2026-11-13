@@ -88,6 +88,11 @@ class DeviceSession:
     # asked once per session, and only when such a map is there.
     account_country_code: str | None = field(default=None, repr=False)
     account_country_asked: bool = False
+    # The folders of its top level ordinary MTP does not show that what the first checks after
+    # the opening found goes to (gui/hidden_reading.note_needed), by path in lower case, and
+    # whether openExpress's own session reads them now.
+    hidden_wanted: dict[str, str] = field(default_factory=dict, repr=False)
+    hidden_reading: bool = False
 
     @property
     def logged_in(self) -> bool:

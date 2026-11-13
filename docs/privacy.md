@@ -259,15 +259,17 @@ Besides these, it has three permissions that weaken the sandbox:
    - If you prefer not to grant it, use the [version from source](install.md#from-source):
      writing to the device then works without it.
 2. It can open USB devices (`--device=usb`: the nodes in `/dev/bus/usb`, nothing else of `/dev`).
-   - It uses this only for two things that need a direct USB connection: Connect IQ apps on
+   - It uses this only for three things that need a direct USB connection: Connect IQ apps on
      devices that hide their app folder (e.g. the fēnix 8: installing, updating and removing
-     them), and reading the hidden crash logs of such a device when you ask. The device
-     disappears from the file manager for a moment while it is used.
+     them), reading the hidden crash logs of such a device when you ask, and reading the names
+     and sizes of the files in the folder a car navigator hides (`.System`), once a connection.
+     The device disappears from the file manager for a moment while it is used.
    - To turn it off: `flatpak override --user --nodevice=usb io.github.tomaszbojanowski.OpenExpress`.
      A Flatpak older than 1.16 does not know this permission and runs as without it.
    - Without it, on devices that hide their app folder, installs and updates are only queued in
      Garmin Connect, from where the phone or Garmin Express installs them; apps are removed on the
-     phone; nothing is written to the device; and the hidden crash logs cannot be read.
+     phone; nothing is written to the device; and the hidden crash logs and a navigator's hidden
+     folder cannot be read.
 3. It can read and write the drives the system mounts under `/run/media` and `/media`
    (`--filesystem=/run/media`, `--filesystem=/media`): every removable drive mounted there (USB
    sticks, memory cards, external disks), not only Garmin devices.

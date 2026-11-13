@@ -19,7 +19,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import NamedTuple
 
-from openexpress import answers, applog, cache, download, known_devices, paths
+from openexpress import answers, applog, cache, download, hidden_folders, known_devices, paths
 from openexpress.device.storage import MAIN_FOLDERS, DeviceError, DeviceNotResponding, Storage
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, ngettext
@@ -143,8 +143,14 @@ class SoftwareUpdate:
     # said.
     product_installed: bool | None = None
     # The folder of the device's top level its file goes to when the ordinary listing does not
-    # show it (mark_present): openExpress neither looks into it nor writes there.
+    # show it (mark_present): openExpress never writes there.
     hidden_folder: str | None = None
+    # For one with a hidden_folder: what became of reading its folder through openExpress's own
+    # USB session on this connection (hidden_folders.Listing.state); None: not tried.
+    hidden_session: str | None = None
+    # Its file found in the folder read, by name: True at the size offered, False of another
+    # size; None: not there, or not read. Its contents are never read.
+    hidden_size_same: bool | None = None
 
     @property
     def key(self) -> str:
@@ -197,6 +203,12 @@ class SoftwareUpdate:
         return self.filename.upper() in SYSTEM_FILES and folder in MAIN_FOLDERS
 
     @property
+    def hidden_read(self) -> bool:
+        """Its folder, which ordinary MTP does not show, was read through openExpress's own
+        session: what is there is known by name and size."""
+        return self.hidden_session == hidden_folders.READ
+
+    @property
     def is_add_on(self) -> bool:
         """Something the device does not have that Garmin offers to add to it (a voice, a
         vehicle of a car navigator): the server says it is not installed, it is not the device's
@@ -242,6 +254,7 @@ SEVERITY_NAMES = {
 MATCHES = "matches"
 NOT_ON_THE_DEVICE = "not on the device"
 TOP_FOLDER_NOT_SEEN = "its top folder not seen"
+SAME_SIZE = "same size, contents not compared"
 MD5_DIFFERS = "MD5 differs"
 
 
@@ -297,6 +310,23 @@ def presence(storage: Storage, u: SoftwareUpdate) -> Presence:
         return Presence("not compared (cannot be read)", real)
 
 
+def presence_by_size(listing: hidden_folders.Listing, u: SoftwareUpdate) -> Presence:
+    """Whether the file of this update is in a folder read through openExpress's own session
+    (hidden_folders), by its name in any letter case and its size; its contents are not read.
+    Sets u.hidden_size_same."""
+    entry = listing.file(u.device_path)
+    if entry is None:
+        return Presence(NOT_ON_THE_DEVICE)
+    real = posixpath.join(listing.real(posixpath.dirname(u.device_path)) or "", entry.name)
+    if not u.size:
+        return Presence("not compared (no size from the server)", real)
+    u.hidden_size_same = entry.size == u.size
+    if u.hidden_size_same:
+        return Presence(SAME_SIZE, real)
+    return Presence(f"size differs ({applog.size(entry.size)} on the device, "
+                    f"{applog.size(u.size)} offered)", real)
+
+
 def _where(u: SoftwareUpdate, found: Presence) -> str:
     """The place of an update's file for the log: the server's path, and the file on the
     device too when its name has another letter case (its folder's case is the device's
@@ -321,12 +351,22 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
     `components`: how many components the device's GarminDevice.xml lists, for the log."""
     offered = [u for u in updates if u.is_offer]
     tops = top_folders(storage)
+    listing = hidden_folders.kept(storage)  # what this connection read of folders not seen
     found = []
     for u in offered:
         u.hidden_folder = top_folder_not_seen(u, tops)
-        found.append(presence(storage, u) if u.hidden_folder is None
-                     else Presence(TOP_FOLDER_NOT_SEEN))
-        u.on_device = found[-1].why == MATCHES
+        u.hidden_session = u.hidden_size_same = None
+        if u.hidden_folder is None:
+            found.append(presence(storage, u))
+        else:
+            u.hidden_session = (listing.state_of(posixpath.dirname(u.device_path))
+                                if listing is not None else None)
+            found.append(presence_by_size(listing, u) if u.hidden_read
+                         else Presence(TOP_FOLDER_NOT_SEEN))
+        # The device's own software at the size offered is not taken for the same file: its
+        # contents were not compared.
+        u.on_device = found[-1].why == MATCHES or (found[-1].why == SAME_SIZE
+                                                   and not u.is_system)
         u.changed_on_device = found[-1].why == MD5_DIFFERS
     # For each: where its file goes on the device, from the device's folder, and whether it
     # is there; never an address (a download address carries a token).
@@ -369,7 +409,23 @@ def top_folder_not_seen(u: SoftwareUpdate, tops: set[str] | None) -> str | None:
     return None if parts[0].casefold() in tops else parts[0]
 
 
+def hidden_needed(updates: list[SoftwareUpdate]) -> list[str]:
+    """The folders the offered updates go to whose folder of the top level ordinary MTP does not
+    show, and that this connection has not tried to read yet (hidden_folders.read), each once."""
+    out: dict[str, str] = {}
+    for u in updates:
+        if u.is_offer and u.hidden_folder is not None and u.hidden_session is None:
+            folder = posixpath.dirname(u.device_path)
+            out.setdefault(folder.casefold(), folder)
+    return sorted(out.values(), key=str.casefold)
+
+
 def not_installed_here_text(u: SoftwareUpdate) -> str:
+    if u.hidden_read:
+        # TRANSLATORS: `openexpress updates`: an update openExpress does not install yet; its
+        # folder ({folder}, e.g. .System) the device hides, and openExpress only reads it
+        return _("Not installed yet: {name} {version} goes to {folder}, which openExpress only "
+                 "reads.").format(name=u.title, version=u.version, folder=u.hidden_folder)
     # TRANSLATORS: `openexpress updates`: an update openExpress does not install; {folder}: the
     # folder of the device's top level its file goes to, e.g. .System
     return _("Not installed: {name} {version} goes to {folder}, which openExpress cannot see "
@@ -382,6 +438,33 @@ def hidden_software_text(folder: str) -> str:
     return _("openExpress cannot see the folder {folder}, where this device keeps its software, "
              "so it installs nothing there. Some devices, such as car navigators, hide it from "
              "the ordinary USB connection.").format(folder=folder)
+
+
+def read_only_software_text(folder: str) -> str:
+    # TRANSLATORS: `openexpress updates`: the device keeps its software in a folder hidden from
+    # the ordinary USB connection ({folder}, e.g. .System), which openExpress reads through a
+    # USB session of its own
+    return _("openExpress reads the folder {folder} through its own USB connection, but does "
+             "not install into it yet.").format(folder=folder)
+
+
+def other_size_text(u: SoftwareUpdate) -> str:
+    # TRANSLATORS: `openexpress updates`, under an update: a file of its name is on the device,
+    # of another size than the one offered; {file}: e.g. B444900.update
+    return _("On the device: {file} of another size.").format(file=u.filename)
+
+
+def same_size_text() -> str:
+    # TRANSLATORS: `openexpress updates`: a file in a folder the device hides, found by name and
+    # size only
+    return _("On the device at the same size; its contents not compared.")
+
+
+def not_read_text(u: SoftwareUpdate) -> str | None:
+    """Why the hidden folder of `u` could not be read; None when it was, or was not tried."""
+    if u.hidden_folder is None or u.hidden_session in (None, hidden_folders.READ):
+        return None
+    return hidden_folders.no_session_text(u.hidden_folder, u.hidden_session)
 
 
 def add_ons_text(count: int) -> str:

@@ -15,6 +15,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import answers, service  # noqa: E402
+from openexpress.gui.hidden_reading import read_again  # noqa: E402
 from openexpress.gui.tasks import read_again_after_failure, writes_to_device  # noqa: E402
 from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.gui.words import free_after_text, space_text  # noqa: E402
@@ -24,11 +25,14 @@ log = logging.getLogger(__name__)
 
 
 def check_maps_again(win) -> None:
-    """"Check Again" on the Maps page: Garmin's servers are asked anew, unit-info too."""
+    """"Check Again" on the Maps page: Garmin's servers are asked anew, unit-info too; the
+    folders of the device's top level ordinary MTP does not show that it needs are read anew
+    first, and the page after them (hidden_reading)."""
     if win.session is not None:
         service.forget_unit_info(win.session)
         answers.forget_session(answers.UNIVERSAL_MAPS, win.session)
-    win.load_section("maps", force=True)
+    if not read_again(win):
+        win.load_section("maps", force=True)
 
 
 def map_update_type_text(word: str) -> str:
@@ -172,6 +176,13 @@ class MapsPage:
                 row.set_subtitle(GLib.markup_escape_text(
                     caption(kind if kind.casefold() != m.name.strip().casefold() else "",
                             m.version, human_size(m.size)) + "\n" + unseen_map_text()))
+                g.add(row)
+                continue
+            if m.hidden_folder is not None:
+                # Its files are in a folder the device hides, read through openExpress's own
+                # session: its state, and nothing is installed or removed there yet.
+                row.set_subtitle(GLib.markup_escape_text(
+                    self._map_subtitle(m) + "\n" + mp.cannot_install_reason(m)))
                 g.add(row)
                 continue
             if m.waiting:

@@ -184,6 +184,15 @@ connected device; no login is needed.
   Until it is unplugged, the window does not open a drive it ejected again. **Install All**
   ejects it once, after all of them.
 
+- A car navigator may hide the folder where it keeps its software and maps (`.System` on a
+  Drive 53 EX) from the ordinary USB connection. Right after such a device is opened, openExpress
+  reads that folder once through a USB session of its own (*Reading the folder .System…*; the
+  device leaves the file manager for a moment) and compares the files offered with those there
+  by name and size; their contents are not read. It installs nothing there yet, and the page
+  says so; **Check Again** reads the folder anew. When the session cannot be opened (a Flatpak
+  without access to USB devices), the page says why the folder could not be read. Voices and
+  vehicles Garmin offers to add to such a device are listed as **Add-Ons** and not installed.
+
 Installing a system update was tested on an Edge 1050 (betas 33.12, 33.20 and 33.21) and
 reported working on a fēnix 7 ([#6](https://github.com/TomaszBojanowski/openExpress/issues/6)); component updates were tested on a Venu 2 and a fēnix 8 (a map support file).
 
@@ -205,6 +214,10 @@ not offer in the country of your Garmin account is not installed or updated, and
 `openexpress maps` say why. The country is read from the account's profile (Garmin Express uses
 the computer's IP address); without it (not signed in, a device of another account) such a map
 is only marked.
+
+On a car navigator that keeps its maps in the folder it hides (`.System/Map`), the Maps page shows
+them as read through that USB session (see [Software updates](#software-updates)), without
+**Update** or **Remove**: openExpress does not install into that folder yet.
 
 ## Maps of your own
 

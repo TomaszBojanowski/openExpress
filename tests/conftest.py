@@ -543,6 +543,10 @@ def usb_nodes(tmp_path, monkeypatch) -> Path:
     from openexpress import diagnostics
 
     monkeypatch.setattr(diagnostics, "_done", {})
+    # Nor what an earlier test read of folders ordinary MTP does not show (hidden_folders.kept).
+    from openexpress import hidden_folders
+
+    monkeypatch.setattr(hidden_folders, "_kept", {})
     return folder
 
 

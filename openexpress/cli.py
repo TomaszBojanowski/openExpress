@@ -17,7 +17,7 @@ from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-from openexpress import __version__, applog, i18n, known_devices, paths
+from openexpress import __version__, applog, hidden_folders, i18n, known_devices, paths
 from openexpress.auth import store
 from openexpress.connect import (
     ApiError,
@@ -1831,8 +1831,17 @@ def _print_hidden(updates_shown, add_ons, lines: bool = False) -> None:
     if add_ons:
         print(upd.add_ons_text(len(add_ons)))
     system = next((u for u in updates_shown if u.is_system and u.hidden_folder), None)
-    if system is not None:
-        print(upd.hidden_software_text(system.hidden_folder))
+    if system is None:
+        return
+    if system.hidden_read:
+        print(upd.read_only_software_text(system.hidden_folder))
+        if system.hidden_size_same is not None:
+            print(upd.same_size_text() if system.hidden_size_same
+                  else upd.other_size_text(system))
+        return
+    print(upd.hidden_software_text(system.hidden_folder))
+    if (why := upd.not_read_text(system)) is not None:
+        print(why)
 
 
 def cmd_updates(args) -> int:
@@ -1843,6 +1852,13 @@ def cmd_updates(args) -> int:
     resp = client.software_updates(dev.raw, include_reinstalls=args.reinstalls)
     # Only reads the device.
     items = upd.offered(st, resp, dev)
+    needed = upd.hidden_needed(items)
+    if needed and hidden_folders.kept(st) is None:
+        # Folders of its top level ordinary MTP does not show: read once through a session of
+        # its own (the device leaves the file manager for a moment), then compared again.
+        with _progress() as progress:
+            hidden_folders.read(st, needed, "updates go there", progress=progress)
+        items = upd.offered(st, resp, dev)
     if not args.reinstalls:
         items = [u for u in items if not u.is_reinstall]
     # A system update that is on the device already waits for the device to install it.
@@ -2020,6 +2036,13 @@ def _load_maps(args, client, own: bool = False):
             # so their names alone are kept apart (ownmaps.is_garmin_name).
             all_maps, listed = [], 0
     mp.mark_waiting(st, all_maps)
+    needed = mp.hidden_needed(all_maps)
+    if needed and hidden_folders.kept(st) is None:
+        # The maps' files in folders of its top level ordinary MTP does not show: read once
+        # through a session of its own, then the maps marked again.
+        with _progress() as progress:
+            hidden_folders.read(st, needed, "the maps' files are there", progress=progress)
+        mp.mark_waiting(st, all_maps)
     return st, dev, all_maps, listed
 
 
@@ -2146,6 +2169,8 @@ def cmd_maps(args) -> int:
             print(f"  {m.name:48} {m.version:>9}  {human_size(m.size):>9}  {m.status}")
             if (note := mp.restriction_note(m)) is not None:
                 print("    " + note)
+            if m.hidden_folder is not None and not m.unseen:
+                print("    " + mp.read_only_text(m.hidden_folder))
         if not args.all:
             n = len(all_maps) - len(on_device)
             print("\n" + ngettext("{count} more map is available (openexpress maps --all).",
@@ -2163,7 +2188,10 @@ def cmd_maps(args) -> int:
         return 0
 
     if args.maps_cmd == "update":
-        targets = [m for m in all_maps if m.update_available]
+        targets = [m for m in all_maps if m.update_available and m.hidden_folder is None]
+        for m in all_maps:
+            if m.update_available and m.hidden_folder is not None:
+                print(mp.cannot_install_message(m))
         incomplete = sum(1 for m in all_maps if m.incomplete)
         for m in all_maps:
             if m.would_update and m.restricted is True:
@@ -2190,6 +2218,8 @@ def cmd_maps(args) -> int:
 
     for m in targets:
         if args.maps_cmd == "remove":
+            if (why := mp.removal_refused(m)) is not None:
+                raise mp.MapError(why)  # refused before anything is listed
             if not m.can_uninstall:
                 # Refused before anything is listed: the files are not going to be removed.
                 raise mp.MapError(mp.cannot_remove_message(m))

@@ -172,6 +172,11 @@ changes anything only shows its plan until you add `--apply`. Every command:
   service (the window and `openexpress maps` say so, and the Maps page names the map update type
   Garmin gives the device, which helps a report). Maps go only to the device's internal memory,
   not to a memory card.
+- A car navigator that hides the folder of its software and maps (`.System`) from the ordinary USB
+  connection, such as the Drive 53 EX ([#42](https://github.com/TomaszBojanowski/openExpress/issues/42)),
+  gets nothing installed or removed there yet: openExpress only reads that folder, through a USB
+  session of its own, to show what is on the device. Voices and vehicles Garmin offers to add
+  are not installed either.
 - GPS satellite data (ephemerides), which Garmin Express writes to the device when it syncs and
   which helps the device find its position faster, is not written.
 - ECG recordings are not uploaded: they go to Garmin Health, which needs a sign-in of its own. A
@@ -201,7 +206,7 @@ More: [Privacy and security](docs/privacy.md).
 
 Besides a window and the network, the Flatpak may run `gio copy` on the host (gvfs lets no
 sandboxed app write to MTP devices), open USB devices (`--device=usb`: Connect IQ apps on
-watches that hide their app folder) and use the drives mounted under `/run/media` and `/media`
+watches that hide their app folder, the folder a car navigator hides) and use the drives mounted under `/run/media` and `/media`
 (devices in mass storage mode). What each is for and how to turn it off:
 [Flatpak permissions](docs/privacy.md#flatpak-permissions).
 

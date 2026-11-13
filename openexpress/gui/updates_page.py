@@ -25,6 +25,7 @@ from openexpress.device.gio_storage import (  # noqa: E402
     ejected_text,
     not_ejected_text,
 )
+from openexpress.gui.hidden_reading import read_again  # noqa: E402
 from openexpress.gui.pictures import bike_accessory_text, is_bike_accessory  # noqa: E402
 from openexpress.gui.tasks import writes_to_device  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
@@ -92,6 +93,58 @@ def hidden_software_text(folder: str) -> str:
                     "device keeps its software, so it installs nothing there. Some devices, such "
                     "as car navigators, hide it from the ordinary USB connection.")
     return text.format(folder=folder)
+
+
+def read_only_folder_text(folder: str) -> str:
+    # TRANSLATORS: subtitle of an update on the Updates page that openExpress does not install
+    # yet, without a full stop; {folder}: a folder the device hides, e.g. .System, which
+    # openExpress reads through a USB session of its own
+    return _("Not installed yet: it goes to {folder}, which openExpress only "
+             "reads").format(folder=folder)
+
+
+def read_only_software_text(folder: str) -> str:
+    # TRANSLATORS: on the Updates page, under the device's software: the device keeps it in a
+    # folder hidden from the ordinary USB connection ({folder}, e.g. .System), which openExpress
+    # reads through a USB session of its own
+    text = pgettext("updates page", "openExpress reads the folder {folder} through its own USB "
+                    "connection, but does not install into it yet.")
+    return text.format(folder=folder)
+
+
+def file_size_line(u) -> str | None:
+    """What openExpress's own session found of the file of `u` in a folder the device hides,
+    by name and size (its contents are never read); None when nothing was found."""
+    if u.hidden_size_same is None:
+        return None
+    if u.hidden_size_same:
+        # TRANSLATORS: on the Updates page, without a full stop: a file in a folder the device
+        # hides, found by name and size only
+        return _("On the device at the same size; its contents not compared")
+    # TRANSLATORS: on the Updates page, without a full stop: a file of the update's name is on
+    # the device, of another size than offered; {file}: e.g. B444900.update
+    return _("On the device: {file} of another size").format(file=u.filename)
+
+
+def not_read_text(u) -> str | None:
+    """Why openExpress's own session could not read the folder of `u` the device hides; None
+    when it read it, or did not try."""
+    from openexpress import hidden_folders
+
+    if u.hidden_folder is None or u.hidden_session in (None, hidden_folders.READ):
+        return None
+    if u.hidden_session == hidden_folders.NO_USB:
+        # TRANSLATORS: on the Updates page; {folder}: a folder the device hides from the
+        # ordinary USB connection, e.g. .System
+        text = pgettext("updates page", "The Flatpak version has no access to USB devices, so "
+                        "it cannot read the folder {folder}. Give it the permission (see the "
+                        "README) or use the version from source.")
+    else:
+        # TRANSLATORS: on the Updates page; {folder}: a folder the device hides from the
+        # ordinary USB connection, e.g. .System
+        text = pgettext("updates page", "openExpress cannot open its own USB session with this "
+                        "device, so it cannot read the folder {folder}.")
+    return text.format(folder=u.hidden_folder)
 
 
 def add_ons_row_text(count: int) -> str:
@@ -303,9 +356,12 @@ def _status_line(text, styles) -> Gtk.Widget | None:
 
 
 def check_updates_again(win) -> None:
-    """"Check Again" on the Updates page: Garmin's server is asked anew."""
+    """"Check Again" on the Updates page: Garmin's server is asked anew; the folders of the
+    device's top level ordinary MTP does not show that it needs are read anew first, and the
+    page after them (hidden_reading)."""
     answers.forget_session(answers.SOFTWARE_UPDATES, win.session)
-    win.load_section("updates", force=True)
+    if not read_again(win):
+        win.load_section("updates", force=True)
 
 
 class UpdatesPage:
@@ -432,9 +488,14 @@ class UpdatesPage:
             detail = caption(system.title, system.severity_text, system.filename)
             # Copied before and offered again: the device has not installed it.
             note = copied_update_text(system)
-            if system.hidden_folder is not None:
+            if system.hidden_read:
+                # Its folder the device hides was read: what is there, nothing installed.
+                note = read_only_software_text(system.hidden_folder)
+                advice = file_size_line(system)
+            elif system.hidden_folder is not None:
                 # Its folder is not seen: nothing to install, and why.
                 note = hidden_software_text(system.hidden_folder)
+                advice = not_read_text(system)
             else:
                 # TRANSLATORS: button
                 buttons.append(self._button(_("Install") if note is None else _("Reinstall"),
@@ -527,7 +588,11 @@ class UpdatesPage:
                 subtitle += "\n" + note
                 reinstall = True
             button = waits_for is None and u.hidden_folder is None
-            if u.hidden_folder is not None:
+            if u.hidden_read:
+                subtitle += "\n" + read_only_folder_text(u.hidden_folder)
+                if (size := file_size_line(u)) is not None:
+                    subtitle += "\n" + size
+            elif u.hidden_folder is not None:
                 subtitle += "\n" + hidden_folder_text(u.hidden_folder)
         row = Adw.ActionRow(
             # TRANSLATORS: title of the row of an update of the device's own software (firmware), on

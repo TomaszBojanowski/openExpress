@@ -5,7 +5,7 @@ what Refresh asks Garmin's servers anew."""
 import functools
 import logging
 
-from openexpress import answers
+from openexpress import answers, hidden_folders
 
 log = logging.getLogger(__name__)
 
@@ -13,10 +13,13 @@ log = logging.getLogger(__name__)
 def forget_on_refresh(session) -> None:
     """Refresh (the button, F5, Try Again) asks Garmin's servers anew: the account's devices,
     the primary device, the account's country, and the software and maps of the device open
-    (answers)."""
+    (answers); and the folders of its top level ordinary MTP does not show are read anew
+    (hidden_folders)."""
     answers.ANSWERS.forget((answers.ACCOUNT_DEVICES, answers.PRIMARY_TRAINING,
                             answers.ACCOUNT_COUNTRY))
     answers.forget_session((answers.SOFTWARE_UPDATES, answers.UNIVERSAL_MAPS), session)
+    if getattr(session, "storage", None) is not None:
+        hidden_folders.forget(session.storage)
 
 
 def writes_to_device(fn):
