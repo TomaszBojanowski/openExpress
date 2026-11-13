@@ -38,7 +38,7 @@ def _account_row():
     from openexpress.gui.app import MainWindow
 
     calls = []
-    win = window_methods(stand_in(choose_dll=lambda: calls.append("installer"),
+    win = window_methods(stand_in(choose_dll=lambda button=None: calls.append("installer"),
                                   login=lambda: calls.append("login"),
                                   logout=lambda: calls.append("logout")),
                          ["_button", "_account_action"])

@@ -574,7 +574,7 @@ def _chosen_in_the_window(path: Path, in_the_window):
     in_the_window("save_consumer", saved.append)
     in_the_window("account_changed", lambda win: None)
     run = RunNow(error="record")
-    app.MainWindow.choose_dll(stand_in(run_task=run, toast=lambda text: None))
+    app.MainWindow.choose_dll(stand_in(run_task=run, toast=lambda text, **kw: None))
     assert run.errors == []
     return saved[0]
 

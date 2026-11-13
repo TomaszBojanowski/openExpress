@@ -429,7 +429,7 @@ class Preferences:
             title=_("Garmin Express Installer for Windows"),
             subtitle=_("GarminExpress.exe from garmin.com: the application key is read from it "
                        "again, nothing is installed"))
-        row.add_suffix(self._button(_("Choose File…"), self.choose_dll))
+        row.add_suffix(self._button(_("Choose File…"), self.choose_dll, with_button=True))
         g.add(row)
         page.add(g)
         page.add(self._cache_group())
@@ -443,20 +443,21 @@ class Preferences:
         with Log out, or nobody with Log In; drawn again when the account changes."""
         g = Adw.PreferencesGroup(title=_("Garmin Connect Account"))
         row = Adw.ActionRow()
-        button = self._button("", self._account_action)
+        button = self._button("", self._account_action, with_button=True)
         row.add_suffix(button)
         g.add(row)
         self._account_row = (row, button)
         render_account_row(self)
         return g
 
-    def _account_action(self) -> None:
+    def _account_action(self, button: Gtk.Button | None = None) -> None:
         """Log out or Log In in the preferences: the same as in the device view; without the
-        application key, Choose Installer… first."""
+        application key, Choose Installer… first (`button`, the row's, spins while it is
+        read)."""
         if logged_in_auth() is not None:
             self.logout()
         elif not has_consumer():
-            self.choose_dll()
+            self.choose_dll(button)
         else:
             self.login()
 
@@ -534,7 +535,11 @@ class Preferences:
         dialog.add(section)
         dialog.present(self)
 
-    def choose_dll(self) -> None:
+    def choose_dll(self, button: Gtk.Button | None = None) -> None:
+        """Garmin Express's installer chosen and its application key saved. What follows is
+        told where the user is: on the preferences while they are open, where `button` (the
+        one clicked there) spins while the installer is read; else on the window (the banner
+        of the device page). A failure is a dialog over both."""
         dialog = Gtk.FileDialog(
             title=_("Choose the Garmin Express Installer for Windows (GarminExpress.exe)"))
 
@@ -550,16 +555,23 @@ class Preferences:
             except GLib.Error:
                 return
             if f.get_path() is None:
-                self.toast(_("Choose a file stored on this computer"))
+                self.toast(_("Choose a file stored on this computer"), on_preferences=True)
+                return
+            if self.busy:
+                # A task began while the file was being chosen: run_task would say so on the
+                # window, under the preferences.
+                log.info("setup: the installer not read: another task is running")
+                self.toast(_("Another operation is in progress"), on_preferences=True)
                 return
             path = Path(f.get_path())
 
             def saved(consumer):
                 save_consumer(consumer)
-                self.toast(_("Application key saved"))
+                self.toast(_("Application key saved"), on_preferences=True)
                 account_changed(self)
 
             self.run_task(_("Reading the Installer…"), lambda: read(path), saved, device=False,
+                          button=button,
                           # TRANSLATORS: heading of the error when the application key could not
                           # be read from Garmin Express's installer
                           failed_title=_("Installer Not Read"))
