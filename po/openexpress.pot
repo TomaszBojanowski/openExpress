@@ -1798,17 +1798,10 @@ msgctxt "satellite data"
 msgid "on"
 msgstr ""
 
-#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned
-#. off
+#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned off
 #: openexpress/cli.py
 msgctxt "satellite data"
 msgid "off"
-msgstr ""
-
-#. TRANSLATORS: `openexpress status` and `sync`: the watch renamed the file written
-#. to CPE_BAD.bin
-#: openexpress/cli.py
-msgid "the device rejected the last file (CPE_BAD.bin)"
 msgstr ""
 
 #. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):"
@@ -1823,6 +1816,12 @@ msgstr ""
 #, python-brace-format
 msgctxt "satellite data"
 msgid "not updated: {reason}"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: on, nothing written yet,
+#. as the watch's own satellite data (e.g. from the phone) is current
+#: openexpress/cli.py openexpress/gui/words.py
+msgid "the data on the device is current"
 msgstr ""
 
 #. TRANSLATORS: in the subtitle of the row Satellite Data: on, not written yet
@@ -8924,6 +8923,52 @@ msgstr ""
 #. TRANSLATORS: why the satellite data was not updated, after "not updated: "
 #: openexpress/gui/words.py
 msgid "the file could not be written to the device"
+msgstr ""
+
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: ": the watch
+#. keeps them hidden from the file manager and the app cannot open its own connection to
+#. the watch here (e.g. a Flatpak without access to USB)
+#: openexpress/gui/words.py
+msgid "the device's hidden files cannot be reached here"
+msgstr ""
+
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: ": Garmin's
+#. server answered that it was asked too often; {time} is when it may be asked again,
+#. e.g. "14:05"
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Garmin's server asks to wait until {time}"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status` and `sync`: the watch did not take the satellite
+#. data file written (left it as written after it was unplugged, or renamed it)
+#: openexpress/gui/words.py
+msgid "the device did not take the last file"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status` and `sync`: the satellite data file written was not
+#. on the watch twice in a row
+#: openexpress/gui/words.py
+msgid "the written file disappeared twice"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status` and `sync`: the watch renamed the file written to
+#. CPE_BAD.bin
+#: openexpress/gui/words.py
+msgid "the device rejected the last file (CPE_BAD.bin)"
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row Satellite Data: the watch did not take the file
+#. written (left it as written after it was unplugged, or renamed it), so the switch
+#. was turned off
+#: openexpress/gui/words.py
+msgid "Turned off: the device did not take the last file"
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row Satellite Data: the file written was not on the
+#. watch twice in a row, so the switch was turned off
+#: openexpress/gui/words.py
+msgid "Turned off: the written file disappeared twice"
 msgstr ""
 
 #. TRANSLATORS: subtitle of the row Satellite Data: the watch renamed the file written to

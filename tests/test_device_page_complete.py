@@ -522,6 +522,58 @@ def test_the_satellite_data_row_says_off_updated_and_turned_off(clock, language)
 
 
 @pytest.mark.needs_display
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_satellite_data_row_of_a_watch_that_hides_gpe_and_gpes(clock, language):
+    """A watch such as the fēnix 8: its own data current, ours written, the server's wait, and
+    turned off when it did not take a file or the file disappeared twice."""
+    from datetime import timedelta
+
+    from openexpress import satellite
+
+    files = {"GPE.bin": {"time": 1794500000}, "GPES.bin": {"time": 1794500000}}
+    written = (clock.current - timedelta(days=1)).timestamp()
+    until = (clock.current + timedelta(minutes=40)).timestamp()
+    i18n.setup(language)
+    try:
+        said = {}
+        for name, state in (
+                ("off", satellite.State(kind=satellite.RXNETWORKS, files=files)),
+                ("current", satellite.State(on=True, kind=satellite.RXNETWORKS, files=files,
+                                            current=True)),
+                ("updated", satellite.State(on=True, kind=satellite.RXNETWORKS, files=files,
+                                            written_at=written)),
+                ("wait", satellite.State(on=True, kind=satellite.RXNETWORKS, files=files,
+                                         error=f"{satellite.WAIT}{int(until)}")),
+                ("not taken", satellite.State(stopped=True, kind=satellite.RXNETWORKS,
+                                              files=files, why=satellite.NOT_TAKEN)),
+                ("gone twice", satellite.State(stopped=True, kind=satellite.RXNETWORKS,
+                                               files=files, why=satellite.GONE_TWICE))):
+            win, _section = _page(satellite=state)
+            said[name] = _satellite_row(win).get_subtitle()
+    finally:
+        i18n.setup("en")
+    at = datetime.fromtimestamp(written).strftime("%H:%M")
+    wait = datetime.fromtimestamp(until).strftime("%H:%M")
+    if language == "en":
+        assert said == {
+            "off": f"Experimental{NB}· when on, each sync updates it",
+            "current": f"Experimental{NB}· the data on the device is current",
+            "updated": f"Experimental{NB}· updated yesterday, {at}",
+            "wait": f"Experimental{NB}· not updated: Garmin's server asks to wait until {wait}",
+            "not taken": "Turned off: the device did not take the last file",
+            "gone twice": "Turned off: the written file disappeared twice"}
+    else:
+        assert said == {
+            "off": f"Eksperymentalne{NB}· po włączeniu aktualizuje je każda synchronizacja",
+            "current": f"Eksperymentalne{NB}· dane na urządzeniu są aktualne",
+            "updated": f"Eksperymentalne{NB}· zaktualizowane wczoraj, {at}",
+            "wait": (f"Eksperymentalne{NB}· nie zaktualizowano: serwer Garmina prosi o{NB}przerwę"
+                     f" do {wait}"),
+            "not taken": "Wyłączone: urządzenie nie przyjęło ostatniego pliku",
+            "gone twice": "Wyłączone: zapisany plik dwa razy zniknął"}
+
+
+@pytest.mark.needs_display
 def test_the_satellite_data_switch_turns_them_on_and_off_for_the_device(clock):
     from openexpress import satellite
 

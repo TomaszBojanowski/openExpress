@@ -172,9 +172,10 @@ changes anything only shows its plan until you add `--apply`. Every command:
   service (the window and `openexpress maps` say so, and the Maps page names the map update type
   Garmin gives the device, which helps a report). Maps go only to the device's internal memory,
   not to a memory card.
-- GPS satellite data is written only to watches that already keep it as `CPE.BIN` in the format
-  of the Forerunner 45, and only when **Satellite Data** is turned on for them (experimental);
-  other watches get it from the phone app as before.
+- GPS satellite data is written only to watches that already keep it in a format openExpress
+  knows (`CPE.BIN` of the Forerunner 45, `GPE.bin` and `GPES.bin` of the fēnix 8), and only when
+  **Satellite Data** is turned on for them (experimental); other watches get it from the phone
+  app as before.
 - ECG recordings are not uploaded: they go to Garmin Health, which needs a sign-in of its own. A
   sync leaves them on the device and says how many there are.
 - The privacy-policy consents are not checked before a sync; the upload consent is
