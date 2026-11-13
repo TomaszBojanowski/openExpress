@@ -408,7 +408,7 @@ def test_logging_out_says_it_on_the_start_page(monkeypatch, in_the_window):
     from openexpress.gui.app import MainWindow
 
     win = stand_in(_account=[{"unitid": 1}], _account_why=None, toasts=[])
-    win.toast = win.toasts.append
+    win.toast = lambda text, on_preferences=False: win.toasts.append(text)
     changed = []
     in_the_window("account_changed", lambda w, cause: changed.append(cause))
     monkeypatch.setattr(store, "delete", lambda: None)

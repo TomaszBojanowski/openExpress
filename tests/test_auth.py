@@ -99,7 +99,7 @@ def test_logout_in_the_window_removes_the_saved_login():
 
     saved_login()
     said, refreshed = [], []
-    win = stand_in(session=object(), toast=said.append,
+    win = stand_in(session=object(), toast=lambda text, on_preferences=False: said.append(text),
                    refresh_device=lambda **_kw: refreshed.append(True))
     MainWindow.logout(win)
     assert not login_file().exists()

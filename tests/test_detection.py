@@ -4570,7 +4570,7 @@ def start_stand_in(start, sections, win=None):
     win.load_section = lambda key: None
     win._poll_usb = lambda: None
     win.in_background = lambda work, done, failed=None: done(work())
-    win.toast = win.errors.append
+    win.toast = lambda text, on_preferences=False: win.errors.append(text)
     win._start_entries, win._asked, win._pending_cause = [], None, None
     win.connected, win._reread_pending = Connected(), False
     win._account, win._account_wanted = None, False
@@ -5774,7 +5774,8 @@ def login_finished(win, monkeypatch):
     monkeypatch.setattr(GLib, "idle_add", lambda fn: fn())
     real = win.run_task
 
-    def run_task(title, fn, done, failed=None, device=True, in_page=False, failed_title=None):
+    def run_task(title, fn, done, failed=None, device=True, in_page=False, button=None,
+                 failed_title=None):
         if title == "Signing In…":
             return done((types.SimpleNamespace(display="someone"), True))
         return real(title, fn, done, failed)

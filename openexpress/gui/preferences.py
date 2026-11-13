@@ -315,7 +315,7 @@ class Preferences:
                 # the start page) stays.
                 self.gui_settings = update_gui_settings(background=enabled)
                 self.toast(_("Background sync enabled") if enabled
-                           else _("Background sync disabled"))
+                           else _("Background sync disabled"), on_preferences=True)
                 if self.session is not None:
                     self.show_overview()
             else:
@@ -579,6 +579,10 @@ class Preferences:
         dialog.open(self, None, chosen)
 
     def login(self) -> None:
+        """Garmin's sign-in page (a window of its own), then the ticket exchanged for the
+        token. Told where the user is: with the preferences open, the account's button there
+        spins while the ticket is exchanged and the toast is on them; else the bar and the
+        toast of the window."""
         if not has_consumer():
             # Garmin's sign-in would be opened for nothing: the ticket cannot be exchanged
             # without the key.
@@ -620,14 +624,19 @@ class Preferences:
             def done(result):
                 auth, profile_ok = result
                 self.toast(_("Signed in as {account}").format(account=auth.display) if profile_ok
-                           else _("Signed in, but the account details could not be loaded"))
+                           else _("Signed in, but the account details could not be loaded"),
+                           on_preferences=True)
                 self._want_account()
                 account_changed(self)
 
             def start():
                 if self.busy:
                     return True  # the ticket expires only after minutes: wait for the task
+                # The account's button of the preferences open now, found now: one held from
+                # the click would keep closed preferences while Garmin's page is open.
+                shown = self._account_row
                 self.run_task(_("Signing In…"), work, done, device=False,
+                              button=shown[1] if shown is not None else None,
                               # TRANSLATORS: heading of the error when signing in to Garmin
                               # Connect did not end
                               failed_title=_("Sign-In Not Finished"))
@@ -645,7 +654,7 @@ class Preferences:
 
     def logout(self) -> None:
         store.delete()
-        self.toast(_("Signed out"))
+        self.toast(_("Signed out"), on_preferences=True)
         self._account = None  # the start page lists no device of the account any more
         self._account_why = "logged-out"  # and says so
         account_changed(self, Cause.LOGGED_OUT)
