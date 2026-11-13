@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 22:32+0100\n"
+"POT-Creation-Date: 2026-11-13 22:37+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -3962,6 +3962,15 @@ msgstr ""
 "akceptując ich licencje"
 
 #: openexpress/cli.py
+msgid ""
+"a trial: also write the updates chosen into a folder the device hides, such "
+"as a car navigator's .System, once openExpress has read it"
+msgstr ""
+"próba: zapisz wybrane aktualizacje także do folderu ukrytego przez "
+"urządzenie, np. .System nawigacji samochodowej, gdy openExpress już go "
+"odczytał"
+
+#: openexpress/cli.py
 msgid "maps on the device (TopoActive, base maps, CourseView…)"
 msgstr "mapy na urządzeniu (TopoActive, mapy bazowe, CourseView…)"
 
@@ -5106,13 +5115,13 @@ msgstr "Na urządzeniu już istnieje „{name}”."
 
 #: openexpress/device/ptp.py
 #, python-brace-format
-msgid "The device did not say where it put “{name}”."
-msgstr "Urządzenie nie podało, gdzie zapisało „{name}”."
+msgid "“{name}” was not written correctly."
+msgstr "Nie udało się poprawnie zapisać „{name}”."
 
 #: openexpress/device/ptp.py
 #, python-brace-format
-msgid "“{name}” was not written correctly."
-msgstr "Nie udało się poprawnie zapisać „{name}”."
+msgid "The device did not say where it put “{name}”."
+msgstr "Urządzenie nie podało, gdzie zapisało „{name}”."
 
 #: openexpress/device/storage.py
 #, python-brace-format
@@ -8666,6 +8675,13 @@ msgstr ""
 "oprogramowanie, więc niczego tam nie instaluje. Niektóre urządzenia, np. "
 "nawigacje samochodowe, ukrywają go przed zwykłym połączeniem USB."
 
+#. TRANSLATORS: in the question before an update into a folder the device hides: the file of
+#. its name on the device is deleted before the new one is written; {file}: e.g. gmaptz.img
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgid "The update replaces the file {file} on the device."
+msgstr "Aktualizacja zastąpi plik {file} na urządzeniu."
+
 #. TRANSLATORS: title of the Updates page when updates are offered and openExpress can install
 #. none of them on this device
 #: openexpress/gui/updates_page.py
@@ -9874,6 +9890,59 @@ msgid ""
 msgstr ""
 "openExpress nie może otworzyć własnej sesji USB z tym urządzeniem, więc nie "
 "odczyta folderu {folder}."
+
+#. TRANSLATORS: {name} is an update, e.g. "Time Zone Map"; its old file was deleted before
+#. the new one was written, as Garmin Express does, and the new one failed
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"{name} was not written: its old file was removed and the new one is not on "
+"the device. Nothing else was changed; install it again."
+msgstr ""
+"Nie zapisano: {name}. Stary plik usunięto, a nowego nie ma na urządzeniu. "
+"Niczego więcej nie zmieniono; zainstaluj aktualizację ponownie."
+
+#. TRANSLATORS: {name} is an update, e.g. "Time Zone Map"
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"{name} was not written; nothing of it is on the device and nothing else was "
+"changed."
+msgstr ""
+"Nie zapisano: {name}. Nic z tej aktualizacji nie trafiło na urządzenie "
+"i niczego więcej nie zmieniono."
+
+#. TRANSLATORS: {name} is an update, e.g. "Time Zone Map", written into a folder the device
+#. hides; the device refused to give it back, so its bytes were not checked
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"{name} was written at its size, but the device did not let openExpress read "
+"it back, so its contents were not compared. The trial stops here: nothing "
+"else is written."
+msgstr ""
+"Zapisano: {name} – rozmiar się zgadza, ale urządzenie nie pozwoliło "
+"openExpress odczytać pliku, więc jego zawartości nie porównano. Próba kończy "
+"się tutaj: niczego więcej nie zapisano."
+
+#. TRANSLATORS: {needed} and {free} are sizes; the old file of the update counts as free, as
+#. it is removed before the new one is written
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"Not enough space for {name}: {needed} needed, {free} free with its old file "
+"counted. openExpress removes nothing else to make room."
+msgstr ""
+"Za mało miejsca na {name}: potrzeba {needed}, wolne {free} wraz ze starym "
+"plikiem. openExpress nie usuwa niczego innego, aby zrobić miejsce."
+
+#. TRANSLATORS: {folder}: e.g. .System/Map
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"The folder {folder} is not on the device; openExpress makes no folder there."
+msgstr ""
+"Folderu {folder} nie ma na urządzeniu; openExpress nie zakłada tam folderów."
 
 #. TRANSLATORS: the name of your language in your language ("Polski", "Deutsch",
 #. "Français"), as the list of languages in the Preferences shows it

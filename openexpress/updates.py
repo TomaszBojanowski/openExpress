@@ -478,9 +478,17 @@ def add_ons_text(count: int) -> str:
                     "install add-ons yet.", count).format(count=count)
 
 
+# Whether the window installs into a folder of the top level ordinary MTP does not show (read
+# through openExpress's own session), as the command line does with --hidden-folder-trial: the
+# one change that turns it on.
+HIDDEN_FOLDER_INSTALL = False
+
+
 def installable(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
-    """Those openExpress may write: none whose top folder it cannot see."""
-    return [u for u in updates if u.hidden_folder is None]
+    """Those the window may write: none whose top folder it cannot see, unless that folder was
+    read and HIDDEN_FOLDER_INSTALL is on."""
+    return [u for u in updates
+            if u.hidden_folder is None or (HIDDEN_FOLDER_INSTALL and u.hidden_read)]
 
 
 def add_ons(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
@@ -537,8 +545,24 @@ def offered(storage: Storage, response: dict, device,
     before (mark_copied; `forget_installed`: False for a check that keeps nothing). A test
     drive carries a real device's unit ID: what was copied to that device is not its."""
     unit = None if _test_drive(storage) else getattr(device, "unit_id", None)
-    return mark_copied(mark_present(storage, parse_updates(response, device),
-                                    component_count(device)), unit, forget_installed)
+    items = mark_present(storage, parse_updates(response, device), component_count(device))
+    started = (_connection_started(device, storage)
+               if unit and any(u.hidden_folder for u in items) else None)
+    return mark_copied(items, unit, forget_installed, connected_at=started)
+
+
+def _connection_started(device, storage) -> float | None:
+    """When the device's present connection began (history.connection_started); None when
+    that is not known. Optional: a failure is only written to the log."""
+    from openexpress import history
+
+    try:
+        return history.connection_started(device, storage)
+    except DeviceNotResponding:
+        raise
+    except Exception as e:  # noqa: BLE001 - only to tell an unplugging since a copy
+        log.info("updates: the start of this connection not read (%s)", type(e).__name__)
+        return None
 
 
 def _test_drive(storage) -> bool:
@@ -546,7 +570,8 @@ def _test_drive(storage) -> bool:
 
 
 def mark_copied(updates: list[SoftwareUpdate], unit_id: int | None,
-                forget_installed: bool = True) -> list[SoftwareUpdate]:
+                forget_installed: bool = True,
+                connected_at: float | None = None) -> list[SoftwareUpdate]:
     """The updates openExpress copied to this device before that the server still offers
     (not as reinstalls): when each was copied (known_devices), each said in the log, with
     whether the file at its place changed since (the same size, other bytes: the device
@@ -571,6 +596,14 @@ def mark_copied(updates: list[SoftwareUpdate], unit_id: int | None,
             continue
         u.copied_at = at
         u.unplugged_since_copy = unplugged is not None and unplugged > at
+        if u.hidden_folder is not None:
+            # In a folder the device hides, known by name and size: openExpress's copy is there
+            # at the size offered (its bytes were checked as it was written), or the device
+            # changed it; a connection begun after the copy (`connected_at`) is an unplugging.
+            u.on_device = u.on_device or u.hidden_size_same is True
+            u.changed_on_device = u.hidden_size_same is False
+            if connected_at is not None and connected_at > at:
+                u.unplugged_since_copy = True
         when = datetime.fromtimestamp(at).isoformat(timespec="minutes")
         if _not_installed(u):
             log.info("software update: %s %s copied %s, on the device after an unplugging "
@@ -791,22 +824,27 @@ def _install(
     progress: Callable[[str], None] | None = None,
     *,
     report: InstallReport,
+    hidden_trial: bool = False,
 ) -> InstallReport:
     """`progress`: each update by its name, in bytes ("Downloading … · 1.2 MB of 3.4 MB",
-    "Copying … to the device · …"); the files are the server's and the device's own. Two
+    "Copying … to the device · …"); the files are the server's and the device's own.
+    `hidden_trial`: also into a folder of the top level the device hides, once read
+    (_write_hidden). Two
     updates for one file: one of them is copied (one_per_file). `report` is filled as it goes:
     what was written before a failure is in it."""
     updates = one_per_file(updates)[0]  # the others are told in the log
-    # Never a folder of the device's top level: one the listing does not show may be hidden
-    # (a car navigator's .System), and nothing is downloaded for an update refused.
+    # Never a folder of the device's top level the listing does not show (a car navigator's
+    # .System), unless `hidden_trial` and that folder was read through openExpress's own session;
+    # nothing is downloaded for an update refused.
     tops = top_folders(storage)
     for u in updates:
         u.hidden_folder = top_folder_not_seen(u, tops)
-        if u.hidden_folder is not None:
+        if u.hidden_folder is not None and not (hidden_trial and u.hidden_read):
             log.info("software update: %s %s not installed: its top folder %s is not seen",
                      u.part_number, u.version, u.hidden_folder)
             raise UpdateError(not_installed_here_text(u))
-    need, free = check_space(storage, updates)
+    # A file in a hidden folder is checked against the space in its own session.
+    need, free = check_space(storage, [u for u in updates if u.hidden_folder is None])
     storage.require_space(need, space_margin(storage), error=UpdateError, free=free,
                           margin_said=True)
     # Download everything first so the watch is never left with only some of the files.
@@ -832,6 +870,11 @@ def _install(
         local_files[u.key] = local
     for u in sort_for_install(updates):
         local = local_files[u.key]
+        if u.hidden_folder is not None:
+            # As Garmin Express writes there; the device's own software after the rest, and the
+            # first failure stops all that would follow.
+            _write_hidden(storage, u, local, progress, report)
+            continue
         size = local.stat().st_size
         log.debug("software update: copying %s", u.device_path)
         copying = copying_text(u.title)
@@ -852,6 +895,27 @@ def _install(
         log.info("software update: %s %s (%s) copied to %s", u.part_number, u.version,
                  applog.size(size), real)
     return report
+
+
+def _write_hidden(storage: Storage, u: SoftwareUpdate, local: Path, progress,
+                  report: InstallReport) -> None:
+    """The file of `u` into the folder of the top level the device hides (hidden_folders.write);
+    an UpdateError that says what is on the device when it was not written whole, or could not
+    be read back (it then stays, counted as written)."""
+    try:
+        written = hidden_folders.write(storage, u.device_path, local.read_bytes(),
+                                       download.normalize_md5(u.md5), u.title,
+                                       space_margin(storage), progress=progress)
+    except hidden_folders.ContentsNotRead as e:
+        report.written.append(u)
+        raise UpdateError(str(e)) from e
+    except DeviceNotResponding:
+        raise
+    except DeviceError as e:
+        raise UpdateError(str(e)) from e
+    report.written.append(u)
+    log.info("software update: %s %s (%s) written to %s", u.part_number, u.version,
+             applog.size(written.size), written.real)
 
 
 # Left by a device that takes an update in parts. openExpress deletes it from the folder of

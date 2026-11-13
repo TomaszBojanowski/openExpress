@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 22:32+0100\n"
+"POT-Creation-Date: 2026-11-13 22:37+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -3564,6 +3564,12 @@ msgid ""
 msgstr ""
 
 #: openexpress/cli.py
+msgid ""
+"a trial: also write the updates chosen into a folder the device hides, such "
+"as a car navigator's .System, once openExpress has read it"
+msgstr ""
+
+#: openexpress/cli.py
 msgid "maps on the device (TopoActive, base maps, CourseView…)"
 msgstr ""
 
@@ -4586,12 +4592,12 @@ msgstr ""
 
 #: openexpress/device/ptp.py
 #, python-brace-format
-msgid "The device did not say where it put “{name}”."
+msgid "“{name}” was not written correctly."
 msgstr ""
 
 #: openexpress/device/ptp.py
 #, python-brace-format
-msgid "“{name}” was not written correctly."
+msgid "The device did not say where it put “{name}”."
 msgstr ""
 
 #: openexpress/device/storage.py
@@ -7895,6 +7901,13 @@ msgid ""
 "navigators, hide it from the ordinary USB connection."
 msgstr ""
 
+#. TRANSLATORS: in the question before an update into a folder the device hides: the file of
+#. its name on the device is deleted before the new one is written; {file}: e.g. gmaptz.img
+#: openexpress/gui/updates_page.py
+#, python-brace-format
+msgid "The update replaces the file {file} on the device."
+msgstr ""
+
 #. TRANSLATORS: title of the Updates page when updates are offered and openExpress can install
 #. none of them on this device
 #: openexpress/gui/updates_page.py
@@ -9039,6 +9052,49 @@ msgstr ""
 msgid ""
 "openExpress cannot open its own USB session with this device, so it cannot "
 "read the folder {folder}."
+msgstr ""
+
+#. TRANSLATORS: {name} is an update, e.g. "Time Zone Map"; its old file was deleted before
+#. the new one was written, as Garmin Express does, and the new one failed
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"{name} was not written: its old file was removed and the new one is not on "
+"the device. Nothing else was changed; install it again."
+msgstr ""
+
+#. TRANSLATORS: {name} is an update, e.g. "Time Zone Map"
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"{name} was not written; nothing of it is on the device and nothing else was "
+"changed."
+msgstr ""
+
+#. TRANSLATORS: {name} is an update, e.g. "Time Zone Map", written into a folder the device
+#. hides; the device refused to give it back, so its bytes were not checked
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"{name} was written at its size, but the device did not let openExpress read "
+"it back, so its contents were not compared. The trial stops here: nothing "
+"else is written."
+msgstr ""
+
+#. TRANSLATORS: {needed} and {free} are sizes; the old file of the update counts as free, as
+#. it is removed before the new one is written
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"Not enough space for {name}: {needed} needed, {free} free with its old file "
+"counted. openExpress removes nothing else to make room."
+msgstr ""
+
+#. TRANSLATORS: {folder}: e.g. .System/Map
+#: openexpress/hidden_folders.py
+#, python-brace-format
+msgid ""
+"The folder {folder} is not on the device; openExpress makes no folder there."
 msgstr ""
 
 #. TRANSLATORS: the name of your language in your language ("Polski", "Deutsch",

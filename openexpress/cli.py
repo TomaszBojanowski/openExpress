@@ -1952,9 +1952,12 @@ def cmd_updates(args) -> int:
     chosen = upd.select(items, args.install, keep_present=args.reinstalls)
     if args.install == ["all"]:
         chosen = [u for u in chosen if not u.is_add_on]  # said with the hidden ones below
-    # Nothing goes to a folder of the device's top level the listing does not show.
-    refused = [u for u in chosen if u.hidden_folder is not None]
-    chosen = [u for u in chosen if u.hidden_folder is None]
+    # Nothing goes to a folder of the device's top level the listing does not show, unless in
+    # a trial into one read through openExpress's own session.
+    trial = bool(getattr(args, "hidden_folder_trial", False))
+    refused = [u for u in chosen if u.hidden_folder is not None
+               and not (trial and u.hidden_read)]
+    chosen = [u for u in chosen if not any(u is r for r in refused)]
     _print_hidden(refused, extra if args.install == ["all"] else [], lines=True)
     if refused and not chosen:
         return 1
@@ -2008,7 +2011,7 @@ def cmd_updates(args) -> int:
         return 0
     with _progress() as progress:
         rep = upd.install(chosen, st, session=client.http, progress=progress,
-                          unit_id=dev.unit_id, offered=items)
+                          unit_id=dev.unit_id, offered=items, hidden_trial=trial)
     n = len(rep.written)
     print("\n" + ngettext("Copied {count} file.", "Copied {count} files.", n).format(count=n))
     if n and getattr(st, "mass_storage", False) and not _eject_drive(st):
@@ -3554,6 +3557,10 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--apply", action="store_true",
                    help=_("download the updates chosen with --install and copy them to the "
                           "device, accepting their licenses"))
+    s.add_argument("--hidden-folder-trial", action="store_true",
+                   help=_("a trial: also write the updates chosen into a folder the device "
+                          "hides, such as a car navigator's .System, once openExpress has read "
+                          "it"))
     s.set_defaults(func=cmd_updates)
 
     s = sub.add_parser("maps", help=_("maps on the device (TopoActive, base maps, CourseView…)"))

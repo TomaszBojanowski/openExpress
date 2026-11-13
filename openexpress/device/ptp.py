@@ -624,6 +624,19 @@ class Session:
             raise PtpWriteError(_("Refusing to write into the top folder of the device."))
         if named_in_any_case(self.all_children(storage, parent), name) is not None:
             raise PtpWriteError(_("“{name}” already exists on the device.").format(name=name))
+        handle = self.send_object(storage, parent, name, data)
+        written = next((item for item in self.children(storage, parent)
+                        if item.handle == handle), None)
+        if written is None or written.name != name or written.size != len(data):
+            raise PtpWriteError(_("“{name}” was not written correctly.").format(name=name), handle)
+        if verify_content and self.read_file(handle) != data:
+            raise PtpWriteError(_("“{name}” was not written correctly.").format(name=name), handle)
+        return written
+
+    def send_object(self, storage: int, parent: int, name: str, data: bytes) -> int:
+        """A new object `name` holding `data` in the folder `parent`, as Garmin Express writes
+        one (SendObjectInfo, then SendObject); its handle. Nothing is checked here. A SendObject
+        that fails raises PtpWriteError with the handle the device gave the object."""
         _data, answer = self._ok(SEND_OBJECT_INFO, storage, parent,
                                  data_out=object_info_dataset(name, len(data)))
         if len(answer) < 3:
@@ -634,13 +647,7 @@ class Session:
             self._ok(SEND_OBJECT, data_out=data)
         except PtpError as e:
             raise PtpWriteError(str(e), handle) from e
-        written = next((item for item in self.children(storage, parent)
-                        if item.handle == handle), None)
-        if written is None or written.name != name or written.size != len(data):
-            raise PtpWriteError(_("“{name}” was not written correctly.").format(name=name), handle)
-        if verify_content and self.read_file(handle) != data:
-            raise PtpWriteError(_("“{name}” was not written correctly.").format(name=name), handle)
-        return written
+        return handle
 
     def delete(self, handle: int) -> None:
         self._ok(DELETE_OBJECT, handle, 0)

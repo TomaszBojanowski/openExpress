@@ -95,6 +95,12 @@ def hidden_software_text(folder: str) -> str:
     return text.format(folder=folder)
 
 
+def replaces_text(u) -> str:
+    # TRANSLATORS: in the question before an update into a folder the device hides: the file of
+    # its name on the device is deleted before the new one is written; {file}: e.g. gmaptz.img
+    return _("The update replaces the file {file} on the device.").format(file=u.filename)
+
+
 def nothing_installable_title(count: int) -> str:
     """The title of the Updates page when Garmin offers updates and openExpress can install
     none of them (each goes to a folder the device hides)."""
@@ -185,7 +191,8 @@ def install_updates(s, chosen, progress, offered=None):
     from openexpress import updates as upd
 
     return upd.install(chosen, s.storage, session=s.client.http, progress=progress,
-                       unit_id=s.device.unit_id, offered=offered)
+                       unit_id=s.device.unit_id, offered=offered,
+                       hidden_trial=upd.HIDDEN_FOLDER_INSTALL)
 
 
 def _below_the_question(s, chosen):
@@ -499,11 +506,11 @@ class UpdatesPage:
             detail = caption(system.title, system.severity_text, system.filename)
             # Copied before and offered again: the device has not installed it.
             note = copied_update_text(system)
-            if system.hidden_read:
+            if system.hidden_read and not upd.HIDDEN_FOLDER_INSTALL:
                 # Its folder the device hides was read: what is there, nothing installed.
                 note = read_only_software_text(system.hidden_folder)
                 advice = file_size_line(system)
-            elif system.hidden_folder is not None:
+            elif system.hidden_folder is not None and not system.hidden_read:
                 # Its folder is not seen: nothing to install, and why.
                 note = hidden_software_text(system.hidden_folder)
                 advice = not_read_text(system)
@@ -599,12 +606,15 @@ class UpdatesPage:
             if note is not None:
                 subtitle += "\n" + note
                 reinstall = True
-            button = waits_for is None and u.hidden_folder is None
-            if u.hidden_read:
+            from openexpress import updates as upd
+
+            button = waits_for is None and (
+                u.hidden_folder is None or (upd.HIDDEN_FOLDER_INSTALL and u.hidden_read))
+            if u.hidden_read and not upd.HIDDEN_FOLDER_INSTALL:
                 subtitle += "\n" + read_only_folder_text(u.hidden_folder)
                 if (size := file_size_line(u)) is not None:
                     subtitle += "\n" + size
-            elif u.hidden_folder is not None:
+            elif u.hidden_folder is not None and not u.hidden_read:
                 subtitle += "\n" + hidden_folder_text(u.hidden_folder)
         row = Adw.ActionRow(
             # TRANSLATORS: title of the row of an update of the device's own software (firmware), on
@@ -637,7 +647,12 @@ class UpdatesPage:
                 # what the update changes
                 + ("\n\n" + _("Changes:") + "\n" + "\n".join("• " + c for c in u.changes[:10])
                    if u.changes else "")
-                + ("\n\n" + _("This is a beta version.") if u.is_beta else ""))
+                + ("\n\n" + _("This is a beta version.") if u.is_beta else "")
+                # A file of its name in a folder the device hides goes first, as Garmin Express
+                # writes there.
+                + ("\n\n" + replaces_text(u)
+                   if u.hidden_folder is not None and u.hidden_size_same is not None else ""))
+
         def install() -> None:
             work, done, failed = _install_task(self, s, chosen)
             self.run_task(_("Installing Update…"), writes_to_device(work), done, failed)

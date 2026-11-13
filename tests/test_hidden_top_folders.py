@@ -336,11 +336,13 @@ MAP_FILE = b"MAPS"  # at the size the map service gives (_map)
 
 class _Session(FakeDevice):
     """The navigator's own USB session; `listed`: (operation, folder) of each listing asked;
-    `fail_at`: a folder whose listing fails as a device unplugged meanwhile does."""
+    `fail_at`: a folder whose listing fails as a device unplugged meanwhile does; `steps`:
+    what changed or read a file, in order; `corrupt_reads`: a file read back with other
+    bytes."""
 
     def __init__(self):
         super().__init__()
-        self.listed, self.fail_at = [], None
+        self.listed, self.fail_at, self.steps, self.corrupt_reads = [], None, [], False
 
     def _handle(self, operation, params, data):
         if operation in (ptp.GET_OBJECT_HANDLES, ptp.GARMIN_GET_OBJECT_IDS):
@@ -348,7 +350,24 @@ class _Session(FakeDevice):
             self.listed.append((operation, parent))
             if self.fail_at is not None and parent == self.handle(self.fail_at):
                 raise ptp.PtpError("No such device (it may have been disconnected)")
+        elif operation == ptp.DELETE_OBJECT and params[0] in self.objects:
+            self.steps.append(("delete", self.path_of(params[0])))
+        elif operation == ptp.SEND_OBJECT_INFO:
+            name, _end = ptp.read_string(data, 52)
+            self.steps.append(("info", f"{self.path_of(params[1])}/{name}"))
+        elif operation == ptp.SEND_OBJECT:
+            self.steps.append(("send",))
+        elif operation == ptp.GET_OBJECT and params[0] in self.objects:
+            self.steps.append(("read", self.path_of(params[0])))
+            answer = super()._handle(operation, params, data)
+            if self.corrupt_reads and answer[0] == ptp.OK:
+                return ptp.OK, bytes(b ^ 1 for b in answer[1])
+            return answer
         return super()._handle(operation, params, data)
+
+    def data_at(self, path: str):
+        handle = self.handle(path)
+        return self.objects[handle].data if handle is not None else None
 
     def path_of(self, handle) -> str:
         parts = []
@@ -371,6 +390,7 @@ def navigator_session(software=OLDER_SYSTEM):
     fake.add("GARMIN/GarminDevice.xml", b"<Device/>")
     fake.add("Voice")
     fake.add("Vehicle")
+    fake.add("Demo/Tour.mp4", b"a demo the device plays")  # never touched
     for folder in (".System", ".System/Map", ".System/Diag"):
         fake.add(folder, hidden=True)
     for path, data in ((".System/B000000.update", software), (".System/gmaptz.img", b"tz"),
@@ -1109,3 +1129,250 @@ def test_the_maps_page_offers_no_own_map_for_a_folder_the_device_hides(navigator
     assert buttons and not any(b.get_sensitive() for b in buttons)
     assert any(r.get_subtitle() == "openExpress does not install into .System yet"
                for r in own.rows if hasattr(r, "get_subtitle"))
+
+
+# --- a trial writes into the hidden folder, in Garmin Express's order ------------------------
+
+TZ_NEW = b"made-up time zones, newer and of another size"
+TZ_OLD = b"tz"  # as navigator_session has it
+
+
+def trial_answer():
+    """The software and the time zone map, both in .System, as a Drive 53 EX is offered them."""
+    return {"updates": [
+        _entry("006-B0000-00", "Made-up Drive", ".System", "B000000.update", SYSTEM,
+               primary=True),
+        _entry("006-D9001-00", "Time zone map", ".System", "gmaptz.img", TZ_NEW)]}
+
+
+@pytest.fixture
+def trial_downloads(monkeypatch, tmp_path):
+    fetched, content = [], {"B000000.update": SYSTEM, "gmaptz.img": TZ_NEW}
+
+    def fetch(urls, dest, size, md5, session=None, progress=None):
+        fetched.append(dest.name)
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        dest.write_bytes(content[dest.name])
+        return dest
+
+    monkeypatch.setattr(download, "fetch", fetch)
+    monkeypatch.setattr(updates, "cache_path", lambda u: tmp_path / "cache" / u.filename)
+    return fetched
+
+
+def _trial_offered(storage):
+    hidden_folders.read(storage, [".System"], "test")
+    return _by_part(_offered_from(storage, trial_answer()))
+
+
+def _both(by):
+    return [by["006-B0000-00"], by["006-D9001-00"]]
+
+
+TZ_STEPS = [("delete", ".System/gmaptz.img"), ("info", ".System/gmaptz.img"), ("send",),
+            ("read", ".System/gmaptz.img")]
+SYSTEM_STEPS = [("delete", ".System/B000000.update"), ("info", ".System/B000000.update"),
+                ("send",), ("read", ".System/B000000.update")]
+NOT_WRITTEN_TZ = ("Time zone map was not written: its old file was removed and the new one is not "
+                  "on the device. Nothing else was changed; install it again.")
+
+
+def test_the_trial_writes_the_time_zone_map_then_the_software_in_express_order(
+        navigator, trial_downloads):
+    fake = navigator_session()
+    storage = OverUsb(navigator, fake)
+    folders_before = sorted(fake.path_of(h) for h, o in fake.objects.items() if o.data is None)
+    report = updates.install(_both(_trial_offered(storage)), storage, hidden_trial=True)
+    assert [u.part_number for u in report.written] == ["006-D9001-00", "006-B0000-00"]
+    # Each: the old file deleted, the new one announced in .System and sent, then read back.
+    assert fake.steps == TZ_STEPS + SYSTEM_STEPS
+    assert fake.data_at(".System/gmaptz.img") == TZ_NEW
+    assert fake.data_at(".System/B000000.update") == SYSTEM
+    # Nothing else: no folder made, Demo as it was.
+    assert sorted(fake.path_of(h) for h, o in fake.objects.items()
+                  if o.data is None) == folders_before
+    assert fake.data_at("Demo/Tour.mp4") == b"a demo the device plays"
+
+
+def test_without_the_trial_nothing_goes_into_the_hidden_folder(navigator, trial_downloads):
+    fake = navigator_session()
+    storage = OverUsb(navigator, fake)
+    with pytest.raises(updates.UpdateError, match="which openExpress only reads"):
+        updates.install(_both(_trial_offered(storage)), storage)
+    assert fake.steps == [] and trial_downloads == []
+
+
+def test_the_trial_stops_at_the_first_file_that_is_not_written(navigator, trial_downloads):
+    fake = navigator_session()
+    fake.refuse[ptp.SEND_OBJECT] = ptp.GENERAL_ERROR
+    storage = OverUsb(navigator, fake)
+    with pytest.raises(updates.UpdateError) as failed:
+        updates.install(_both(_trial_offered(storage)), storage, hidden_trial=True)
+    assert str(failed.value) == NOT_WRITTEN_TZ
+    # What was announced is deleted at once; the software is never touched.
+    assert fake.steps == TZ_STEPS[:3] + [("delete", ".System/gmaptz.img")]
+    assert fake.data_at(".System/gmaptz.img") is None
+    assert fake.data_at(".System/B000000.update") == OLDER_SYSTEM
+
+
+def test_a_file_written_short_is_removed_and_the_trial_stops(navigator, trial_downloads):
+    fake = navigator_session()
+    fake.truncate_written = 1
+    storage = OverUsb(navigator, fake)
+    with pytest.raises(updates.UpdateError) as failed:
+        updates.install(_both(_trial_offered(storage)), storage, hidden_trial=True)
+    assert str(failed.value) == NOT_WRITTEN_TZ
+    assert fake.data_at(".System/gmaptz.img") is None
+    assert fake.data_at(".System/B000000.update") == OLDER_SYSTEM
+
+
+def test_a_file_read_back_with_other_bytes_is_removed_and_the_trial_stops(navigator,
+                                                                         trial_downloads):
+    fake = navigator_session()
+    fake.corrupt_reads = True
+    storage = OverUsb(navigator, fake)
+    with pytest.raises(updates.UpdateError) as failed:
+        updates.install(_both(_trial_offered(storage)), storage, hidden_trial=True)
+    assert str(failed.value) == NOT_WRITTEN_TZ
+    assert fake.steps == TZ_STEPS + [("delete", ".System/gmaptz.img")]
+    assert fake.data_at(".System/B000000.update") == OLDER_SYSTEM
+
+
+def test_a_read_back_refused_ends_the_trial_after_the_size(navigator, trial_downloads):
+    fake = navigator_session()
+    fake.refuse[ptp.GET_OBJECT] = ptp.ACCESS_DENIED
+    storage = OverUsb(navigator, fake)
+    with pytest.raises(updates.UpdateError) as stopped:
+        updates.install(_both(_trial_offered(storage)), storage, hidden_trial=True)
+    assert str(stopped.value) == (
+        "Time zone map was written at its size, but the device did not let openExpress read it "
+        "back, so its contents were not compared. The trial stops here: nothing else is "
+        "written.")
+    assert fake.data_at(".System/gmaptz.img") == TZ_NEW  # kept, as Garmin Express leaves it
+    assert fake.data_at(".System/B000000.update") == OLDER_SYSTEM
+
+
+def test_not_enough_space_changes_nothing(navigator, trial_downloads):
+    fake = navigator_session()
+    storage = OverUsb(navigator, fake)
+    by = _trial_offered(storage)
+    fake.free = 1
+    with pytest.raises(updates.UpdateError, match="openExpress removes nothing else to make room"):
+        updates.install(_both(by), storage, hidden_trial=True)
+    assert fake.steps == [] and fake.data_at(".System/gmaptz.img") == TZ_OLD
+
+
+def test_the_write_lists_the_folder_afresh(navigator, trial_downloads):
+    fake = navigator_session()
+    storage = OverUsb(navigator, fake)
+    by = _trial_offered(storage)
+    # The device replaced its file after the reading: the write finds the one there now.
+    del fake.objects[fake.handle(".System/gmaptz.img")]
+    fake.add(".System/gmaptz.img", b"another", hidden=True)
+    updates.install([by["006-D9001-00"]], storage, hidden_trial=True)
+    assert fake.steps == TZ_STEPS and fake.data_at(".System/gmaptz.img") == TZ_NEW
+
+
+def test_a_folder_not_on_the_device_is_never_made(navigator):
+    fake = navigator_session()
+    storage = OverUsb(navigator, fake)
+    with pytest.raises(hidden_folders.WriteRefused, match="openExpress makes no folder there"):
+        hidden_folders.write(storage, ".System/Made-up/x.bin", b"x",
+                             hashlib.md5(b"x").hexdigest(), "X", margin=0)
+    assert fake.steps == []
+
+
+def test_the_command_line_trial_writes_both_and_says_so(offered_to, monkeypatch, capsys,
+                                                       trial_downloads):
+    from openexpress import cli
+
+    fake = navigator_session()
+    storage = OverUsb(offered_to, fake)
+    monkeypatch.setattr(cli, "open_storage", lambda args: storage)
+    answer = lower_keys(trial_answer())
+    monkeypatch.setattr(GarminClient, "software_updates",
+                        lambda self, raw, include_reinstalls=False: answer)
+    assert main(["updates", "--install", "006-D9001-00", "006-B0000-00", "--apply"]) == 1
+    assert fake.steps == []  # without the flag: refused
+    assert main(["updates", "--install", "006-D9001-00", "006-B0000-00",
+                 "--hidden-folder-trial", "--apply"]) == 0
+    assert "Copied 2 files." in capsys.readouterr().out.splitlines()
+    assert fake.steps == TZ_STEPS + SYSTEM_STEPS
+
+
+def test_after_the_trial_the_software_waits_for_the_device_then_is_said_not_installed(
+        navigator, trial_downloads, monkeypatch):
+    from openexpress import history, known_devices, service
+
+    fake = navigator_session()
+    storage = OverUsb(navigator, fake)
+    device = service.read_device(storage, found_now=True)
+    updates.install(_both(_trial_offered(storage)), storage, hidden_trial=True,
+                    unit_id=device.unit_id)
+    assert known_devices.load()[device.unit_id].copied_updates
+    hidden_folders.forget(storage)
+    hidden_folders.read(storage, [".System"], "test")
+    items = updates.offered(storage, lower_keys(trial_answer()), device)
+    # Its file at the size offered, written by openExpress: copied, waiting for the device.
+    assert {u.part_number for u in updates.staged(items)} == {"006-D9001-00", "006-B0000-00"}
+    # A connection begun after the copy with the same offer: the device did not install it.
+    monkeypatch.setattr(history, "connection_started", lambda device, storage: 4e9)
+    items = updates.offered(storage, lower_keys(trial_answer()), device)
+    assert updates.staged(items) == []
+    assert {u.part_number for u in updates.not_installed(items)} == {"006-D9001-00",
+                                                                    "006-B0000-00"}
+
+
+@pytest.mark.needs_display
+def test_the_window_installs_nothing_into_the_hidden_folder_until_switched_on(navigator,
+                                                                             monkeypatch):
+    from gi.repository import Gtk
+
+    from openexpress.gui import updates_page
+    from openexpress.gui.window_tasks import descendants
+
+    storage = OverUsb(navigator, navigator_session())
+    offered = list(_trial_offered(storage).values())
+    status, available, *_rest = _updates_page(offered)
+    assert "Install" not in _texts(status.rows[0])
+    assert not [w for r in available.rows for w in descendants(r) if isinstance(w, Gtk.Button)]
+    # Switched on (one change, once the trial passes): Install, without the words of reading.
+    monkeypatch.setattr(updates, "HIDDEN_FOLDER_INSTALL", True)
+    status, available, *_rest = _updates_page(offered)
+    top = _texts(status.rows[0])
+    assert "Install" in top and READ_NOTICE not in top
+    (tz,) = available.rows
+    assert not any(words in tz.get_subtitle() for words in ("only reads", "file named",
+                                                            "cannot see"))
+    assert "Install" in _texts(tz)
+    assert updates_page.replaces_text(offered[1]) == (
+        "The update replaces the file gmaptz.img on the device.")
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_words_of_the_trial_in_both_languages(language):
+    from openexpress import i18n
+    from openexpress.gui import updates_page
+
+    i18n.setup(language)
+    try:
+        u = updates.parse_updates(lower_keys(trial_answer()))[1]
+        texts = [hidden_folders.not_written_text(u.title, old_removed=True),
+                 hidden_folders.contents_not_read_text(u.title),
+                 updates_page.replaces_text(u)]
+    finally:
+        i18n.setup("en")
+    expected = {
+        "en": [NOT_WRITTEN_TZ,
+               ("Time zone map was written at its size, but the device did not let openExpress "
+                "read it back, so its contents were not compared. The trial stops here: nothing "
+                "else is written."),
+               "The update replaces the file gmaptz.img on the device."],
+        "pl": [("Nie zapisano: Time zone map. Stary plik usunięto, a\u00a0nowego nie ma na "
+                "urządzeniu. Niczego więcej nie zmieniono; zainstaluj aktualizację ponownie."),
+               ("Zapisano: Time zone map\u00a0– rozmiar się zgadza, ale urządzenie nie pozwoliło "
+                "openExpress odczytać pliku, więc jego zawartości nie porównano. Próba kończy się "
+                "tutaj: niczego więcej nie zapisano."),
+               "Aktualizacja zastąpi plik gmaptz.img na urządzeniu."]}
+    assert texts == expected[language]
+

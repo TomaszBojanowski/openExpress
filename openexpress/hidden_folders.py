@@ -8,6 +8,7 @@ take it from there. Whatever writes there one day lists its folder anew in its o
 
 from __future__ import annotations
 
+import hashlib
 import logging
 import posixpath
 from collections.abc import Callable, Iterable
@@ -251,3 +252,150 @@ def _read_in(session, wanted: list[str], listing: Listing) -> None:
         entries = [Entry(i.name, i.is_dir, 0 if i.is_dir else i.size)
                    for i in children(store, current.handle)]
         listing.folders[folder.casefold()] = ("/".join(real), entries)
+
+
+# --- writing one file there (a trial: updates._install with hidden_trial) ---------------------
+
+
+class WriteRefused(DeviceError):
+    """Nothing was changed on the device: why not."""
+
+
+class NotWritten(DeviceError):
+    """The file was not written; the text says what is on the device now."""
+
+
+class ContentsNotRead(DeviceError):
+    """The file was written at its size, and the device did not let it be read back."""
+
+
+def not_written_text(name: str, old_removed: bool) -> str:
+    if old_removed:
+        # TRANSLATORS: {name} is an update, e.g. "Time Zone Map"; its old file was deleted before
+        # the new one was written, as Garmin Express does, and the new one failed
+        return _("{name} was not written: its old file was removed and the new one is not on "
+                 "the device. Nothing else was changed; install it again.").format(name=name)
+    # TRANSLATORS: {name} is an update, e.g. "Time Zone Map"
+    return _("{name} was not written; nothing of it is on the device and nothing else was "
+             "changed.").format(name=name)
+
+
+def contents_not_read_text(name: str) -> str:
+    # TRANSLATORS: {name} is an update, e.g. "Time Zone Map", written into a folder the device
+    # hides; the device refused to give it back, so its bytes were not checked
+    return _("{name} was written at its size, but the device did not let openExpress read it "
+             "back, so its contents were not compared. The trial stops here: nothing else is "
+             "written.").format(name=name)
+
+
+def no_space_text(name: str, needed: int, free: int) -> str:
+    from openexpress.i18n import human_size
+
+    # TRANSLATORS: {needed} and {free} are sizes; the old file of the update counts as free, as
+    # it is removed before the new one is written
+    return _("Not enough space for {name}: {needed} needed, {free} free with its old file "
+             "counted. openExpress removes nothing else to make room.").format(
+        name=name, needed=human_size(needed), free=human_size(free))
+
+
+def no_folder_text(folder: str) -> str:
+    # TRANSLATORS: {folder}: e.g. .System/Map
+    return _("The folder {folder} is not on the device; openExpress makes no folder "
+             "there.").format(folder=folder)
+
+
+@dataclass
+class Written:
+    real: str  # where the file is on the device, in its letter case
+    size: int
+
+
+def write(storage: Storage, path: str, data: bytes, md5: str | None, name: str, margin: int,
+          progress: Callable[[str], None] | None = None) -> Written:
+    """Write `data` as the file at `path` in a folder of the top level ordinary MTP does not
+    show, as Garmin Express writes there, in a session of its own: the folder listed afresh
+    (the ordinary listing and Garmin's together), the space checked with the old file counted
+    (free + old >= new + `margin`, else WriteRefused, nothing changed), the old file of that
+    name deleted (hidden too), the new one announced in that folder and sent, then checked:
+    its size as the device gives it, and the whole file read back against `md5`. A file not
+    written whole, or read back otherwise, is deleted at once (NotWritten, which says what is on
+    the device); one the device does not give back stays (ContentsNotRead). No folder is ever
+    made; nothing else is touched. `name`: of the update, for the words."""
+    parts = [p for p in path.replace("\\", "/").split("/") if p]
+    folder, filename = "/".join(parts[:-1]), parts[-1]
+    opener = storage.exclusive_ptp()
+    if opener is None:
+        state = NO_USB if storage.usb_blocked() else NO_SESSION
+        raise WriteRefused(no_session_text(parts[0], state))
+    log.info("hidden folders: writing %s (%d B) into %s, in a session of its own", filename,
+             len(data), folder)
+    say_to(progress)(reading_text([folder]))
+    with opener as session:
+        store, parent, real = _folder_in(session, folder)
+        items = _children(session, store, parent.handle)
+        old = named_in_any_case([i for i in items if not i.is_dir], filename)
+        free = session.free_space(store)
+        room = (free or 0) + (old.size if old is not None else 0)
+        if free is None or room < len(data) + margin:
+            log.info("hidden folders: %s not written: %s B free with the old file, %s B needed",
+                     filename, room if free is not None else "?", len(data) + margin)
+            raise WriteRefused(no_space_text(name, len(data) + margin, room))
+        if old is not None:
+            try:
+                session.delete(old.handle)
+            except ptp.PtpError as e:
+                log.warning("hidden folders: the old %s not deleted (%s: %s)", old.name,
+                            type(e).__name__, e)
+                raise NotWritten(not_written_text(name, old_removed=False)) from e
+            log.info("hidden folders: the old %s (%d B) deleted", old.name, old.size)
+        handle = None
+        try:
+            handle = session.send_object(store, parent.handle, filename, data)
+            size = session.info(handle).size
+            if size != len(data):
+                raise ptp.PtpWriteError(f"{size} B on the device, {len(data)} B written")
+            try:
+                back = session.read_file(handle)
+            except ptp.PtpRefused as e:
+                log.info("hidden folders: %s written at its size; reading it back refused "
+                         "(0x%04x): kept, contents not compared", filename, e.code)
+                raise ContentsNotRead(contents_not_read_text(name)) from e
+            if md5 is not None and hashlib.md5(back).hexdigest() != md5.casefold():
+                raise ptp.PtpWriteError("the file read back differs from the one written")
+        except ContentsNotRead:
+            raise
+        except ptp.PtpError as e:
+            handle = getattr(e, "handle", None) or handle
+            log.warning("hidden folders: %s not written (%s: %s)", filename, type(e).__name__, e)
+            if handle is not None:
+                try:
+                    session.delete(handle)
+                except ptp.PtpError as gone:
+                    log.warning("hidden folders: what was written of %s not deleted (%s)",
+                                filename, type(gone).__name__)
+            raise NotWritten(not_written_text(name, old_removed=old is not None)) from e
+    log.info("hidden folders: %s written into %s (%d B), read back whole", filename, real,
+             len(data))
+    forget(storage)  # what was read of the folder is not what is there now
+    return Written(f"{real}/{filename}", len(data))
+
+
+def _folder_in(session, folder: str):
+    """(store, the folder's object, its path in the device's letter case), looked up afresh
+    from the top level through both listings; WriteRefused when it is not there."""
+    parts = folder.split("/")
+    for store in session.storages():
+        current = named_in_any_case(
+            [i for i in _children(session, store, ptp.ROOT) if i.is_dir], parts[0])
+        real = [current.name] if current is not None else []
+        for part in parts[1:]:
+            if current is None:
+                break
+            current = named_in_any_case(
+                [i for i in _children(session, store, current.handle) if i.is_dir], part)
+            if current is not None:
+                real.append(current.name)
+        if current is not None:
+            return store, current, "/".join(real)
+    raise WriteRefused(no_folder_text(folder))
+

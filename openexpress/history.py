@@ -457,6 +457,17 @@ def _via(storage: Storage) -> str:
     return "drive" if getattr(storage, "mass_storage", False) else "mtp"
 
 
+def connection_started(device: GarminDevice, storage: Storage) -> float | None:
+    """When the line of the device's present connection was written (its first opening while
+    it stays plugged in, _key), as a time stamp; None when there is no such line."""
+    if not getattr(device, "unit_id", None):
+        return None
+    key = _key(device, storage, _via(storage))
+    kept = read(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    line = next((line for line in reversed(kept.lines) if line.get("conn") == key), None)
+    return _when(line).timestamp() if line is not None else None
+
+
 def _last_key(where: Path) -> str | None:
     kept = read_file(where)
     return kept.lines[-1]["conn"] if kept.lines else None

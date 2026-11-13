@@ -174,9 +174,10 @@ changes anything only shows its plan until you add `--apply`. Every command:
   not to a memory card.
 - A car navigator that hides the folder of its software and maps (`.System`) from the ordinary USB
   connection, such as the Drive 53 EX ([#42](https://github.com/TomaszBojanowski/openExpress/issues/42)),
-  gets nothing installed or removed there yet: openExpress only reads that folder, through a USB
-  session of its own, to show what is on the device. Voices and vehicles Garmin offers to add
-  are not installed either.
+  gets nothing installed or removed there from the window yet: openExpress reads that folder,
+  through a USB session of its own, to show what is on the device, and the command line writes
+  updates there only in a trial (`--hidden-folder-trial`, [command line](docs/cli.md)). Voices
+  and vehicles Garmin offers to add are not installed either.
 - GPS satellite data (ephemerides), which Garmin Express writes to the device when it syncs and
   which helps the device find its position faster, is not written.
 - ECG recordings are not uploaded: they go to Garmin Health, which needs a sign-in of its own. A
