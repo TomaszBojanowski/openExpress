@@ -217,7 +217,8 @@ is only marked.
 
 On a car navigator that keeps its maps in the folder it hides (`.System/Map`), the Maps page shows
 them as read through that USB session (see [Software updates](#software-updates)), without
-**Update** or **Remove**: openExpress does not install into that folder yet.
+**Update** or **Remove**: openExpress does not install into that folder yet. When the device's
+folder for maps of your own is there too, **Add Map…** is off for the same reason.
 
 ## Maps of your own
 

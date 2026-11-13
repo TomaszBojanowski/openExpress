@@ -247,7 +247,15 @@ class MapsPage:
         g = self.sections["maps"].group(
             # TRANSLATORS: heading of the group of maps the user added, not from Garmin
             _("Own Maps"), _("Maps not from Garmin, e.g. from OpenStreetMap"))
-        g.set_header_suffix(self._button(_("Add Map…"), self.choose_map))
+        add = self._button(_("Add Map…"), self.choose_map)
+        g.set_header_suffix(add)
+        if overview.hidden_folder is not None:
+            # Its map folder is in a folder the device hides: nothing is added there, and why.
+            from openexpress import maps as mp
+
+            add.set_sensitive(False)
+            g.add(Adw.ActionRow(title=_("Map Folder"),
+                                subtitle=mp.not_installed_into(overview.hidden_folder)))
         if overview.unreadable:
             # TRANSLATORS: title of the row of the device's folder of own maps, when it could
             # not be read

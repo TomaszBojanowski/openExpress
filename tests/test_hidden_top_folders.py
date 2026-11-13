@@ -1035,3 +1035,71 @@ def test_the_updates_page_title_says_when_nothing_can_be_installed(navigator, la
     finally:
         i18n.setup("en")
     assert title in none_installable and title not in one_installable
+
+
+# --- own maps: never into a folder the device hides --------------------------------------------
+
+OWN_MAPS_HIDDEN = """
+  <DataType><Name>NMaps</Name>
+   <File><Location><Path>.System/Map</Path><FileExtension>img</FileExtension></Location>
+    <TransferDirection>InputToUnit</TransferDirection></File></DataType>
+"""
+
+
+def _own_maps_in_system(root):
+    xml = root / "GARMIN" / "GarminDevice.xml"
+    xml.write_text(xml.read_text().replace("</MassStorageMode>",
+                                           OWN_MAPS_HIDDEN + "</MassStorageMode>"))
+    return root
+
+
+def _map_file(tmp_path):
+    """A made-up map file of the user's: the header the program reads, a name in it."""
+    from openexpress import ownmaps
+
+    data = bytearray(ownmaps.HEADER_SIZE * 2)
+    data[:ownmaps.HEADER_SIZE] = bytes(ownmaps.HEADER_SIZE)
+    local = tmp_path / "Made_up_map.img"
+    local.write_bytes(bytes(data))
+    return local
+
+
+def test_an_own_map_is_never_written_into_a_folder_the_device_hides(navigator, tmp_path):
+    from openexpress import ownmaps, service
+
+    storage = OverUsb(_own_maps_in_system(navigator), navigator_session())
+    device = service.read_device(storage, found_now=False)
+    overview = ownmaps.overview(device, storage, [])
+    assert overview.hidden_folder == ".System"
+    with pytest.raises(maps.MapError, match="does not install into .System yet"):
+        ownmaps.plan_add(device, storage, [], _map_file(tmp_path))
+    assert not any(p.name.casefold() == ".system" for p in navigator.iterdir())
+
+
+def test_an_own_map_of_a_watch_goes_where_it_did(device_root):
+    from openexpress import ownmaps, service
+
+    storage = LocalStorage(device_root)
+    device = service.read_device(storage, found_now=False)
+    assert ownmaps.overview(device, storage, []).hidden_folder is None
+
+
+@pytest.mark.needs_display
+def test_the_maps_page_offers_no_own_map_for_a_folder_the_device_hides(navigator):
+    from gi.repository import Gtk
+
+    from openexpress import ownmaps, service
+    from openexpress.gui.app import MainWindow
+    from openexpress.gui.window_tasks import descendants
+
+    storage = OverUsb(_own_maps_in_system(navigator), navigator_session())
+    win, _reloads = maps_window(storage)
+    win.session.device = service.read_device(storage, found_now=False)
+    win.choose_map = lambda *args: pytest.fail("a map was chosen")
+    MainWindow.show_own_maps(win, ownmaps.overview(win.session.device, storage, []))
+    (own,) = win.sections["maps"].groups
+    buttons = [w for w in [own.header, *descendants(own.header)] if isinstance(w, Gtk.Button)
+               and w.get_label() == "Add Map…"]
+    assert buttons and not any(b.get_sensitive() for b in buttons)
+    assert any(r.get_subtitle() == "openExpress does not install into .System yet"
+               for r in own.rows if hasattr(r, "get_subtitle"))

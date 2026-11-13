@@ -21,7 +21,7 @@ from openexpress import applog, paths
 from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.i18n import _
-from openexpress.maps import SPACE_MARGIN, MapError
+from openexpress.maps import SPACE_MARGIN, MapError, read_only_text
 from openexpress.progress import byte_steps, checking_text, copying_text
 
 log = logging.getLogger(__name__)
@@ -75,6 +75,9 @@ class Overview:
     # installation): they can be removed after a stronger question. A file without the
     # header of a map is in neither set: nobody knows what it is.
     foreign: set[str] = field(default_factory=set)
+    # The folder of the top level of the map folder when ordinary MTP does not show it (a car
+    # navigator's .System, hidden_folder): nothing is added there.
+    hidden_folder: str | None = None
 
 
 def read_title(data: bytes) -> str | None:
@@ -111,6 +114,28 @@ def device_map_dir(device: GarminDevice, storage: Storage) -> str | None:
     if folder is None:
         return None
     return storage.resolve(folder) or folder
+
+
+def hidden_folder(device: GarminDevice, storage: Storage) -> str | None:
+    """The folder of the top level the map folder is in when ordinary MTP does not show it (a
+    car navigator's .System; or one not there yet, which openExpress never makes): no map is
+    added there. None when it is seen, when the device has no map folder, or when its top
+    level cannot be listed."""
+    from openexpress.updates import top_folders
+
+    folder = map_dir(device)
+    if folder is None:
+        return None
+    top = folder.replace("\\", "/").strip("/").split("/")[0]
+    tops = top_folders(storage)
+    return top if tops is not None and top and top.casefold() not in tops else None
+
+
+def _refuse_hidden(device: GarminDevice, storage: Storage) -> None:
+    hidden = hidden_folder(device, storage)
+    if hidden is not None:
+        log.info("own maps: not added, the map folder is in %s, which MTP does not show", hidden)
+        raise MapError(read_only_text(hidden))
 
 
 def _map_folder(device: GarminDevice, storage: Storage) -> str:
@@ -177,17 +202,18 @@ def overview(device: GarminDevice, storage: Storage, garmin_maps: list) -> Overv
     folder = map_dir(device)
     if folder is None:
         return Overview(None, [], set())
+    hidden = hidden_folder(device, storage)
     try:
         maps = list_own(device, storage, garmin_maps)
     except DeviceNotResponding:
         raise
     except DeviceError as e:
         log.info("own maps: the map folder could not be read (%s)", type(e).__name__)
-        return Overview(folder, [], set(), unreadable=True)
+        return Overview(folder, [], set(), unreadable=True, hidden_folder=hidden)
     ours = recorded_names(device)
     removable = {m.filename for m in maps if m.filename.casefold() in ours}
     foreign = {m.filename for m in maps if m.filename not in removable and m.title is not None}
-    return Overview(folder, maps, removable, foreign=foreign)
+    return Overview(folder, maps, removable, foreign=foreign, hidden_folder=hidden)
 
 
 # --- copying a map of the user's to the device ------------------------------------------------
@@ -245,7 +271,9 @@ def _taken(name: str) -> OwnMapError:
 def plan_add(device: GarminDevice, storage: Storage, garmin_maps: list, local: Path,
              name: str | None = None) -> AddPlan:
     """Everything that is checked before a map is copied; nothing is written. Raises
-    MapError with the reason when the map cannot be added."""
+    MapError with the reason when the map cannot be added; first of all, a map folder in a
+    folder of the top level ordinary MTP does not show (_refuse_hidden)."""
+    _refuse_hidden(device, storage)
     name, title, size = check_local(local, name)
     folder = _map_folder(device, storage)
     path = f"{folder}/{name}"
@@ -268,6 +296,7 @@ def add(plan: AddPlan, device: GarminDevice, storage: Storage,
     of that name was there a moment before. `progress`: the copy and the check as steps, by
     the map's title ("Copying … to the device · 1.2 MB of 3.4 MB", "Checking … on the device
     · …")."""
+    _refuse_hidden(device, storage)
     if storage.resolve(plan.path) is not None:
         raise _taken(plan.name)  # it appeared since the plan was made
     name = plan.title or plan.name

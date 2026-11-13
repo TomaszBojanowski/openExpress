@@ -523,9 +523,7 @@ def can_install(m: UniversalMap) -> bool:
 def cannot_install_reason(m: UniversalMap) -> str:
     """The same reason as cannot_install_message, short, for the line under the map's name."""
     if m.hidden_folder is not None:
-        # TRANSLATORS: on the Maps page, under a map whose files go to a folder the device hides
-        # ({folder}, e.g. .System), without a full stop
-        return _("openExpress does not install into {folder} yet").format(folder=m.hidden_folder)
+        return not_installed_into(m.hidden_folder)
     if m.restricted is True:
         return _("Cannot be installed: Garmin does not offer this map in your account's "
                  "country")
@@ -719,6 +717,12 @@ def hidden_needed(maps: list[UniversalMap]) -> list[str]:
             if folder.split("/")[0].casefold() == m.hidden_folder.casefold():
                 out.setdefault(folder.casefold(), folder)
     return sorted(out.values(), key=str.casefold)
+
+
+def not_installed_into(folder: str) -> str:
+    # TRANSLATORS: on the Maps page, under a map whose files go to a folder the device hides
+    # ({folder}, e.g. .System), and under its own maps' folder there, without a full stop
+    return _("openExpress does not install into {folder} yet").format(folder=folder)
 
 
 def read_only_text(folder: str) -> str:

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 21:25+0100\n"
+"POT-Creation-Date: 2026-11-13 22:23+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -10082,13 +10082,6 @@ msgstr "Stare pliki, które Garmin zaleca usunąć:"
 msgid "openExpress does not remove these files yet."
 msgstr "openExpress na razie ich nie usuwa."
 
-#. TRANSLATORS: on the Maps page, under a map whose files go to a folder the device hides
-#. ({folder}, e.g. .System), without a full stop
-#: openexpress/maps.py
-#, python-brace-format
-msgid "openExpress does not install into {folder} yet"
-msgstr "openExpress jeszcze nie instaluje w folderze {folder}"
-
 #: openexpress/maps.py
 msgid ""
 "Cannot be installed: Garmin does not offer this map in your account's country"
@@ -10146,6 +10139,13 @@ msgstr ""
 #, python-brace-format
 msgid "No map named “{name}”"
 msgstr "Brak mapy o nazwie „{name}”"
+
+#. TRANSLATORS: on the Maps page, under a map whose files go to a folder the device hides
+#. ({folder}, e.g. .System), and under its own maps' folder there, without a full stop
+#: openexpress/maps.py
+#, python-brace-format
+msgid "openExpress does not install into {folder} yet"
+msgstr "openExpress jeszcze nie instaluje w folderze {folder}"
 
 #. TRANSLATORS: `openexpress maps`, under a map whose files are in a folder the device hides
 #. ({folder}, e.g. .System), which openExpress only reads
