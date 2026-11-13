@@ -13,6 +13,7 @@ import struct
 import subprocess
 import tempfile
 from pathlib import Path
+import zipfile
 
 from openexpress.i18n import _
 from openexpress.settings import (
@@ -21,6 +22,8 @@ from openexpress.settings import (
     extract_consumer_from_dll,
     extract_url_salt_from_dll,
 )
+
+log = logging.getLogger(__name__)
 
 CAB_MAGIC = b"MSCF\0\0\0\0"
 # A Windows program starts with these bytes; the installer for Windows is one.
@@ -136,24 +139,39 @@ def extract_dlls(installer: Path, dest: Path) -> dict[str, Path]:
     if not installer.is_file():
         raise SetupError(_("File not found: {path}").format(path=installer))
     refuse_macos_installer(installer)
-    with tempfile.TemporaryDirectory(prefix="openexpress-") as tmp:
-        tmp_path = Path(tmp)
-        cab = _attached_container(installer, tmp_path / "payload.cab")
-        payload = tmp_path / "payload"
-        _run_7z(cab, payload)
-        msi = _find_msi(payload)
-        files = tmp_path / "msi"
-        _run_7z(msi, files, *MSI_STREAMS)
-        out = {}
-        dest.mkdir(parents=True, exist_ok=True)
-        for stream, name in MSI_STREAMS.items():
-            src = files / stream
-            if not src.exists():
+    out = {}
+    try:
+        # Newer installers use Velopack with zip file appended, can open directly
+        with zipfile.ZipFile(installer) as input:
+            for member in input.infolist():
+                filename = Path(member.filename)
+                if filename.name in MSI_STREAMS.values():
+                    if filename.name in out:
+                        raise SetupError(_("{name} was found multiple times in the installer").format(name=filename.name))
+                    output = input.extract(member, dest)
+                    out[filename.name] = Path(output)
+        for filename in MSI_STREAMS.values():
+            if filename not in out:
                 raise SetupError(_("{name} was not found in the installer.").format(name=name))
-            target = dest / name
-            shutil.copyfile(src, target)
-            out[name] = target
-        return out
+    except zipfile.BadZipFile:
+        log.info("Could not open installer at %s as zipfile, assuming it is an older installer with cab payload")
+        with tempfile.TemporaryDirectory(prefix="openexpress-") as tmp:
+            tmp_path = Path(tmp)
+            cab = _attached_container(installer, tmp_path / "payload.cab")
+            payload = tmp_path / "payload"
+            _run_7z(cab, payload)
+            msi = _find_msi(payload)
+            files = tmp_path / "msi"
+            _run_7z(msi, files, *MSI_STREAMS)
+            dest.mkdir(parents=True, exist_ok=True)
+            for stream, name in MSI_STREAMS.items():
+                src = files / stream
+                if not src.exists():
+                    raise SetupError(_("{name} was not found in the installer.").format(name=name))
+                target = dest / name
+                shutil.copyfile(src, target)
+                out[name] = target
+    return out
 
 
 def consumer_from_installer(installer: Path) -> Consumer:
