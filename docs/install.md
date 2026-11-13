@@ -19,11 +19,12 @@ repository, keeping your setup, login and settings, add the repository as in
 Requirements:
 
 - Linux with Python 3.11+, `requests`, PyGObject 3.46+ with GTK 4, libadwaita 1.5+, WebKitGTK 6.0
-  (login window), GIO/gvfs (MTP) and `7z` (7-Zip or p7zip: setup needs it to read the
-  installer). Optional: `mutagen` (music tags), `libusb-1.0` (Connect IQ apps on devices
-  that hide their app folder, and their hidden crash logs; usually installed), libshumate
-  1.1+ (the map on the page of an activity; without libshumate the page says so and has no
-  map, and with an older one the track has no streets under it). GNU gettext (`msgfmt`)
+  (login window) and GIO/gvfs (MTP). Optional: `7z` (7-Zip or p7zip; setup needs it only for
+  a Garmin Express installer older than version 8), `mutagen` (music tags), `libusb-1.0`
+  (Connect IQ apps on devices that hide their app folder, and their hidden crash logs;
+  usually installed), libshumate 1.1+ (the map on the page of an activity; without
+  libshumate the page says so and has no map, and with an older one the track has no
+  streets under it). GNU gettext (`msgfmt`)
   builds the translations, which are not kept compiled in the repository; without it
   openExpress runs in English.
   - Fedora: `sudo dnf install python3-requests python3-gobject gtk4 libadwaita webkitgtk6.0 gvfs-mtp python3-mutagen p7zip-plugins libusb1 libshumate gettext`

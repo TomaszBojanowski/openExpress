@@ -30,8 +30,6 @@ from openexpress.i18n import N_, _, caption, human_size, ngettext, pgettext  # n
 from openexpress.settings import (  # noqa: E402
     Settings,
     SetupError,
-    extract_consumer_from_dll,
-    extract_url_salt_from_dll,
     has_consumer,
     save_consumer,
 )
@@ -541,16 +539,10 @@ class Preferences:
             title=_("Choose the Garmin Express Installer for Windows (GarminExpress.exe)"))
 
         def read(path: Path):
-            from openexpress.installer import consumer_from_installer, refuse_macos_installer
+            from openexpress.installer import consumer_from_installer
 
-            refuse_macos_installer(path)
-            if path.suffix.lower() == ".exe":
-                return consumer_from_installer(path)
-            consumer = extract_consumer_from_dll(path)
-            util = path.with_name("Utilities.dll")
-            if util.exists():
-                consumer.url_salt = extract_url_salt_from_dll(util)
-            return consumer
+            # The installer of either layout, or Networking.dll itself: told by its bytes.
+            return consumer_from_installer(path)
 
         def chosen(dlg, res):
             try:
