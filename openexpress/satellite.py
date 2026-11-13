@@ -257,6 +257,7 @@ def update(device, storage, apply: bool = True, http=None) -> Result | None:
     except NotUpdated as e:
         return _failed(unit, state, e.reason, apply)
     if current is not None and _sha(current) == _sha(data):
+        log.info("satellite data: %s on the device is the same file, nothing written", NAME)
         if apply and state.error is not None:
             state.error = None
             save(unit, state)

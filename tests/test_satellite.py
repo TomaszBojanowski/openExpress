@@ -4,6 +4,7 @@ the cache for 4 hours, written only when it differs from the device's, read back
 the device renames to CPE_BAD.bin turns the feature off until it is turned on again; nothing is
 asked of the network but through a stand-in. All files, devices and answers are made up."""
 
+import logging
 import types
 from datetime import timedelta
 
@@ -134,6 +135,18 @@ def test_on_garmins_file_is_written_read_back_and_kept_in_the_cache_4_hours(
     clock.current += timedelta(minutes=2)
     assert satellite.update(device, storage) == satellite.Result("updated", satellite.SIZE)
     assert on_device(storage) == made_up_cpe(3) and server.asked == 2
+
+
+def test_the_same_file_on_the_watch_is_said_in_the_log(tmp_path, clock, monkeypatch, caplog):
+    storage, device = watch(tmp_path, {CPE: made_up_cpe(2)})
+    satellite.seen(device, storage)
+    satellite.set_on(UNIT, True)
+    satellite_server(monkeypatch, satellite_answer(made_up_cpe(2)))
+    with caplog.at_level(logging.INFO, logger="openexpress.satellite"):
+        assert satellite.update(device, storage) == satellite.Result("current")
+    assert ("satellite data: CPE.BIN on the device is the same file, nothing written"
+            in caplog.messages)
+    assert storage.writes == []
 
 
 @pytest.mark.parametrize("answer, reason", [

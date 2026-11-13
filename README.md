@@ -98,7 +98,7 @@ devices that connect over USB (MTP) should work too – reports are welcome.
 | Forerunner 55 | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) |
 | Forerunner 920XT | USB drive | [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) |
 | Instinct 2S Solar | USB drive | [#24](https://github.com/TomaszBojanowski/openExpress/issues/24) |
-| Forerunner 45 | USB drive | [#36](https://github.com/TomaszBojanowski/openExpress/issues/36) |
+| Forerunner 45 | USB drive | [#36](https://github.com/TomaszBojanowski/openExpress/issues/36), [#30](https://github.com/TomaszBojanowski/openExpress/issues/30) |
 | zūmo 595LM | – | [#15](https://github.com/TomaszBojanowski/openExpress/issues/15) |
 | Other Garmin watches and bike computers over USB (MTP) | MTP | expected to work, untested |
 
