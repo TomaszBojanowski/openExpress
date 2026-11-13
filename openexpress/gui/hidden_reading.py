@@ -1,9 +1,10 @@
 """The window's reading of the folders of the device's top level that ordinary MTP does not show
 (a car navigator's .System) through openExpress's own USB session (hidden_folders): once a
 connection, right after the device was opened, when what its first checks found (its updates,
-its maps) goes to such a folder; again only when the user asks (Check Again, Refresh). The
-device leaves the file manager for a moment, so the reading is a task: never during another
-one, and after the diagnostics of the opening are read.
+its maps) goes to such a folder or the device is known to hide one; again only when the user
+asks (Check Again, Refresh). It reads what the command line reads (folders_to_read), so that
+both count the same. The device leaves the file manager for a moment, so the reading is a
+task: never during another one, and after the diagnostics of the opening are read.
 
 Has: nothing; the device's session keeps the folders wanted and whether they are being read
 (DeviceSession.hidden_wanted, hidden_reading)."""
@@ -25,8 +26,8 @@ def note_needed(win, s, folders: list[str]) -> None:
     """A first check of the open device `s` (updates, maps) found what goes to `folders`, which
     ordinary MTP does not show: they are read once neither first check runs any more, unless
     this connection was read already."""
-    if win.session is not s or not (folders or _wanted(s)):
-        return
+    if win.session is not s or not hasattr(s, "hidden_wanted"):
+        return  # no device, or a session made up for a page alone
     for folder in folders:
         s.hidden_wanted.setdefault(folder.casefold(), folder)
     _start(win, s)
@@ -36,25 +37,32 @@ def read_again(win) -> bool:
     """Check Again: the folders this connection needs read anew, then the pages read before
     read again (_shown_again). False when it needs none: the caller reads its page itself."""
     s = win.session
-    if s is None or not _wanted(s):
+    if s is None or not _folders(s):
         return False
     hidden_folders.forget(s.storage)
     _start(win, s)
     return True
 
 
-def _wanted(s) -> dict:
-    """The folders `s` wants read; none for a session without the field (one made up for a
-    page alone)."""
-    return getattr(s, "hidden_wanted", None) or {}
+def _folders(s) -> list[str]:
+    """What a reading of `s` reads: what its checks wanted, and the folders it is known to
+    hide, with what its GarminDevice.xml names under them (hidden_folders.folders_to_read), as
+    the command line reads them; none for a session without the field (one made up for a page
+    alone)."""
+    if not hasattr(s, "hidden_wanted"):
+        return []
+    return hidden_folders.folders_to_read(s.device, s.hidden_wanted.values())
 
 
 def _start(win, s) -> None:
-    if (win.session is not s or not s.hidden_wanted or s.hidden_reading
+    if (win.session is not s or not hasattr(s, "hidden_wanted") or s.hidden_reading
             or hidden_folders.kept(s.storage) is not None):
         return
     if win._update_check_session is s or win._map_check_session is s:
         return  # the other first check may need a folder too: it ends with note_needed
+    folders = _folders(s)
+    if not folders:
+        return
     if win.busy:
         def retry() -> bool:
             _start(win, s)
@@ -62,12 +70,12 @@ def _start(win, s) -> None:
 
         GLib.timeout_add(RETRY_MS, retry)
         return
-    folders = sorted(s.hidden_wanted.values(), key=str.casefold)
     s.hidden_reading = True
 
     def work():
-        return hidden_folders.read(s.storage, folders, "updates or maps go there",
-                                   progress=win.progress)
+        return hidden_folders.read(s.storage, folders, "updates, maps or Device Status need them",
+                                   progress=win.progress,
+                                   unit_id=getattr(s.device, "unit_id", None))
 
     work.leaves_the_file_manager = True
 

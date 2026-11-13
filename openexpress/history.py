@@ -144,6 +144,21 @@ class _Folders:
         return out
 
 
+def declared_under(device: GarminDevice, tops) -> list[str]:
+    """The folders GarminDevice.xml names (its data types, its update files) under the folders
+    of the top level `tops`, in any letter case, each once: what count walks there."""
+    wanted = {t.casefold() for t in tops}
+    if not wanted:
+        return []
+    out: dict[str, str] = {}
+    for where in [*(f.path for f in device.files),
+                  *(u.path for u in getattr(device, "update_files", None) or [])]:
+        folder = where.replace("\\", "/").strip("/")
+        if folder and folder.split("/")[0].casefold() in wanted:
+            out.setdefault(folder.casefold(), folder)
+    return sorted(out.values(), key=str.casefold)
+
+
 # Declared for the device's whole main folder (FITBinary, FTLImageVersion, the maps of a fēnix 8):
 # only its own files are counted, not those of the folders under it, and only by a rule that names
 # an extension or a file (one without would take GarminDevice.xml and the update files there).

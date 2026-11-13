@@ -274,6 +274,10 @@ class KnownDevice:
     # its place on USB left empty, or another device number there while it was watched); a
     # copied update offered again after that was not installed by the device. None: not seen.
     unplugged_at: float | None = None
+    # The folders of its top level that ordinary MTP does not show and that a session of
+    # openExpress's own found (a car navigator's .System; hidden_folders): a later command reads
+    # them too, so that what it counts is what the window counts.
+    hidden_tops: tuple[str, ...] = ()
 
     @property
     def shown_name(self) -> str:
@@ -497,6 +501,30 @@ def keep_copied(unit_id: int, offered: set[str]) -> bool:
     return True
 
 
+def note_hidden_tops(unit_id: int, tops) -> bool:
+    """Keep the folders of its top level a session of openExpress's own found and ordinary MTP
+    does not show; whether that changed anything. A device not remembered gets no entry."""
+    def change(entry: KnownDevice) -> KnownDevice:
+        known = {t.casefold(): t for t in entry.hidden_tops}
+        for top in tops:
+            known.setdefault(top.casefold(), top)
+        return replace(entry, hidden_tops=tuple(sorted(known.values(), key=str.casefold)))
+
+    changed = _update(unit_id, change)
+    if changed is None:
+        return False
+    log.info("devices: %s hides %s from MTP", changed[1].part_number,
+             ", ".join(changed[1].hidden_tops))
+    return True
+
+
+def hidden_tops(unit_id) -> tuple[str, ...]:
+    """The folders of its top level the device is known to hide (note_hidden_tops); none for
+    one not remembered."""
+    entry = load().get(unit_id) if unit_id else None
+    return entry.hidden_tops if entry is not None else ()
+
+
 def recorded_updates(entry: KnownDevice | None, software_version: str,
                      now: float | None = None) -> UpdateSummary | None:
     """What the last check found for this device, if it found an update less than
@@ -694,13 +722,21 @@ def _read() -> tuple[dict[int, KnownDevice], bool]:
                 volume_uuid=_identifier(value.get("volume_uuid")),
                 model_name=garmin_name(value.get("model_name")),
                 copied_updates=_copied(value.get("copied_updates")),
-                unplugged_at=_time(value.get("unplugged_at")))
+                unplugged_at=_time(value.get("unplugged_at")),
+                hidden_tops=_folders(value.get("hidden_tops")))
             known[entry.unit_id] = entry
     except (ValueError, KeyError, TypeError, AttributeError):
         log.warning("devices: %s is damaged; it is left as it is and nothing is remembered "
                     "from it", FILE_NAME)
         return {}, False
     return known, True
+
+
+def _folders(value) -> tuple[str, ...]:
+    """Names of folders kept (hidden_tops); none from anything else."""
+    if not isinstance(value, list):
+        return ()
+    return tuple(v for v in value if isinstance(v, str) and v and "/" not in v)
 
 
 def _tile_facts(value: dict) -> dict:
@@ -764,6 +800,9 @@ def _write(known: dict[int, KnownDevice]) -> None:
                          "volume_uuid", "model_name", "unplugged_at"):
             if fields[optional] is None:
                 del fields[optional]  # written only when known
+        del fields["hidden_tops"]
+        if entry.hidden_tops:
+            fields["hidden_tops"] = list(entry.hidden_tops)
         del fields["copied_updates"]
         if entry.copied_updates:
             fields["copied_updates"] = dict(entry.copied_updates)

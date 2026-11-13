@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 20:27+0100\n"
+"POT-Creation-Date: 2026-11-13 21:25+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -8665,6 +8665,15 @@ msgstr ""
 "openExpress nie widzi folderu {folder}, w którym to urządzenie trzyma swoje "
 "oprogramowanie, więc niczego tam nie instaluje. Niektóre urządzenia, np. "
 "nawigacje samochodowe, ukrywają go przed zwykłym połączeniem USB."
+
+#. TRANSLATORS: title of the Updates page when updates are offered and openExpress can install
+#. none of them on this device
+#: openexpress/gui/updates_page.py
+msgid "Update Cannot Be Installed"
+msgid_plural "Updates Cannot Be Installed"
+msgstr[0] "Nie można zainstalować aktualizacji"
+msgstr[1] "Nie można zainstalować aktualizacji"
+msgstr[2] "Nie można zainstalować aktualizacji"
 
 #. TRANSLATORS: subtitle of an update on the Updates page that openExpress does not install
 #. yet, without a full stop; {folder}: a folder the device hides, e.g. .System, which

@@ -268,6 +268,8 @@ INREACH = ("inReach Mini 2", "5.05", "006-B3968-00")
 # A car navigator that hides its .System from MTP: what its pages show (the listing of one in the
 # made-up values below).
 NAVIGATOR = ("Drive 53", "8.50", "006-B4449-00")
+# Its free space and capacity, the same on its Maps page and its Device Status.
+NAVIGATOR_SPACE = (8_900_000_000, 15_500_000_000)
 
 
 def _navigator_updates(read: bool = False):
@@ -323,7 +325,7 @@ def _navigator_status_facts():
 
     now = datetime(2026, 10, 21, 12, 0)
     return status.Facts(
-        free=8_900_000_000, capacity=15_500_000_000,
+        free=NAVIGATOR_SPACE[0], capacity=NAVIGATOR_SPACE[1],
         categories={"maps": 5_260_000_000, "updates": 65_344_512, "system": 1_274_655_488},
         counted_at=now - timedelta(minutes=2), crashes=[], errors_known=False, dumps=None,
         events=[], hidden_logs=False, copies=(0, 0, None), has_diagnostics=False,
@@ -369,9 +371,7 @@ def _fill(win, page: str) -> str:
     elif page == "maps-none":
         MainWindow.show_maps(win, ([], 0), None)
     elif page in ("maps-navigator", "maps-read-navigator"):
-        storage = win.session.storage
-        MainWindow.show_maps(win, *_navigator_maps(read="read" in page),
-                             space=(storage.free_space(), storage.capacity()))
+        MainWindow.show_maps(win, *_navigator_maps(read="read" in page), space=NAVIGATOR_SPACE)
     elif key == "maps":
         # With the row of the space, as the page has it once the maps are read.
         storage = win.session.storage

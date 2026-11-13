@@ -95,6 +95,14 @@ def hidden_software_text(folder: str) -> str:
     return text.format(folder=folder)
 
 
+def nothing_installable_title(count: int) -> str:
+    """The title of the Updates page when Garmin offers updates and openExpress can install
+    none of them (each goes to a folder the device hides)."""
+    # TRANSLATORS: title of the Updates page when updates are offered and openExpress can install
+    # none of them on this device
+    return ngettext("Update Cannot Be Installed", "Updates Cannot Be Installed", count)
+
+
 def read_only_folder_text(folder: str) -> str:
     # TRANSLATORS: subtitle of an update on the Updates page that openExpress does not install
     # yet, without a full stop; {folder}: a folder the device hides, e.g. .System, which
@@ -475,7 +483,8 @@ class UpdatesPage:
         buttons = []
         if system is not None:
             icon = "software-update-available-symbolic"
-            title = update_state_text("available", count, only)
+            title = (update_state_text("available", count, only) if installable
+                     else nothing_installable_title(count))
             versions = versions_text(system)
             size = human_size(system.size)
             subtitle = caption(versions, size)
@@ -517,7 +526,8 @@ class UpdatesPage:
             subtitle, detail = _copied_lines(ready, lead, installed)
         elif count:
             icon, subtitle = "software-update-available-symbolic", installed
-            title = update_state_text("available", count, only)
+            title = (update_state_text("available", count, only) if installable
+                     else nothing_installable_title(count))
         elif untaken:
             icon = "dialog-information-symbolic"
             # TRANSLATORS: title of the Updates page: updates openExpress copied are on the

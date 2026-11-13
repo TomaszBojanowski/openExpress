@@ -909,3 +909,129 @@ def test_the_words_of_a_folder_read_in_both_languages(language):
                ("Nie można usunąć mapy „Made-up City Navigator”: openExpress jeszcze nie zmienia "
                 "folderu .System.")]}
     assert texts == expected[language]
+
+
+# --- the window and the command line read and count the same ----------------------------------
+
+
+def _with_types(root):
+    """The made-up navigator's GarminDevice.xml naming its maps in .System/Map and its software
+    in .System, as Device Status counts them."""
+    xml = root / "GARMIN" / "GarminDevice.xml"
+    xml.write_text(xml.read_text().replace("</MassStorageMode>",
+                                           NAVIGATOR_TYPES + "</MassStorageMode>"))
+    return root
+
+
+def test_a_device_found_to_hide_a_top_folder_is_remembered_so(navigator):
+    from openexpress import known_devices, service
+
+    storage = OverUsb(navigator, navigator_session())
+    device = service.read_device(storage, found_now=True)  # remembered, as a command does
+    hidden_folders.read(storage, [".System"], "test", unit_id=device.unit_id)
+    assert known_devices.hidden_tops(device.unit_id) == (".System",)
+
+
+def test_the_folders_read_are_those_needed_and_what_the_xml_names_under_them(navigator):
+    from openexpress import service
+
+    device = service.read_device(LocalStorage(_with_types(navigator)), found_now=False)
+    assert hidden_folders.folders_to_read(device, [".System"]) == [".System", ".System/Map"]
+    assert hidden_folders.folders_to_read(device, []) == []  # nothing needed, nothing known
+
+
+def test_the_command_line_counts_what_the_window_counts_after_the_reading(offered_to,
+                                                                         monkeypatch, capsys):
+    from openexpress import cli, history, service
+
+    _with_types(offered_to)
+    storage = OverUsb(offered_to, navigator_session())
+    monkeypatch.setattr(cli, "open_storage", lambda args: storage)
+    assert main(["updates"]) == 0  # reads .System: the device is known to hide it from now on
+    device = service.read_device(storage, found_now=False)
+    window = history.count(device, storage)  # as the window counts once it has read
+    hidden_folders.forget(storage)  # another command: nothing read in it yet
+    assert main(["diagnostics"]) == 0
+    line = history.read(device.unit_id).lines[-1]
+    assert line["categories"]["maps"] == window["maps"] == len(MAP_FILE)
+    assert line["categories"]["updates"] == window["updates"]
+    assert storage.sessions == 2
+
+
+@pytest.mark.parametrize("hidden", WATCHES.values(), ids=WATCHES)
+def test_a_watch_opens_no_session_for_a_command(device_root, hidden, monkeypatch, capsys):
+    from openexpress import cli
+
+    fake = FakeDevice()
+    for name in hidden:
+        fake.add(name.rstrip("/"), None if name.endswith("/") else b"x", hidden=True)
+    storage = OverUsb(device_root, fake)
+    storage.exclusive_ptp = lambda: pytest.fail("a USB session of its own was opened")
+    monkeypatch.setattr(cli, "open_storage", lambda args: storage)
+    assert main(["diagnostics"]) == 0
+
+
+def test_status_online_says_what_the_window_says_after_the_reading(navigator):
+    from openexpress import cli, service
+
+    storage = OverUsb(navigator, navigator_session())
+    device = service.read_device(storage, found_now=False)
+    client = types.SimpleNamespace(
+        software_updates=lambda raw, include_reinstalls=False: lower_keys(server_answer()))
+    said = cli._status_updates_online(client, types.SimpleNamespace(device=device,
+                                                                    storage=storage))
+    # As the window once it has read .System: the time zone map is there at its size; the
+    # software and the new part are updates.
+    assert said == cli._update_words("available", 2, None) and storage.sessions == 1
+
+
+def test_the_window_reads_what_the_xml_names_under_the_folder_needed(navigator, monkeypatch,
+                                                                       in_the_window):
+    from openexpress import history
+
+    fake = navigator_session()
+    storage = OverUsb(_with_types(navigator), fake)
+    in_the_window("count_again", lambda win, s: None)
+    win, s, _shown = _window(monkeypatch, storage, server_answer(), [])  # no map listed
+    _first_checks(win)
+    assert fake.folders_listed() == {"/", ".System", ".System/Map"}
+    assert history.count(s.device, storage)["maps"] == len(MAP_FILE)
+
+
+def test_the_window_reads_the_folders_a_device_is_known_to_hide(navigator, monkeypatch,
+                                                                  in_the_window):
+    from openexpress import known_devices
+
+    fake = navigator_session()
+    storage = OverUsb(_with_types(navigator), fake)
+    in_the_window("count_again", lambda win, s: None)
+    visible_only = {"updates": [u for u in server_answer()["updates"]
+                                if u["installation"]["path"] == "Garmin\\NewPart"]}
+    win, s, _shown = _window(monkeypatch, storage, visible_only, [])
+    known_devices.remember(s.device.unit_id, "Made-up Drive", "006-B0000-00", "8.50", "mtp")
+    known_devices.note_hidden_tops(s.device.unit_id, [".System"])
+    _first_checks(win)  # nothing offered there, yet Device Status counts it as the commands do
+    assert win.run_task.titles == ["Reading the folder .System…"]
+    assert fake.folders_listed() == {"/", ".System", ".System/Map"}
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("language, title", [("en", "Update Cannot Be Installed"),
+                                             ("pl", "Nie można zainstalować aktualizacji")])
+def test_the_updates_page_title_says_when_nothing_can_be_installed(navigator, language, title):
+    from openexpress import i18n
+
+    storage = OverUsb(navigator, navigator_session())
+    hidden_folders.read(storage, [".System"], "test")
+    offered = _offered_from(storage)
+    # Without the new part in a folder that is seen, nothing offered can be installed.
+    only_hidden = [u for u in offered if u.part_number != "006-D9004-00"]
+    i18n.setup(language)
+    try:
+        status, *_groups = _updates_page(only_hidden)
+        none_installable = _texts(status.rows[0])
+        status, *_groups = _updates_page(offered)
+        one_installable = _texts(status.rows[0])
+    finally:
+        i18n.setup("en")
+    assert title in none_installable and title not in one_installable

@@ -108,6 +108,33 @@ def open_storage(args) -> Storage:
 NOTED_AFTER_READING = ("diagnostics", "report")
 
 
+def _read_hidden(st, dev, needed=(), why: str = "") -> bool:
+    """Read once a command, through a session of its own, the folders of the device's top level
+    that ordinary MTP does not show which `needed` names (updates, maps) or the device is known
+    to hide, with what its GarminDevice.xml names under them (hidden_folders.folders_to_read):
+    what the window reads, so that both count and compare the same; once read, the line of
+    this connection in the device's log counted again, as the window counts it. Whether it read
+    now."""
+    if hidden_folders.kept(st) is not None:
+        return False
+    folders = hidden_folders.folders_to_read(dev, needed)
+    if not folders:
+        return False
+    with _progress() as progress:
+        listing = hidden_folders.read(st, folders, why, progress=progress,
+                                      unit_id=getattr(dev, "unit_id", None))
+    if listing.state == hidden_folders.READ and getattr(dev, "unit_id", None):
+        from openexpress import history
+
+        try:
+            history.note_counted(dev, st)
+        except DeviceNotResponding:
+            raise
+        except Exception as e:  # noqa: BLE001 - the log is a side line, as at the opening
+            log.info("history: not counted again after the reading (%s)", type(e).__name__)
+    return True
+
+
 def open_device(args) -> tuple[Storage, GarminDevice]:
     from openexpress import service
     from openexpress.device.gio_storage import mass_storage_text
@@ -130,6 +157,9 @@ def open_device(args) -> tuple[Storage, GarminDevice]:
     # A device found now is remembered, and its connection noted in its log; a folder given
     # with --path may be a copy.
     dev = service.read_device(st, found_now=not args.path, refuse=refuse)
+    if not args.path:
+        # Before anything counts it: the folders it is known to hide, as the window reads them.
+        _read_hidden(st, dev, why="the device is known to hide them")
     if not args.path and command not in NOTED_AFTER_READING:
         from openexpress import history
 
@@ -1119,7 +1149,8 @@ def cmd_status(args) -> int:
     USB mode, whether on the account), the last sync of each and what the last check of its
     updates found. Reads only the devices' GarminDevice.xml and the files this installation
     keeps; with --online it asks the account's device list and the update server too,
-    keeping nothing."""
+    keeping nothing of their answers (a car navigator's hidden folder is read for its updates
+    then, as the window reads it: _read_hidden)."""
     from openexpress.device import gio_storage
 
     try:
@@ -1235,8 +1266,11 @@ def _status_updates_online(client, s) -> str:
         if device is None or storage is None:  # a drive: probe keeps nothing of it
             storage = gio_storage.open_ums_storage(s.found)
             device = parse(storage.read("GARMIN/GarminDevice.xml"))
-        items = upd.offered(storage, client.software_updates(device.raw), device,
-                            forget_installed=False)  # keeps nothing
+        answer = client.software_updates(device.raw)
+        items = upd.offered(storage, answer, device, forget_installed=False)  # keeps nothing
+        if _read_hidden(storage, device, upd.hidden_needed(items), "updates go there"):
+            # As the window says it once it has read them.
+            items = upd.offered(storage, answer, device, forget_installed=False)
     except DeviceNotResponding:
         raise
     except (ApiError, DeviceError) as e:
@@ -1852,13 +1886,8 @@ def cmd_updates(args) -> int:
     resp = client.software_updates(dev.raw, include_reinstalls=args.reinstalls)
     # Only reads the device.
     items = upd.offered(st, resp, dev)
-    needed = upd.hidden_needed(items)
-    if needed and hidden_folders.kept(st) is None:
-        # Folders of its top level ordinary MTP does not show: read once through a session of
-        # its own (the device leaves the file manager for a moment), then compared again.
-        with _progress() as progress:
-            hidden_folders.read(st, needed, "updates go there", progress=progress)
-        items = upd.offered(st, resp, dev)
+    if _read_hidden(st, dev, upd.hidden_needed(items), "updates go there"):
+        items = upd.offered(st, resp, dev)  # compared again with what was read
     if not args.reinstalls:
         items = [u for u in items if not u.is_reinstall]
     # A system update that is on the device already waits for the device to install it.
@@ -2036,13 +2065,8 @@ def _load_maps(args, client, own: bool = False):
             # so their names alone are kept apart (ownmaps.is_garmin_name).
             all_maps, listed = [], 0
     mp.mark_waiting(st, all_maps)
-    needed = mp.hidden_needed(all_maps)
-    if needed and hidden_folders.kept(st) is None:
-        # The maps' files in folders of its top level ordinary MTP does not show: read once
-        # through a session of its own, then the maps marked again.
-        with _progress() as progress:
-            hidden_folders.read(st, needed, "the maps' files are there", progress=progress)
-        mp.mark_waiting(st, all_maps)
+    if _read_hidden(st, dev, mp.hidden_needed(all_maps), "the maps' files are there"):
+        mp.mark_waiting(st, all_maps)  # marked again with what was read
     return st, dev, all_maps, listed
 
 

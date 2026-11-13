@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 20:27+0100\n"
+"POT-Creation-Date: 2026-11-13 21:25+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -7894,6 +7894,14 @@ msgid ""
 "software, so it installs nothing there. Some devices, such as car "
 "navigators, hide it from the ordinary USB connection."
 msgstr ""
+
+#. TRANSLATORS: title of the Updates page when updates are offered and openExpress can install
+#. none of them on this device
+#: openexpress/gui/updates_page.py
+msgid "Update Cannot Be Installed"
+msgid_plural "Updates Cannot Be Installed"
+msgstr[0] ""
+msgstr[1] ""
 
 #. TRANSLATORS: subtitle of an update on the Updates page that openExpress does not install
 #. yet, without a full stop; {folder}: a folder the device hides, e.g. .System, which

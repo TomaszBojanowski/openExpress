@@ -136,13 +136,31 @@ def _tops(folders: Iterable[str]) -> list[str]:
     return out
 
 
+def folders_to_read(device, needed: Iterable[str]) -> list[str]:
+    """The folders a session reads, the same in the window and the command line: those
+    `needed` (by updates and maps), the folders of the top level they are in and those the
+    device is known to hide (known_devices.hidden_tops), and what its GarminDevice.xml names
+    under them (history.declared_under: what Device Status counts there), each once."""
+    from openexpress import history, known_devices
+
+    needed = [f.replace("\\", "/").strip("/") for f in needed]
+    tops = {f.split("/")[0] for f in needed if f}
+    tops |= set(known_devices.hidden_tops(getattr(device, "unit_id", None)))
+    out: dict[str, str] = {}
+    for folder in [*needed, *tops, *history.declared_under(device, tops)]:
+        if folder:
+            out.setdefault(folder.casefold(), folder)
+    return sorted(out.values(), key=str.casefold)
+
+
 def read(storage: Storage, folders: Iterable[str], why: str,
-         progress: Callable[[str], None] | None = None) -> Listing:
+         progress: Callable[[str], None] | None = None, unit_id: int | None = None) -> Listing:
     """Read `folders` (paths from the top level) through a session of our own, keep what it
     read for the connection, and return it: each folder by the ordinary listing and Garmin's
     together, as they are now. `why`: for the log, what needs them. A session that cannot be
     opened or fails leaves a listing that says why (Listing.state); only a device not mounted
-    again after it raises (RemountFailed: unplug it and plug it in)."""
+    again after it raises (RemountFailed: unplug it and plug it in). `unit_id`: the device's,
+    which then keeps the folders of its top level found hidden (known_devices.hidden_tops)."""
     wanted = sorted({f.strip("/") for f in folders if f.strip("/")}, key=str.casefold)
     listing = Listing()
     opener = storage.exclusive_ptp() if wanted else None
@@ -167,6 +185,11 @@ def read(storage: Storage, folders: Iterable[str], why: str,
         log.warning("hidden folders: not read, %s (%s: %s)", FAILED, type(e).__name__, e)
         listing = Listing(state=FAILED)
     else:
+        if unit_id and listing.tops():
+            from openexpress import known_devices
+
+            with known_devices.optional_change("devices: the hidden folders not kept (%s)"):
+                known_devices.note_hidden_tops(unit_id, listing.tops())
         log.info("hidden folders: %s", "; ".join(
             f"{real}: {len(entries)} entries" for real, entries in listing.folders.values())
             + "".join(f"; {m}: not on the device" for m in sorted(listing.missing)))
