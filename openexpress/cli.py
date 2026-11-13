@@ -2018,6 +2018,8 @@ def cmd_updates(args) -> int:
         return 1  # the cable must stay in: no steps that begin with unplugging it
     if n:
         print(_(FINISH_STEPS))
+    if any(u.is_system and u.hidden_folder is not None for u in rep.written):
+        print(upd.power_text())  # a navigator, its software written: it must not lose power
     return 1 if refused else 0
 
 

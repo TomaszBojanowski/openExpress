@@ -440,6 +440,14 @@ def hidden_software_text(folder: str) -> str:
              "the ordinary USB connection.").format(folder=folder)
 
 
+def power_text() -> str:
+    # TRANSLATORS: after the device's own software was written into the folder a car navigator
+    # hides: it installs it once unplugged, and must not lose power meanwhile
+    return _("Keep the device powered while it installs its software: connect it to power (its "
+             "car cable or a USB charger) or make sure its battery is well charged, and do not cut "
+             "its power until it has finished.")
+
+
 def read_only_software_text(folder: str) -> str:
     # TRANSLATORS: `openexpress updates`: the device keeps its software in a folder hidden from
     # the ordinary USB connection ({folder}, e.g. .System), which openExpress reads through a

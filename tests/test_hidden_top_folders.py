@@ -1173,6 +1173,9 @@ TZ_STEPS = [("delete", ".System/gmaptz.img"), ("info", ".System/gmaptz.img"), ("
             ("read", ".System/gmaptz.img")]
 SYSTEM_STEPS = [("delete", ".System/B000000.update"), ("info", ".System/B000000.update"),
                 ("send",), ("read", ".System/B000000.update")]
+POWER = ("Keep the device powered while it installs its software: connect it to power (its car "
+         "cable or a USB charger) or make sure its battery is well charged, and do not cut its "
+         "power until it has finished.")
 NOT_WRITTEN_TZ = ("Time zone map was not written: its old file was removed and the new one is not "
                   "on the device. Nothing else was changed; install it again.")
 
@@ -1294,9 +1297,17 @@ def test_the_command_line_trial_writes_both_and_says_so(offered_to, monkeypatch,
                         lambda self, raw, include_reinstalls=False: answer)
     assert main(["updates", "--install", "006-D9001-00", "006-B0000-00", "--apply"]) == 1
     assert fake.steps == []  # without the flag: refused
+    # Without --apply, the flag only says what would be written.
+    capsys.readouterr()
+    assert main(["updates", "--install", "006-D9001-00", "006-B0000-00",
+                 "--hidden-folder-trial"]) == 0
+    dry = capsys.readouterr().out.splitlines()
+    assert any(line.startswith("Dry run: nothing was downloaded or written") for line in dry)
+    assert fake.steps == [] and trial_downloads == []
     assert main(["updates", "--install", "006-D9001-00", "006-B0000-00",
                  "--hidden-folder-trial", "--apply"]) == 0
-    assert "Copied 2 files." in capsys.readouterr().out.splitlines()
+    out = capsys.readouterr().out.splitlines()
+    assert "Copied 2 files." in out and POWER in out
     assert fake.steps == TZ_STEPS + SYSTEM_STEPS
 
 
@@ -1359,7 +1370,7 @@ def test_the_words_of_the_trial_in_both_languages(language):
         u = updates.parse_updates(lower_keys(trial_answer()))[1]
         texts = [hidden_folders.not_written_text(u.title, old_removed=True),
                  hidden_folders.contents_not_read_text(u.title),
-                 updates_page.replaces_text(u)]
+                 updates_page.replaces_text(u), updates.power_text()]
     finally:
         i18n.setup("en")
     expected = {
@@ -1367,12 +1378,16 @@ def test_the_words_of_the_trial_in_both_languages(language):
                ("Time zone map was written at its size, but the device did not let openExpress "
                 "read it back, so its contents were not compared. The trial stops here: nothing "
                 "else is written."),
-               "The update replaces the file gmaptz.img on the device."],
+               "The update replaces the file gmaptz.img on the device.", POWER],
         "pl": [("Nie zapisano: Time zone map. Stary plik usunięto, a\u00a0nowego nie ma na "
                 "urządzeniu. Niczego więcej nie zmieniono; zainstaluj aktualizację ponownie."),
                ("Zapisano: Time zone map\u00a0– rozmiar się zgadza, ale urządzenie nie pozwoliło "
                 "openExpress odczytać pliku, więc jego zawartości nie porównano. Próba kończy się "
                 "tutaj: niczego więcej nie zapisano."),
-               "Aktualizacja zastąpi plik gmaptz.img na urządzeniu."]}
+               "Aktualizacja zastąpi plik gmaptz.img na urządzeniu.",
+               ("Podczas instalacji oprogramowania urządzenie musi mieć zasilanie: podłącz je do "
+                "zasilania (kablem samochodowym albo ładowarką USB) albo upewnij się, że bateria "
+                "jest dobrze naładowana, i\u00a0nie odcinaj zasilania, dopóki instalacja się nie "
+                "skończy.")]}
     assert texts == expected[language]
 

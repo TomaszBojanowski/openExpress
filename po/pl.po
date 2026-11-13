@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-13 22:37+0100\n"
+"POT-Creation-Date: 2026-11-13 23:00+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -11639,6 +11639,19 @@ msgstr ""
 "openExpress nie widzi folderu {folder}, w którym to urządzenie trzyma swoje "
 "oprogramowanie, więc niczego tam nie instaluje. Niektóre urządzenia, np. "
 "nawigacje samochodowe, ukrywają go przed zwykłym połączeniem USB."
+
+#. TRANSLATORS: after the device's own software was written into the folder a car navigator
+#. hides: it installs it once unplugged, and must not lose power meanwhile
+#: openexpress/updates.py
+msgid ""
+"Keep the device powered while it installs its software: connect it to power "
+"(its car cable or a USB charger) or make sure its battery is well charged, "
+"and do not cut its power until it has finished."
+msgstr ""
+"Podczas instalacji oprogramowania urządzenie musi mieć zasilanie: podłącz je "
+"do zasilania (kablem samochodowym albo ładowarką USB) albo upewnij się, że "
+"bateria jest dobrze naładowana, i nie odcinaj zasilania, dopóki instalacja "
+"się nie skończy."
 
 #. TRANSLATORS: `openexpress updates`: the device keeps its software in a folder hidden from
 #. the ordinary USB connection ({folder}, e.g. .System), which openExpress reads through a
