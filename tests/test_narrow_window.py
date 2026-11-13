@@ -359,6 +359,7 @@ def _fill(win, page: str) -> str:
     for section in win.sections.values():
         section.clear()  # a page built before in this window goes
     key = {"device": "watch"}.get(page.split("-")[0], page.split("-")[0])
+    shown = None
     if key == "watch":
         MainWindow.show_overview(win)
     elif page in ("updates-navigator", "updates-read-navigator"):
@@ -385,10 +386,11 @@ def _fill(win, page: str) -> str:
         MainWindow.show_courses(win, _courses(empty=page == "courses-empty",
                                               uncounted=page == "courses-uncounted"))
     elif page == "status-navigator":
-        MainWindow.show_status(win, _navigator_status_facts())
+        # Without diagnostic data: the page of information it names, as show_loaded shows it.
+        shown = MainWindow.show_status(win, _navigator_status_facts())
     elif key == "status":
         MainWindow.show_status(win, _status_facts())
-    win.sections[key].show("content")
+    win.sections[key].show(shown or "content")
     win._update_actions()
     win._update_banner()
     return key
