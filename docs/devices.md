@@ -17,7 +17,7 @@
 | Edge 1040 (part 006-B3843-00) | MTP | [#8](https://github.com/TomaszBojanowski/openExpress/issues/8), [#10](https://github.com/TomaszBojanowski/openExpress/issues/10) | detected; checking for software updates, installing a Garmin map (Trailforks) and installing and removing Connect IQ apps work; sync not tried. In #10 map updates worked too; the sign-in window works also when the system's language is missing in the Flatpak (see [The Flatpak and the language of your system](troubleshooting.md#the-flatpak-and-the-language-of-your-system)) | #8: Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.1; #10: Ubuntu 26.04, KDE on X11, Flatpak 0.6.7 |
 | Edge 540 (part 006-B4061-00) | MTP | [#18](https://github.com/TomaszBojanowski/openExpress/issues/18), [#28](https://github.com/TomaszBojanowski/openExpress/issues/28) | detected; sync, software updates and maps work. In #28, on Ubuntu 22.04 (flatpak 1.12), a software update and a map install from the Flatpak work (software 30.18) | #18: Fedora 44, KDE on Wayland, Flatpak 0.6.20; #28: Ubuntu 22.04, GNOME on Wayland, Flatpak 0.8.6 with the reporter's fix |
 | inReach Mini 2 (part 006-B3968-00) | USB drive | [#11](https://github.com/TomaszBojanowski/openExpress/issues/11) | connects as a USB drive: software updates work (the device installs one once its drive is ejected properly); not synced: Garmin's update server says that Garmin Connect does not take its data ([#12](https://github.com/TomaszBojanowski/openExpress/issues/12)) | Linux Mint 22.3, Cinnamon on X11, Flatpak 0.6.4 |
-| Forerunner 55 (part 006-B3869-00) | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) | connects as a USB drive: software updates work, sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
+| Forerunner 55 (part 006-B3869-00) | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) | connects as a USB drive: detected; software updates and sync with Garmin Connect work (software 11.03 when reported) | Fedora 44, KDE on Wayland, Flatpak 0.6.20; sync: version not given |
 | Forerunner 920XT (part 006-B1765-00) | USB drive | [#20](https://github.com/TomaszBojanowski/openExpress/issues/20) | connects as a USB drive: software updates work (time-zone map updated), sync not confirmed yet | Fedora 44, KDE on Wayland, Flatpak 0.6.20 |
 | Instinct 2S Solar (part 006-B3889-00) | USB drive | [#24](https://github.com/TomaszBojanowski/openExpress/issues/24) | connects as a USB drive; sync works (new activities uploaded, those already in Garmin Connect recognised, no errors); installing the software update of its GPS chip is not confirmed yet | Arch Linux, GNOME on X11, Flatpak 0.7.13 |
 | Forerunner 45 (part 006-B3282-00) | USB drive | [#36](https://github.com/TomaszBojanowski/openExpress/issues/36), [#30](https://github.com/TomaszBojanowski/openExpress/issues/30) | connects as a USB drive: detected; sync and software updates work (software 5.40); satellite data (experimental): written by a test version, read back whole and taken by the watch, which already had current data before | CachyOS, KDE on Wayland, Flatpak 0.10.0 |
@@ -139,8 +139,9 @@ and in the version from source:
 
 Tested in this mode: by the developer on the Varia RTL515 (also copying a component update and
 ejecting the drive in the window); users report software updates working on an inReach Mini 2, a
-Forerunner 55, a Forerunner 920XT and a Forerunner 45, and sync on an Instinct 2S and a
-Forerunner 45 (see the table). Reports from other devices in mass storage mode are welcome.
+Forerunner 55, a Forerunner 920XT and a Forerunner 45, and sync on an Instinct 2S, a
+Forerunner 45 and a Forerunner 55 (see the table). Reports from other devices in mass storage
+mode are welcome.
 
 ### HID only
 

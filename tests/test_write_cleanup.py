@@ -184,45 +184,50 @@ def test_trueup_cut_short_is_said_and_leaves_nothing(device_root):
     assert _files_in(st, "Garmin/NewFiles") == []
 
 
+# The unlock files of these tests go to the Maps folder of the made-up device's own GARMIN folder
+# (device_root), asked for as "Garmin/Maps/…" and found in any letter case. A second folder that
+# differs only in case would leave which one is found to the order of the file system's listing.
+
+
 def test_an_unlock_file_that_never_gets_written_leaves_none(device_root):
     """Six tries, each cut short: the error, and no half unlock file (the device could take
     it for the map's)."""
     st = Mtp(device_root, breaks=(".gma",))
-    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    (device_root / "GARMIN" / "Maps").mkdir(parents=True, exist_ok=True)
     with pytest.raises(maps.MapError):
         maps._write_unlock(st, "Garmin/Maps/abc.gma", b"UNLOCK DATA", lambda text: None,
                            lambda seconds: None)
-    assert not (device_root / "Garmin" / "Maps" / "abc.gma").exists()
+    assert not (device_root / "GARMIN" / "Maps" / "abc.gma").exists()
 
 
 def test_an_unlock_file_cut_short_once_is_whole_after_the_next_try(device_root):
     st = Mtp(device_root, breaks=(".gma",), times=1)
-    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    (device_root / "GARMIN" / "Maps").mkdir(parents=True, exist_ok=True)
     maps._write_unlock(st, "Garmin/Maps/abc.gma", b"UNLOCK DATA", lambda text: None,
                        lambda seconds: None)
-    assert (device_root / "Garmin" / "Maps" / "abc.gma").read_bytes() == b"UNLOCK DATA"
+    assert (device_root / "GARMIN" / "Maps" / "abc.gma").read_bytes() == b"UNLOCK DATA"
 
 
 def test_an_unlock_file_written_short_without_a_word_is_written_again(device_root):
     """The device took the unlock file but keeps half of it: its size says so, it is written
     again after the pause, and whole then."""
     st = Mtp(device_root, short=(".gma",), times=1)
-    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    (device_root / "GARMIN" / "Maps").mkdir(parents=True, exist_ok=True)
     said, slept = [], []
     maps._write_unlock(st, "Garmin/Maps/abc.gma", b"UNLOCK DATA", said.append, slept.append)
-    assert (device_root / "Garmin" / "Maps" / "abc.gma").read_bytes() == b"UNLOCK DATA"
+    assert (device_root / "GARMIN" / "Maps" / "abc.gma").read_bytes() == b"UNLOCK DATA"
     assert st.writes == ["abc.gma", "abc.gma"] and slept == [maps.UNLOCK_PAUSE_S]
     assert said == [f"Writing the unlock file again (2 of {maps.UNLOCK_TRIES})"]
 
 
 def test_an_unlock_file_always_written_short_leaves_none(device_root):
     st = Mtp(device_root, short=(".gma",))
-    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    (device_root / "GARMIN" / "Maps").mkdir(parents=True, exist_ok=True)
     with pytest.raises(maps.UnlockNotWritten, match="Write verification"):
         maps._write_unlock(st, "Garmin/Maps/abc.gma", b"UNLOCK DATA", lambda text: None,
                            lambda seconds: None)
     assert len(st.writes) == maps.UNLOCK_TRIES
-    assert not (device_root / "Garmin" / "Maps" / "abc.gma").exists()
+    assert not (device_root / "GARMIN" / "Maps" / "abc.gma").exists()
 
 
 def test_a_playlist_written_short_without_a_word_is_said_and_leaves_nothing(iq_device):
@@ -233,7 +238,7 @@ def test_a_playlist_written_short_without_a_word_is_said_and_leaves_nothing(iq_d
 
 
 def test_an_unlock_file_refused_leaves_the_old_one(device_root):
-    folder = device_root / "Garmin" / "Maps"
+    folder = device_root / "GARMIN" / "Maps"
     folder.mkdir(parents=True, exist_ok=True)
     (folder / "abc.gma").write_bytes(b"OLD UNLOCK")
     with pytest.raises(maps.MapError):
@@ -351,10 +356,10 @@ def test_an_app_update_refused_leaves_the_old_app(iq_device):
 # --- the map whose unlock file could not be written: what the user is told (B a) -----------------
 
 WINDOW_TEXT = ("The map files are on the device, but its unlock file Garmin/Maps/abc.gma could not "
-               "be written (Cannot write Garmin/Maps/abc.gma: the device is gone). The device may "
+               "be written (Cannot write GARMIN/Maps/abc.gma: the device is gone). The device may "
                "still load the map after it is unplugged; if it does not, come back to this page.")
 CLI_TEXT = ("The map files are on the device, but its unlock file Garmin/Maps/abc.gma could not "
-            "be written (Cannot write Garmin/Maps/abc.gma: the device is gone). The device may "
+            "be written (Cannot write GARMIN/Maps/abc.gma: the device is gone). The device may "
             "still load the map after it is unplugged; if it does not, run openexpress maps "
             "again.")
 
@@ -362,7 +367,7 @@ CLI_TEXT = ("The map files are on the device, but its unlock file Garmin/Maps/ab
 def test_an_unlock_file_not_written_is_said_without_install_again(device_root):
     """Not "install the map again" (that is refused while its files are on the device): the
     files are there, the device may load the map once unplugged, else come back."""
-    (device_root / "Garmin" / "Maps").mkdir(parents=True, exist_ok=True)
+    (device_root / "GARMIN" / "Maps").mkdir(parents=True, exist_ok=True)
     with pytest.raises(maps.UnlockNotWritten) as error:
         maps._write_unlock(Mtp(device_root, breaks=(".gma",)), "Garmin/Maps/abc.gma",
                            b"UNLOCK DATA", lambda text: None, lambda seconds: None)
@@ -401,7 +406,7 @@ def test_the_window_says_the_text_of_the_window(device_root, monkeypatch):
 
     def install(*args, **kwargs):
         raise maps.UnlockNotWritten("Garmin/Maps/abc.gma",
-                                    "Cannot write Garmin/Maps/abc.gma: the device is gone")
+                                    "Cannot write GARMIN/Maps/abc.gma: the device is gone")
 
     monkeypatch.setattr(maps, "install", install)
 
