@@ -9,9 +9,9 @@ import logging
 import types
 
 import pytest
-from fakes import descendants
+from fakes import descendants, maps_window
 from test_country_names import countries  # noqa: F401 - a fixture of these tests
-from test_updates_maps import _maps_window, maps_response
+from test_updates_maps import maps_response
 
 from openexpress import maps as mp
 from openexpress import service
@@ -179,7 +179,7 @@ def _page_rows(device_root, country):
 
     maps = mp.parse_maps(answer(restricted=("TopoActive Japan", "TopoActive East")))
     mp.apply_country(maps, country)
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, (maps, len(maps)), None)
     out = {}
     for g in win.sections["maps"].groups:

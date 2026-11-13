@@ -612,6 +612,35 @@ def window_picture(win, path) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     texture.save_to_png(str(path))
 
+def maps_window(storage):
+    """A stand-in for the window around the Maps page: its groups and rows are kept (the
+    groups as plain records), the buttons are real, a reload of a page is recorded."""
+    import types
+
+    from openexpress.gui.app import MainWindow
+
+    class Section:
+        def __init__(self):
+            self.groups = []
+
+        def group(self, title="", description=""):
+            group = types.SimpleNamespace(title=title, rows=[], header=None)
+            group.add = group.rows.append
+            group.set_header_suffix = lambda widget: setattr(group, "header", widget)
+            self.groups.append(group)
+            return group
+
+    reloads = []
+    win = window(
+        session=types.SimpleNamespace(storage=storage), sections={"maps": Section()},
+        busy=False, _action_buttons=[], confirm_map=lambda m: None,
+        confirm_remove=lambda m: None, _search_filter=lambda search, rows: None,
+        load_section=lambda key, force=False: reloads.append((key, force)),
+        _set_map_state=lambda result: None)
+    window_methods(win, ["_button", "_trash"])
+    win._map_subtitle = MainWindow._map_subtitle
+    return win, reloads
+
 def window_methods(win, names):
     """Returns the stand-in window `win` with these methods of MainWindow bound to it, each
     looked up along MainWindow's MRO as the window finds it (in app.py or a mixin), so a method

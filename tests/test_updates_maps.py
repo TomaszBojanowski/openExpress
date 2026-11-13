@@ -7,7 +7,7 @@ import threading
 
 import pytest
 import requests
-from fakes import RunNow, device_session, window_methods
+from fakes import RunNow, device_session, maps_window
 from fakes import window as stand_in
 
 from openexpress import applog, download, maps, updates
@@ -504,7 +504,7 @@ def test_maps_that_cannot_be_read_are_not_no_maps(device_root, xdg, monkeypatch,
 def test_maps_page_with_maps_that_cannot_be_read(device_root):
     from openexpress.gui.app import MainWindow
 
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps({"maps": [{"displayname": "X"}]}))
     assert [g.title for g in win.sections["maps"].groups] == ["On the Device"]
 
@@ -586,34 +586,6 @@ def test_maps_command_does_not_say_no_maps_when_the_check_fails(
         assert "Server error: Map check" in captured.err and "Traceback" not in captured.err
 
 
-def _maps_window(storage):
-    import types
-
-    from openexpress.gui.app import MainWindow
-
-    class Section:
-        def __init__(self):
-            self.groups = []
-
-        def group(self, title="", description=""):
-            group = types.SimpleNamespace(title=title, rows=[], header=None)
-            group.add = group.rows.append
-            group.set_header_suffix = lambda widget: setattr(group, "header", widget)
-            self.groups.append(group)
-            return group
-
-    reloads = []
-    win = stand_in(
-        session=types.SimpleNamespace(storage=storage), sections={"maps": Section()},
-        busy=False, _action_buttons=[], confirm_map=lambda m: None,
-        confirm_remove=lambda m: None, _search_filter=lambda search, rows: None,
-        load_section=lambda key, force=False: reloads.append((key, force)),
-        _set_map_state=lambda result: None)
-    window_methods(win, ["_button", "_trash"])
-    win._map_subtitle = MainWindow._map_subtitle
-    return win, reloads
-
-
 def _children(widget):
     child = widget.get_first_child()
     while child is not None:
@@ -627,7 +599,7 @@ def test_maps_page_without_maps(device_root):
 
     from openexpress.gui.app import MainWindow
 
-    win, reloads = _maps_window(LocalStorage(device_root))
+    win, reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(lower_keys(NO_MAPS)))
     assert win.maps_cache == []
     (group,) = win.sections["maps"].groups  # no "On the Device", no storage bar
@@ -645,7 +617,7 @@ def test_maps_page_without_maps(device_root):
 def test_maps_page_with_maps_keeps_the_groups(server, device_root):
     from openexpress.gui.app import MainWindow
 
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
     on_device, available = win.sections["maps"].groups
     assert on_device.title == "On the Device" and available.title == "Available"
@@ -667,7 +639,7 @@ def test_maps_page_does_not_repeat_the_name_as_the_type(name, map_type, subtitle
     answer = maps_response(server)
     answer["maps"] = answer["maps"][:1]  # the installed, up-to-date map
     answer["maps"][0].update(displayname=name, maptype=map_type)
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(answer))
     (on_device,) = win.sections["maps"].groups
     row = on_device.rows[-1]
@@ -873,7 +845,7 @@ def test_maps_page_updates_the_row_of_the_device_page(server, device_root):
     win, asked, _later = _overview_window([map_answer(server, 1, 1)], device_root)
     win._check_maps_quietly()
     assert win.map_row.subtitle == "1 update available"
-    page, _reloads = _maps_window(LocalStorage(device_root))
+    page, _reloads = maps_window(LocalStorage(device_root))
     page._set_map_state = win._set_map_state
     MainWindow.show_maps(page, maps.read_maps(map_answer(server, 0, 2)))
     assert (win.map_state, win.map_row.subtitle) == (
@@ -1092,7 +1064,7 @@ def test_unplugging_leaves_no_check_waiting_for_the_old_device(server, device_ro
 def test_maps_page_with_maps_can_check_again(server, device_root):
     from openexpress.gui.app import MainWindow
 
-    win, reloads = _maps_window(LocalStorage(device_root))
+    win, reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
     on_device, _available = win.sections["maps"].groups
     button = on_device.header
@@ -1107,7 +1079,7 @@ def test_maps_page_with_maps_can_check_again(server, device_root):
 def test_check_again_is_greyed_while_another_task_runs(server, device_root):
     from openexpress.gui.app import MainWindow
 
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     win.busy = True
     MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
     assert not win.sections["maps"].groups[0].header.get_sensitive()
@@ -1117,7 +1089,7 @@ def test_check_again_is_greyed_while_another_task_runs(server, device_root):
 def test_maps_page_without_maps_has_one_check_again(device_root):
     from openexpress.gui.app import MainWindow
 
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(lower_keys(NO_MAPS)))
     (group,) = win.sections["maps"].groups
     assert group.header is None  # only the button under the message
@@ -1429,7 +1401,7 @@ def test_the_maps_page_shows_waiting_maps_on_the_device(server, device_root):
     put(device_root, **{"DEM.img": DEM, "E.img": b"old", "E.gma": b"u", "J.img": TOPO})
     all_maps = maps.parse_maps(maps_response(server))
     maps.mark_waiting(LocalStorage(device_root), all_maps)  # Japan written, West removed
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, (all_maps, len(all_maps)))
     groups = win.sections["maps"].groups
     on_device = {r.get_title(): r for r in groups[0].rows if hasattr(r, "get_title")}
@@ -1711,7 +1683,7 @@ def test_a_map_that_cannot_be_installed_has_no_install_button_and_says_why(serve
         east["deliverableoptions"][0]["md5"] = "z" * 32
     else:
         east["deliverableoptions"] = []
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(answer))
     on_device, available = win.sections["maps"].groups
     rows = {row.get_title(): row for row in on_device.rows if hasattr(row, "get_title")}
@@ -1727,7 +1699,7 @@ def test_a_map_that_cannot_be_installed_has_no_install_button_and_says_why(serve
 def test_the_install_buttons_stay_for_maps_that_can_be_installed(server, device_root):
     from openexpress.gui.app import MainWindow
 
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(maps_response(server)))
     on_device, available = win.sections["maps"].groups
     rows = {row.get_title(): row for row in on_device.rows if hasattr(row, "get_title")}
@@ -1901,7 +1873,7 @@ def test_the_maps_page_offers_install_for_an_incomplete_map(server, device_root)
 
     answer = maps_response(server)
     answer["maps"][1]["installationstate"] = 2  # East
-    win, _reloads = _maps_window(LocalStorage(device_root))
+    win, _reloads = maps_window(LocalStorage(device_root))
     MainWindow.show_maps(win, maps.read_maps(answer))
     on_device, available = win.sections["maps"].groups
     rows = {row.get_title(): row for row in on_device.rows if hasattr(row, "get_title")}
