@@ -99,6 +99,23 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.4" date="2026-11-14">
+      <description translate="no">
+        <p>A small release: satellite data for two watches, experimental and off by default.</p>
+        <ul>
+          <li>Satellite Data on the device page keeps the GPS satellite data of the Forerunner 45
+          (CPE.BIN) and the fēnix 8 (GPE.bin and GPES.bin) current when they sync, without the
+          phone.</li>
+          <li>openExpress only refreshes the files the watch already keeps, downloaded from Garmin's
+          server without your account or any detail of the watch.</li>
+          <li>A file the watch does not take turns Satellite Data off, and the device page says
+          why.</li>
+          <li>On a fēnix 8 the row appears after the first sync, once openExpress has found the
+          watch's files.</li>
+        </ul>
+        <p>Thanks to PrimeRiposte for trying it on a Forerunner 45 (#30).</p>
+      </description>
+    </release>
     <release version="0.10.3" date="2026-11-13">
       <description translate="no">
         <p>A maintenance release for the one-time setup.</p>
