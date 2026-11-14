@@ -552,8 +552,8 @@ name; an answer that took more than 5 s is noted too.
 
 ### Languages
 
-The interface is available in English, Polish, German and Czech. The language follows the system
-locale; you can override it:
+The interface is available in English, Polish, German, Czech and, in part, French (its texts not
+translated yet stay in English). The language follows the system locale; you can override it:
 
 - in the window: main menu (☰) → Preferences → **Language**,
 - for one command: `openexpress --lang pl …` or `OPENEXPRESS_LANG=pl`,

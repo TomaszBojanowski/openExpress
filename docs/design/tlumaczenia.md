@@ -44,9 +44,11 @@ Less work at each release: Hosted Weblate (D1).
    merged by Weblate's msgmerge add-on, and only there (D7): both doing it made conflicts. Polish
    keeps its rule (a new text and its Polish in one commit) and is edited in the repository
    only (D5).
-2. **`po/LINGUAS`**, kept by the project, not by Weblate's add-on: a language is added by hand
-   once it translates at least 90% of the template of a release, together with its
-   `po/<language>.po` (a test holds that the two agree and that Polish is listed). The add-on
+2. **`po/LINGUAS`**, kept by the project, not by Weblate's add-on: a language is added by hand,
+   as a rule once it translates at least 90% of the template of a release. Its
+   `po/<language>.po` may come from Weblate before; a test holds that every language listed has
+   its file and that Polish is listed. French was listed before that threshold, so that its
+   translator sees the work in a release (what is not translated yet stays in English). The add-on
    would list every language Weblate has, also one just started, and none that Weblate leaves
    out, such as Polish (D5). The languages are read from it, not from `LANGUAGE_NAMES`.
 3. **The name of a language in that language**: a text `pgettext("language name", "English")`

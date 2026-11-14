@@ -229,9 +229,10 @@ also when everything works.
 
 <a href="https://hosted.weblate.org/projects/openexpress/"><img alt="Translation status on Hosted Weblate" src="https://hosted.weblate.org/widget/openexpress/openexpress/svg-badge.svg"></a>
 
-openExpress speaks English, Polish, German and Czech. To add your language or correct one, translate it
-in your browser on [Hosted Weblate](https://hosted.weblate.org/projects/openexpress/) (Polish,
-which the project keeps itself: an issue or a pull request):
+openExpress speaks English, Polish, German, Czech and, in part, French. To add your language or
+correct one, translate it in your browser on
+[Hosted Weblate](https://hosted.weblate.org/projects/openexpress/) (Polish, which the project
+keeps itself: an issue or a pull request):
 [Translating openExpress](docs/translating.md).
 
 ## Documentation
@@ -253,6 +254,8 @@ which the project keeps itself: an issue or a pull request):
   symbolic icons.
 - hutamaki found why every write to the device failed from the Flatpak on Ubuntu 22.04
   and sent the fix ([#28](https://github.com/TomaszBojanowski/openExpress/issues/28)).
+- The translators on Hosted Weblate: prajzner (Czech), BeGiBue (German) and Alex Giroux
+  (French); see [TRANSLATORS](TRANSLATORS).
 
 ## License
 

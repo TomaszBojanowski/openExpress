@@ -22,12 +22,15 @@ XML_LANG = "{http://www.w3.org/XML/1998/namespace}lang"
 needs_gettext = pytest.mark.skipif(not shutil.which("xgettext"), reason="gettext not installed")
 
 
-def test_the_languages_are_those_of_linguas_each_with_its_po():
+def test_the_languages_of_linguas_each_have_their_po():
     """po/LINGUAS is the project's, not written by Weblate: Polish (which Weblate leaves out)
-    and exactly the languages with a po/<language>.po, each once."""
+    and languages with a po/<language>.po, each once. A language's file may come from Weblate
+    before the project lists it."""
     languages = catalogs.languages()
     assert "pl" in languages
-    assert sorted(p.stem for p in (ROOT / "po").glob("*.po")) == sorted(languages)
+    assert len(set(languages)) == len(languages)
+    files = {p.stem for p in (ROOT / "po").glob("*.po")}
+    assert [lang for lang in languages if lang not in files] == []
 
 
 def test_linguas_takes_comments_and_several_languages_on_a_line(tmp_path):

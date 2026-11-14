@@ -25,8 +25,10 @@ GitHub account:
 - **Sending**: Weblate sends the translations to this repository in a pull request, merged
   before each release: the tests are run then, and your name goes to `TRANSLATORS`. Weblate also
   brings each new text of the template into your language.
-- **In a release**: a language goes into the program once at least 90% of its texts are
-  translated; the project then adds it to `po/LINGUAS` (Weblate does not).
+- **In a release**: as a rule a language goes into the program once at least 90% of its texts
+  are translated; the project then adds it to `po/LINGUAS` (Weblate does not). French went in
+  earlier, so that its translator sees the work in a release: its texts not translated yet
+  stay in English.
 
 ## What not to translate
 
@@ -109,5 +111,5 @@ connected device as usual.
   shows it. Add your language and name to [TRANSLATORS](../TRANSLATORS) too.
 - Translate "English" in the context "language name" into the name of your language in your
   language ("Deutsch", "Français"). The list of languages in the Preferences shows it.
-- Weblate sends your translation; the project adds your language to `po/LINGUAS` once at
-  least 90% of its texts are translated, and your name to `TRANSLATORS`.
+- Weblate sends your translation; the project adds your language to `po/LINGUAS`, as a rule
+  once at least 90% of its texts are translated, and your name to `TRANSLATORS`.
