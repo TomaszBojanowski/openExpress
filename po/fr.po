@@ -9,7 +9,8 @@ msgstr ""
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-13 22:07+0100\n"
 "PO-Revision-Date: 2026-11-14 07:06+0000\n"
-"Last-Translator: Alex Giroux <alexgiroux1@users.noreply.hosted.weblate.org>\n"
+"Last-Translator: Tomasz Bojanowski "
+"<tbojanowski@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/openexpress/"
 "openexpress/fr/>\n"
 "Language: fr\n"
@@ -138,7 +139,7 @@ msgstr "HIIT"
 #, python-brace-format
 msgctxt "sport"
 msgid "Sport {number}"
-msgstr "Sport {numéro}"
+msgstr "Sport {number}"
 
 #. TRANSLATORS: a step of a long task: the activity files read ("… · 2 of 30")
 #: openexpress/activities.py
@@ -152,7 +153,7 @@ msgstr "Aucun fichier journal : {error}"
 
 #: openexpress/auth/sso.py
 msgid "Sign-In Page Not Working"
-msgstr "Aucun fichier journal : {erreur}"
+msgstr "La page de connexion ne fonctionne pas"
 
 #: openexpress/auth/sso.py
 msgid ""
@@ -328,7 +329,7 @@ msgid ""
 "GNU gettext's {tool} is needed to build the translations (the gettext "
 "package); without it openExpress stays in English."
 msgstr ""
-"GNU gettext {tools} est nécessaire pour générer les traductions (le paquet "
+"GNU gettext {tool} est nécessaire pour générer les traductions (le paquet "
 "gettext) ; sans lui, openExpress reste en anglais."
 
 #. TRANSLATORS: a type of Connect IQ app openExpress does not know, lower case, after an
