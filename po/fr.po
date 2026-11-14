@@ -8,149 +8,151 @@ msgstr ""
 "Project-Id-Version: openexpress 0.10.4\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-13 22:07+0100\n"
-"PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
-"Last-Translator: Automatically generated\n"
-"Language-Team: none\n"
+"PO-Revision-Date: 2026-11-14 02:17+0000\n"
+"Last-Translator: Alex Giroux <alexgiroux1@users.noreply.hosted.weblate.org>\n"
+"Language-Team: French <https://hosted.weblate.org/projects/openexpress/"
+"openexpress/fr/>\n"
 "Language: fr\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Plural-Forms: nplurals=2; plural=n > 1;\n"
+"X-Generator: Weblate 2026.12.dev0\n"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Activity"
-msgstr ""
+msgstr "Activité"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Running"
-msgstr ""
+msgstr "En cours d'exécution"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Cycling"
-msgstr ""
+msgstr "Vélo"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Fitness equipment"
-msgstr ""
+msgstr "Équipement de fitness"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Swimming"
-msgstr ""
+msgstr "Natation"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Training"
-msgstr ""
+msgstr "Entraînement"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Walking"
-msgstr ""
+msgstr "Marche"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Cross-country skiing"
-msgstr ""
+msgstr "Ski de fond"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Alpine skiing"
-msgstr ""
+msgstr "ski alpin"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Snowboarding"
-msgstr ""
+msgstr "planche à neige"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Rowing"
-msgstr ""
+msgstr "Aviron"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Mountaineering"
-msgstr ""
+msgstr "Alpinisme"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Hiking"
-msgstr ""
+msgstr "Randonnée"
 
 #: openexpress/activities.py
 #, ignore-same
 msgctxt "sport"
 msgid "Multisport"
-msgstr ""
+msgstr "Multisport"
 
 #: openexpress/activities.py
 #, ignore-reused
 msgctxt "sport"
 msgid "Paddling"
-msgstr ""
+msgstr "Pagaie"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "E-biking"
-msgstr ""
+msgstr "Pratique du vélo électrique"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Golf"
-msgstr ""
+msgstr "Golf"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Rock climbing"
-msgstr ""
+msgstr "Escalade"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "Snowshoeing"
-msgstr ""
+msgstr "Randonnée en raquettes"
 
 #: openexpress/activities.py
 #, ignore-multiple-capital
 msgctxt "sport"
 msgid "Stand-up paddleboarding"
-msgstr ""
+msgstr "planche à pagaie debout"
 
 #: openexpress/activities.py
 #, ignore-reused
 msgctxt "sport"
 msgid "Kayaking"
-msgstr ""
+msgstr "Kayak"
 
 #: openexpress/activities.py
 msgctxt "sport"
 msgid "HIIT"
-msgstr ""
+msgstr "HIIT"
 
 #. TRANSLATORS: a sport the program has no name for, by its number in the FIT profile
 #: openexpress/activities.py
 #, python-brace-format
 msgctxt "sport"
 msgid "Sport {number}"
-msgstr ""
+msgstr "Sport {numéro}"
 
 #. TRANSLATORS: a step of a long task: the activity files read ("… · 2 of 30")
 #: openexpress/activities.py
 msgid "Reading activities"
-msgstr ""
+msgstr "Activités de lecture"
 
 #: openexpress/applog.py
 #, python-brace-format
 msgid "No log file: {error}"
-msgstr ""
+msgstr "Aucun fichier journal : {error}"
 
 #: openexpress/auth/sso.py
 msgid "Sign-In Page Not Working"
-msgstr ""
+msgstr "Aucun fichier journal : {erreur}"
 
 #: openexpress/auth/sso.py
 msgid ""
@@ -158,23 +160,26 @@ msgid ""
 "sign in in your web browser, then paste the address the browser shows at the "
 "end."
 msgstr ""
+"Réessayez, ou connectez-vous sans passer par cette fenêtre : exécutez cette "
+"commande dans un terminal, connectez-vous via votre navigateur web, puis "
+"collez l’adresse qui s’affiche dans le navigateur."
 
 #: openexpress/auth/sso.py openexpress/gui/device_page.py
 #: openexpress/gui/netstatus_view.py openexpress/gui/updates_page.py
 msgid "Try Again"
-msgstr ""
+msgstr "Essayer à nouveau"
 
 #: openexpress/auth/sso.py
 msgid "Sign in to Garmin"
-msgstr ""
+msgstr "Connectez-vous à Garmin"
 
 #: openexpress/auth/sso.py
 msgid "Sign-in cancelled or no SSO ticket received."
-msgstr ""
+msgstr "Connexion annulée ou aucun ticket SSO reçu."
 
 #: openexpress/auth/sso.py
 msgid "1. Open this URL in your browser:"
-msgstr ""
+msgstr "1. Ouvrez cette URL dans votre navigateur :"
 
 #: openexpress/auth/sso.py
 msgid ""
@@ -182,45 +187,53 @@ msgid ""
 "   (it contains “ticket=ST-…”). If the browser shows an error, the URL still "
 "works."
 msgstr ""
+"2. Connectez-vous. Ensuite, copiez l'URL complète depuis la barre d'adresse "
+"du navigateur\n"
+"(elle contient « ticket=ST-… »). Si le navigateur affiche une erreur, l'URL "
+"reste fonctionnelle."
 
 #: openexpress/auth/sso.py
 msgid "3. Paste the URL: "
-msgstr ""
+msgstr "3. Collez l’URL : "
 
 #: openexpress/auth/sso.py
 #, ignore-end-stop
 msgid "The given URL has no ticket=ST-... parameter"
-msgstr ""
+msgstr "L'URL fournie ne comporte pas de paramètre ticket=ST-..."
 
 #. TRANSLATORS: shown in place of the signed-in Garmin account's name when it has no user
 #. name and no e-mail address
 #: openexpress/auth/store.py
 msgid "(unknown account)"
-msgstr ""
+msgstr "(compte inconnu)"
 
 #: openexpress/auth/store.py openexpress/connect.py
 msgid "Not signed in. Run: openexpress login"
-msgstr ""
+msgstr "Non connecté. Exécutez : openexpress login"
 
 #: openexpress/auth/store.py
 msgid "The saved sign-in is damaged; sign in again."
 msgstr ""
+"Les informations de connexion enregistrées sont endommagées ; veuillez vous "
+"reconnecter."
 
 #: openexpress/background.py
 msgid "Background sync was not allowed."
-msgstr ""
+msgstr "La synchronisation en arrière-plan n’était pas autorisée."
 
 #: openexpress/background.py
 msgid "Starting at login was not allowed."
-msgstr ""
+msgstr "Le démarrage lors de la connexion n’était pas autorisé."
 
 #: openexpress/background.py
 msgid "Sync the device with Garmin Connect when it is connected."
-msgstr ""
+msgstr "Synchronisez l'appareil avec Garmin Connect lorsqu'il est connecté."
 
 #: openexpress/background.py
 msgid "systemctl was not found; background sync needs systemd."
 msgstr ""
+"systemctl est introuvable ; la synchronisation en arrière-plan nécessite "
+"systemd."
 
 #: openexpress/backup.py
 #, python-brace-format
@@ -228,6 +241,9 @@ msgid ""
 "Nothing was backed up: the device names a folder or file “{name}” that "
 "cannot be used as a path on this computer."
 msgstr ""
+"Rien n’a été sauvegardé : l’appareil désigne un dossier ou un fichier « "
+"{name} » qui ne peut pas être utilisé comme chemin d’accès sur cet "
+"ordinateur."
 
 #. TRANSLATORS: after a backup (a message of the window and a line of the command line)
 #: openexpress/backup.py
@@ -239,50 +255,56 @@ msgid_plural ""
 "{count} files were still being written by the device and are not in the "
 "backup. Unplug the device and plug it in again, then make the backup again."
 msgstr[0] ""
+"{count} fichier était encore en cours d’écriture par l’appareil et ne figure "
+"pas dans la sauvegarde. Débranchez l’appareil, rebranchez-le, puis effectuez "
+"à nouveau la sauvegarde."
 msgstr[1] ""
+"{count} fichiers étaient encore en cours d’écriture par l’appareil et ne "
+"figurent pas dans la sauvegarde. Débranchez l’appareil, rebranchez-le, puis "
+"effectuez à nouveau la sauvegarde."
 
 #. TRANSLATORS: a step of a backup ("… · 120 of 1530")
 #: openexpress/backup.py
 msgid "Copying to the backup"
-msgstr ""
+msgstr "Copie vers la sauvegarde"
 
 #. TRANSLATORS: the parts of the cache, as `openexpress cache` lists them
 #. TRANSLATORS: rows of the cache in the preferences: downloaded maps
 #: openexpress/cache.py openexpress/gui/preferences.py
 msgid "Maps"
-msgstr ""
+msgstr "Cartes"
 
 #. TRANSLATORS: a part of the cache in `openexpress cache`: downloaded device software
 #: openexpress/cache.py
 #, ignore-reused
 msgid "Software updates"
-msgstr ""
+msgstr "Mises à jour logicielles"
 
 #. TRANSLATORS: a part of the cache in `openexpress cache`: downloaded pictures of devices
 #. and icons of apps
 #: openexpress/cache.py
 #, ignore-reused
 msgid "Pictures and icons"
-msgstr ""
+msgstr "Images et icônes"
 
 #. TRANSLATORS: a part of the cache in `openexpress cache`: answers of Garmin's servers kept
 #. for a while
 #: openexpress/cache.py
 msgid "Garmin server responses"
-msgstr ""
+msgstr "Réponses des serveurs Garmin"
 
 #. TRANSLATORS: a part of the cache in `openexpress cache`: OpenStreetMap tiles under the
 #. maps of activities
 #: openexpress/cache.py
 #, ignore-reused
 msgid "Activity map tiles"
-msgstr ""
+msgstr "Tuiles de carte d’activité"
 
 #. TRANSLATORS: a part of the cache in `openexpress cache`: files on their way to the device
 #: openexpress/cache.py
 #, ignore-reused
 msgid "Temporary files"
-msgstr ""
+msgstr "Fichiers temporaires"
 
 #: openexpress/cache.py
 msgid "The cache is being cleared."
@@ -291,12 +313,12 @@ msgstr ""
 #: openexpress/cache.py
 msgid ""
 "The cache is in use (a download or an install is running). Try again later."
-msgstr ""
+msgstr "Le cache est en cours de vidage."
 
 #: openexpress/cache.py
 #, python-brace-format
 msgid "Could not delete {path}: {error}"
-msgstr ""
+msgstr "Impossible de supprimer {path} : {error}"
 
 #: openexpress/catalogs.py
 #, python-brace-format
@@ -304,72 +326,77 @@ msgid ""
 "GNU gettext's {tool} is needed to build the translations (the gettext "
 "package); without it openExpress stays in English."
 msgstr ""
+"GNU gettext {tools} est nécessaire pour générer les traductions (le paquet "
+"gettext) ; sans lui, openExpress reste en anglais."
 
 #. TRANSLATORS: a type of Connect IQ app openExpress does not know, lower case, after an
 #. app's name in lists
 #: openexpress/ciq.py
 msgctxt "app type"
 msgid "unknown"
-msgstr ""
+msgstr "inconnue"
 
 #. TRANSLATORS: a type of Connect IQ app, lower case, after an app's name in lists; use
 #. the name the Connect IQ Store uses in your language
 #: openexpress/ciq.py
 msgctxt "app type"
 msgid "app"
-msgstr ""
+msgstr "application"
 
 #. TRANSLATORS: a type of Connect IQ app, lower case, after an app's name in lists; use
 #. the name the Connect IQ Store uses in your language
 #: openexpress/ciq.py
 msgctxt "app type"
 msgid "widget"
-msgstr ""
+msgstr "widget"
 
 #. TRANSLATORS: a type of Connect IQ app, lower case, after an app's name in lists; use
 #. the name the Connect IQ Store uses in your language
 #: openexpress/ciq.py
 msgctxt "app type"
 msgid "watch face"
-msgstr ""
+msgstr "cadran de montre"
 
 #. TRANSLATORS: a type of Connect IQ app, lower case, after an app's name in lists; use
 #. the name the Connect IQ Store uses in your language
 #: openexpress/ciq.py
 msgctxt "app type"
 msgid "data field"
-msgstr ""
+msgstr "champ de données"
 
 #. TRANSLATORS: a type of Connect IQ app, lower case, after an app's name in lists; use
 #. the name the Connect IQ Store uses in your language
 #: openexpress/ciq.py
 msgctxt "app type"
 msgid "music app"
-msgstr ""
+msgstr "application musicale"
 
 #. TRANSLATORS: a type of Connect IQ app, lower case, after an app's name in lists; use
 #. the name the Connect IQ Store uses in your language
 #: openexpress/ciq.py
 msgctxt "app type"
 msgid "activity"
-msgstr ""
+msgstr "activité"
 
 #: openexpress/ciq.py
 msgid "Not a Connect IQ configuration file"
-msgstr ""
+msgstr "Ce n’est pas un fichier de configuration Connect IQ"
 
 #: openexpress/ciq.py
 msgid "OUT.BIN does not contain an installed-apps response"
 msgstr ""
+"OUT.BIN ne contient pas de réponse relative aux applications installées."
 
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "The Connect IQ app list (OUT.BIN) is damaged: {error}"
-msgstr ""
+msgstr "La liste des applications Connect IQ (OUT.BIN) est endommagée : {error}"
 
 #: openexpress/ciq.py
 msgid "This device does not support Connect IQ app configuration"
 msgstr ""
+"Cet appareil ne prend pas en charge la configuration des applications "
+"Connect IQ."
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -380,7 +407,11 @@ msgid_plural ""
 "Wrote {names} to the device; they will be installed after the device is "
 "unplugged."
 msgstr[0] ""
+"{names} a été écrit sur l’appareil ; il sera installé une fois l’appareil "
+"débranché."
 msgstr[1] ""
+"{names} ont été écrits sur l’appareil ; ils seront installés une fois "
+"l’appareil débranché."
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -391,7 +422,11 @@ msgid_plural ""
 "Wrote the updates of {names} to the device; they will be installed after the "
 "device is unplugged."
 msgstr[0] ""
+"La mise à jour {names} a été écrite sur l’appareil ; elle sera installée une "
+"fois l’appareil débranché."
 msgstr[1] ""
+"Les mises à jour concernant {names} ont été écrites sur l’appareil ; elles "
+"seront installées une fois l’appareil débranché."
 
 #. TRANSLATORS: on the Apps page and in `openexpress apps`, without a full stop
 #: openexpress/ciq.py
