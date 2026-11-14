@@ -291,7 +291,9 @@ figcaption {
 /* A row of two: as wide as two pictures of a row of three and their gap, so that a picture is
    as large in every row; with a narrow window beside them, as wide as it takes besides
    (0.3602 of a picture: 600 × 1233 as high as 1400 × 1036). */
-.shot-row.pair, .shot-row.pair-and-narrow { margin-inline: auto; }
+.shot-row.pair, .shot-row.pair-and-narrow, .shot-row.single { margin-inline: auto; }
+/* One picture alone: as wide as one of a row of three. */
+.shot-row.single { max-width: calc((100% - 2 * var(--gap)) / 3); }
 .shot-row.pair { max-width: calc((100% - 2 * var(--gap)) * 2 / 3 + var(--gap)); }
 .shot-row.pair-and-narrow { max-width: calc((100% - 2 * var(--gap)) * 2.3602 / 3 + 2 * var(--gap)); }
 
@@ -473,7 +475,7 @@ footer p { margin: 0 0 12px; }
   .shot-row > .shot { flex: none; }
   /* 360 of a window of 1000 px: as large as the others, one under the other */
   .shot-row > .narrow-shot { width: 36%; margin: 0 auto; }
-  .shot-row.pair, .shot-row.pair-and-narrow { max-width: none; }  /* one under the other */
+  .shot-row.pair, .shot-row.pair-and-narrow, .shot-row.single { max-width: none; }  /* one under the other */
   main > section { padding-top: 40px; }
   .spotlight {
     grid-template-columns: 1fr;
