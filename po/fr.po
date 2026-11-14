@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: openexpress 0.10.4\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-13 22:07+0100\n"
-"PO-Revision-Date: 2026-11-14 02:17+0000\n"
+"PO-Revision-Date: 2026-11-14 07:06+0000\n"
 "Last-Translator: Alex Giroux <alexgiroux1@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/openexpress/"
 "openexpress/fr/>\n"
@@ -214,8 +214,9 @@ msgstr "Non connecté. Exécutez : openexpress login"
 #: openexpress/auth/store.py
 msgid "The saved sign-in is damaged; sign in again."
 msgstr ""
-"Les informations de connexion enregistrées sont endommagées ; veuillez vous "
-"reconnecter."
+"Les informations de connexion enregistrées sont endommagées ; reconnectez-"
+"vous.Les informations de connexion enregistrées sont endommagées ; veuillez "
+"vous reconnecter."
 
 #: openexpress/background.py
 msgid "Background sync was not allowed."
@@ -233,7 +234,8 @@ msgstr "Synchronisez l'appareil avec Garmin Connect lorsqu'il est connecté."
 msgid "systemctl was not found; background sync needs systemd."
 msgstr ""
 "systemctl est introuvable ; la synchronisation en arrière-plan nécessite "
-"systemd."
+"systemd.systemctl est introuvable ; la synchronisation en arrière-plan "
+"nécessite systemd."
 
 #: openexpress/backup.py
 #, python-brace-format
@@ -308,7 +310,7 @@ msgstr "Fichiers temporaires"
 
 #: openexpress/cache.py
 msgid "The cache is being cleared."
-msgstr ""
+msgstr "Le cache est en cours de vidage."
 
 #: openexpress/cache.py
 msgid ""
@@ -385,7 +387,8 @@ msgstr "Ce n’est pas un fichier de configuration Connect IQ"
 #: openexpress/ciq.py
 msgid "OUT.BIN does not contain an installed-apps response"
 msgstr ""
-"OUT.BIN ne contient pas de réponse relative aux applications installées."
+"OUT.BIN ne contient pas de réponse d’applications installéesOUT.BIN ne "
+"contient pas de réponse relative aux applications installées."
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -396,7 +399,8 @@ msgstr "La liste des applications Connect IQ (OUT.BIN) est endommagée : {error
 msgid "This device does not support Connect IQ app configuration"
 msgstr ""
 "Cet appareil ne prend pas en charge la configuration des applications "
-"Connect IQ."
+"Connect IQCet appareil ne prend pas en charge la configuration des "
+"applications Connect IQ."
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -431,7 +435,7 @@ msgstr[1] ""
 #. TRANSLATORS: on the Apps page and in `openexpress apps`, without a full stop
 #: openexpress/ciq.py
 msgid "No Connect IQ apps on the device"
-msgstr ""
+msgstr "Aucune application Connect IQ sur l’appareil"
 
 #. TRANSLATORS: "Install" is the button of the Apps page
 #: openexpress/ciq.py
@@ -470,117 +474,119 @@ msgstr ""
 #: openexpress/ciq.py
 msgctxt "server request"
 msgid "Connect IQ apps"
-msgstr ""
+msgstr "Applications Connect IQ"
 
 #. TRANSLATORS: name of a server request that asks
 #. which apps have new versions, shown before an
 #. error
 #: openexpress/ciq.py
 msgid "Connect IQ updates"
-msgstr ""
+msgstr "Mises à jour Connect IQ"
 
 #. TRANSLATORS: name of a server request that queues apps for
 #. installation, shown before an error
 #: openexpress/ciq.py
 msgid "Connect IQ install"
-msgstr ""
+msgstr "Installation Connect IQ"
 
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "The server refused to queue: {apps}"
-msgstr ""
+msgstr "Le serveur a refusé de mettre en file d’attente : {apps}"
 
 #. TRANSLATORS: name of a server request that takes apps off the account's
 #. list, shown before an error
 #: openexpress/ciq.py
 msgid "Connect IQ remove"
-msgstr ""
+msgstr "Suppression Connect IQ"
 
 #. TRANSLATORS: a permission a Connect IQ app asks for, one line under "{name} {version} needs
 #. these permissions:"
 #: openexpress/ciq.py
 msgid "ANT radio"
-msgstr ""
+msgstr "Radio ANT"
 
 #: openexpress/ciq.py
 msgid "running in the background (may use more battery)"
-msgstr ""
+msgstr "exécution en arrière-plan (peut utiliser plus de batterie)"
 
 #: openexpress/ciq.py
 msgid "the internet, through the phone"
-msgstr ""
+msgstr "Internet, via le téléphone"
 
 #: openexpress/ciq.py
 msgid "offering data to watch faces and other apps"
-msgstr ""
+msgstr "fourniture de données aux cadrans et autres applications"
 
 #: openexpress/ciq.py
 msgid "reading data that other apps offer"
-msgstr ""
+msgstr "lecture des données proposées par d’autres applications"
 
 #: openexpress/ciq.py
 msgid "alerts during an activity"
-msgstr ""
+msgstr "alertes pendant une activité"
 
 #. TRANSLATORS: a permission a Connect IQ app asks for, one line under "{name} {version} needs
 #. these permissions:"
 #: openexpress/ciq.py
 msgid "activity files (FIT)"
-msgstr ""
+msgstr "fichiers d’activité (FIT)"
 
 #: openexpress/ciq.py
 msgid "adding its own data to activity files"
-msgstr ""
+msgstr "ajout de ses propres données aux fichiers d’activité"
 
 #. TRANSLATORS: a permission a Connect IQ app asks for, one line under "{name} {version} needs
 #. these permissions:"
 #: openexpress/ciq.py
 msgid "showing notifications"
-msgstr ""
+msgstr "affichage des notifications"
 
 #: openexpress/ciq.py
 msgid "saved courses, routes, waypoints and workouts"
-msgstr ""
+msgstr "parcours, itinéraires, points de passage et entraînements enregistrés"
 
 #: openexpress/ciq.py
 msgid "saving locations on the device"
-msgstr ""
+msgstr "enregistrement des positions sur l’appareil"
 
 #. TRANSLATORS: a permission a Connect IQ app asks for, one line under "{name} {version} needs
 #. these permissions:"
 #: openexpress/ciq.py
 msgid "GPS location"
-msgstr ""
+msgstr "Position GPS"
 
 #. TRANSLATORS: a permission a Connect IQ app asks for, one line under "{name} {version} needs
 #. these permissions:"
 #: openexpress/ciq.py
 msgid "push notifications"
-msgstr ""
+msgstr "notifications push"
 
 #: openexpress/ciq.py
 msgid "sensors (heart rate, ANT+ sensors, compass)"
-msgstr ""
+msgstr "capteurs (fréquence cardiaque, capteurs ANT+, boussole)"
 
 #: openexpress/ciq.py
 msgid "history of heart rate, pressure, temperature and altitude"
 msgstr ""
+"historique de la fréquence cardiaque, de la pression, de la température et "
+"de l’altitude"
 
 #. TRANSLATORS: a permission a Connect IQ app asks for, one line under "{name} {version} needs
 #. these permissions:"
 #: openexpress/ciq.py
 msgid "recording sensor data"
-msgstr ""
+msgstr "enregistrement des données des capteurs"
 
 #. TRANSLATORS: a permission a Connect IQ app asks for, one line under "{name} {version} needs
 #. these permissions:"
 #: openexpress/ciq.py
 msgid "step counts"
-msgstr ""
+msgstr "nombre de pas"
 
 #: openexpress/ciq.py
 msgid "your Garmin Connect profile"
-msgstr ""
+msgstr "votre profil Garmin Connect"
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -592,20 +598,20 @@ msgstr ""
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "{name} {version} needs these permissions:"
-msgstr ""
+msgstr "{name} {version} a besoin de ces permissions :"
 
 #: openexpress/ciq.py
 msgid "no free app slots on the device"
-msgstr ""
+msgstr "aucun emplacement d’application libre sur l’appareil"
 
 #: openexpress/ciq.py
 msgid "not enough Connect IQ space on the device"
-msgstr ""
+msgstr "espace Connect IQ insuffisant sur l’appareil"
 
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "the device does not accept {datatype}"
-msgstr ""
+msgstr "l’appareil n’accepte pas {datatype}"
 
 #: openexpress/ciq.py
 msgid ""
@@ -652,29 +658,31 @@ msgstr ""
 #: openexpress/ciq.py
 msgid "Remove it on the phone, in the Connect IQ or Garmin Connect app."
 msgstr ""
+"Supprimez-la sur le téléphone, dans l’application Connect IQ ou Garmin "
+"Connect."
 
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "Cannot register the apps on the device: {error}"
-msgstr ""
+msgstr "Impossible d’enregistrer les applications sur l’appareil : {error}"
 
 #: openexpress/ciq.py
 msgid "not enough free space on the device"
-msgstr ""
+msgstr "espace libre insuffisant sur l’appareil"
 
 #: openexpress/ciq.py
 msgid "the app list folder was not found"
-msgstr ""
+msgstr "le dossier de la liste des applications est introuvable"
 
 #. TRANSLATORS: shown in place of an app's name in the list of what failed in an install
 #. ("USB connection: …")
 #: openexpress/ciq.py
 msgid "USB connection"
-msgstr ""
+msgstr "Connexion USB"
 
 #: openexpress/ciq.py
 msgid "the GARMIN folder was not found on the device"
-msgstr ""
+msgstr "le dossier GARMIN est introuvable sur l’appareil"
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -702,7 +710,7 @@ msgstr ""
 #: openexpress/ciq.py openexpress/device/storage.py
 #, python-brace-format
 msgid "Write verification of {path} failed"
-msgstr ""
+msgstr "La vérification d’écriture de {path} a échoué"
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -722,10 +730,11 @@ msgstr ""
 #, python-brace-format
 msgid "{name} is part of the device software and cannot be removed"
 msgstr ""
+"{name} fait partie du logiciel de l’appareil et ne peut pas être supprimée"
 
 #: openexpress/ciq.py
 msgid "App not found on the device"
-msgstr ""
+msgstr "Application introuvable sur l’appareil"
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -740,6 +749,8 @@ msgstr ""
 #, python-brace-format
 msgid "The app list on the device could not be updated: {error}"
 msgstr ""
+"La liste des applications sur l’appareil n’a pas pu être mise à jour : "
+"{error}"
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -752,11 +763,11 @@ msgstr ""
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "{name} was not removed: {error}"
-msgstr ""
+msgstr "{name} n’a pas été supprimée : {error}"
 
 #: openexpress/ciq.py
 msgid "the app folder was not found on the device"
-msgstr ""
+msgstr "le dossier de l’application est introuvable sur l’appareil"
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -769,11 +780,12 @@ msgstr ""
 #, python-brace-format
 msgid "The device refused to delete {path} ({reason}); nothing was changed."
 msgstr ""
+"L’appareil a refusé de supprimer {path} ({reason}) ; rien n’a été modifié."
 
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "the device did not delete {path}"
-msgstr ""
+msgstr "l’appareil n’a pas supprimé {path}"
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -785,17 +797,18 @@ msgstr ""
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "No OUT.BIN in {name}"
-msgstr ""
+msgstr "Aucun OUT.BIN dans {name}"
 
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "Cannot read the copy of the app list {name}: {error}"
 msgstr ""
+"Impossible de lire la copie de la liste des applications {name} : {error}"
 
 #: openexpress/ciq.py
 #, python-brace-format
 msgid "No copy of the app list matches “{name}”."
-msgstr ""
+msgstr "Aucune copie de la liste des applications ne correspond à « {name} »."
 
 #: openexpress/ciq.py
 #, python-brace-format
@@ -5096,7 +5109,7 @@ msgstr ""
 #: openexpress/gui/app.py
 msgctxt "tab"
 msgid "Device"
-msgstr ""
+msgstr "Appareil"
 
 #: openexpress/gui/app.py openexpress/gui/detection.py openexpress/gui/start.py
 msgid "Detecting the Device…"
@@ -5107,7 +5120,7 @@ msgstr ""
 #: openexpress/gui/start.py
 msgctxt "tab"
 msgid "Updates"
-msgstr ""
+msgstr "Mises à jour"
 
 #: openexpress/gui/app.py openexpress/gui/updates_page.py
 msgid "Checking for Updates…"
@@ -5118,7 +5131,7 @@ msgstr ""
 #: openexpress/gui/start.py
 msgctxt "tab"
 msgid "Maps"
-msgstr ""
+msgstr "Cartes"
 
 #: openexpress/gui/app.py openexpress/gui/maps_page.py
 msgid "Checking Maps…"
@@ -5128,7 +5141,7 @@ msgstr ""
 #: openexpress/gui/app.py
 msgctxt "tab"
 msgid "Courses"
-msgstr ""
+msgstr "Parcours"
 
 #: openexpress/gui/app.py openexpress/gui/courses_page.py
 msgid "Reading Courses…"
@@ -5145,7 +5158,7 @@ msgstr ""
 #: openexpress/gui/app.py openexpress/gui/device_page.py
 msgctxt "tab"
 msgid "Apps"
-msgstr ""
+msgstr "Applications"
 
 #: openexpress/gui/app.py openexpress/gui/apps_page.py
 msgid "Reading Connect IQ Apps…"
@@ -5155,7 +5168,7 @@ msgstr ""
 #: openexpress/gui/app.py openexpress/gui/device_page.py
 msgctxt "tab"
 msgid "Music"
-msgstr ""
+msgstr "Musique"
 
 #: openexpress/gui/app.py openexpress/gui/music_page.py
 msgid "Reading Music on the Device…"
@@ -5165,14 +5178,14 @@ msgstr ""
 #: openexpress/gui/app.py
 msgctxt "tab"
 msgid "Activities"
-msgstr ""
+msgstr "Activités"
 
 #. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
 #: openexpress/gui/app.py openexpress/gui/device_page.py
 #: openexpress/gui/start.py openexpress/gui/status_page.py
 msgctxt "tab"
 msgid "Device Status"
-msgstr ""
+msgstr "État de l’appareil"
 
 #. TRANSLATORS: while the page Device Status reads what it shows
 #: openexpress/gui/app.py openexpress/gui/status_page.py
@@ -5203,7 +5216,7 @@ msgstr ""
 #: openexpress/gui/app.py openexpress/gui/preferences.py
 #: openexpress/gui/start.py
 msgid "Sync"
-msgstr ""
+msgstr "Synchroniser"
 
 #: openexpress/gui/app.py
 msgid "Do not unplug the device"
@@ -5827,7 +5840,7 @@ msgstr ""
 #. TRANSLATORS: a row of the Courses page when the courses could not be read
 #: openexpress/gui/courses_page.py
 msgid "Courses"
-msgstr ""
+msgstr "Parcours"
 
 #: openexpress/gui/courses_page.py
 msgid "Could not be read from the device"
@@ -7437,12 +7450,12 @@ msgstr ""
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
 msgid "Maps"
-msgstr ""
+msgstr "Cartes"
 
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
 msgid "Activities"
-msgstr ""
+msgstr "Activités"
 
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
@@ -7452,7 +7465,7 @@ msgstr ""
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
 msgid "Apps"
-msgstr ""
+msgstr "Applications"
 
 #: openexpress/gui/status_page.py
 msgctxt "storage kind"
@@ -7996,7 +8009,7 @@ msgstr ""
 #. drive was ejected (not a button)
 #: openexpress/gui/updates_page.py
 msgid "Done"
-msgstr ""
+msgstr "Terminé"
 
 #. TRANSLATORS: the last line of the message after updates were copied to the device or its
 #. drive was ejected: how many updates the Updates page still lists
@@ -8156,7 +8169,7 @@ msgstr ""
 
 #: openexpress/gui/window_tasks.py
 msgid "OK"
-msgstr ""
+msgstr "OK"
 
 #: openexpress/gui/window_tasks.py
 msgid "This can take a few minutes."
@@ -8400,7 +8413,7 @@ msgstr ""
 #: openexpress/gui/words.py
 msgctxt "activity source"
 msgid "Device"
-msgstr ""
+msgstr "Appareil"
 
 #: openexpress/gui/words.py
 #, python-brace-format
@@ -9391,7 +9404,7 @@ msgstr ""
 #. and Files… on the Music page
 #: openexpress/music.py
 msgid "Music"
-msgstr ""
+msgstr "Musique"
 
 #. TRANSLATORS: a kind of audio to add, beside Music and Audiobooks (a row of the Music page)
 #: openexpress/music.py
@@ -9471,7 +9484,7 @@ msgstr ""
 #. TRANSLATORS: state of Garmin's servers at the bottom of the side panel: they answer
 #: openexpress/netstatus.py
 msgid "Online"
-msgstr ""
+msgstr "En ligne"
 
 #. TRANSLATORS: state of Garmin's servers at the bottom of the side panel: nothing answered,
 #. the computer has no connection
@@ -10018,36 +10031,36 @@ msgstr ""
 #. of data types)
 #: openexpress/service.py
 msgid "sleep disruptions"
-msgstr ""
+msgstr "interruptions de sommeil"
 
 #. TRANSLATORS: a type of data: use of gear such as shoes or bikes, not bike gears (lowercase, in
 #. lists of data types)
 #: openexpress/service.py
 msgid "gear tracking"
-msgstr ""
+msgstr "suivi du matériel"
 
 #. TRANSLATORS: a type of data: activities that last several days (lowercase, in lists of data
 #. types)
 #: openexpress/service.py
 msgid "multi-day activities"
-msgstr ""
+msgstr "activités sur plusieurs jours"
 
 #. TRANSLATORS: a type of data: a backup of the device uploaded to Garmin Connect (lowercase, in
 #. lists of data types)
 #: openexpress/service.py
 msgid "device backup"
-msgstr ""
+msgstr "sauvegarde de l’appareil"
 
 #: openexpress/service.py
 msgid "raw GPS data of activities"
-msgstr ""
+msgstr "données GPS brutes des activités"
 
 #. TRANSLATORS: a type of data with no name, in lists of data types; {type}: its technical name,
 #. e.g. FIT_TYPE_70
 #: openexpress/service.py
 #, python-brace-format
 msgid "other data ({type})"
-msgstr ""
+msgstr "autres données ({type})"
 
 #: openexpress/service.py
 #, python-brace-format
@@ -10144,13 +10157,14 @@ msgstr[1] ""
 
 #: openexpress/service.py
 msgid "TrueUp: daily totals aligned with your other Garmin devices"
-msgstr ""
+msgstr "TrueUp : totaux quotidiens alignés avec vos autres appareils Garmin"
 
 #. TRANSLATORS: a line of the details of "Last Sync" and of the end of
 #. `openexpress sync --apply`
 #: openexpress/service.py
 msgid "TrueUp: waiting stopped; it comes with the next sync"
 msgstr ""
+"TrueUp : attente arrêtée ; il arrivera avec la prochaine synchronisation"
 
 #. TRANSLATORS: a line of the details of "Last Sync" and of the end of
 #. `openexpress sync --apply`
@@ -10176,12 +10190,12 @@ msgstr[1] ""
 #. TRANSLATORS: under "Last Sync": the uploads were not looked at (sync --download-only)
 #: openexpress/service.py
 msgid "upload skipped"
-msgstr ""
+msgstr "envoi ignoré"
 
 #. TRANSLATORS: under "Last Sync": nothing was uploaded
 #: openexpress/service.py
 msgid "nothing uploaded"
-msgstr ""
+msgstr "rien n’a été envoyé"
 
 #. TRANSLATORS: files found on the device, e.g. "8 new files, 6 uploaded"
 #: openexpress/service.py
@@ -10203,12 +10217,12 @@ msgstr[1] ""
 #. TRANSLATORS: after "3 new files, ": not one of them was uploaded
 #: openexpress/service.py
 msgid "none uploaded"
-msgstr ""
+msgstr "aucun envoyé"
 
 #. TRANSLATORS: the device had no new file to upload to Garmin Connect
 #: openexpress/service.py
 msgid "nothing to upload"
-msgstr ""
+msgstr "rien à envoyer"
 
 #. TRANSLATORS: under "Last Sync": a sync of only these data types (sync --type), e.g.
 #. "activities only: 3 new files, 3 uploaded"
@@ -10245,7 +10259,7 @@ msgstr ""
 
 #: openexpress/service.py
 msgid "A sync is already running in another process."
-msgstr ""
+msgstr "Une synchronisation est déjà en cours dans un autre processus."
 
 #: openexpress/service.py
 msgid ""
@@ -10285,19 +10299,19 @@ msgstr ""
 
 #: openexpress/service.py
 msgid "Not signed in to Garmin Connect."
-msgstr ""
+msgstr "Non connecté à Garmin Connect."
 
 #: openexpress/service.py
 msgid "Fetching configuration from the Garmin server…"
-msgstr ""
+msgstr "Récupération de la configuration depuis le serveur Garmin…"
 
 #: openexpress/service.py
 msgid "Looking for new files on the device…"
-msgstr ""
+msgstr "Recherche de nouveaux fichiers sur l’appareil…"
 
 #: openexpress/service.py
 msgid "Checking for files from Garmin Connect…"
-msgstr ""
+msgstr "Vérification des fichiers provenant de Garmin Connect…"
 
 #: openexpress/service.py
 #, python-brace-format
@@ -10308,18 +10322,21 @@ msgstr ""
 #, python-brace-format
 msgid "The settings file {path} is damaged ({error}); fix or delete it."
 msgstr ""
+"Le fichier de paramètres {path} est endommagé ({error}) ; corrigez-le ou "
+"supprimez-le."
 
 #: openexpress/settings.py
 #, python-brace-format
 msgid "The settings file {path} is damaged; fix or delete it."
 msgstr ""
+"Le fichier de paramètres {path} est endommagé ; corrigez-le ou supprimez-le."
 
 #. TRANSLATORS: error: the settings file names a set of Garmin servers openExpress does
 #. not know; {name}: e.g. "production"
 #: openexpress/settings.py
 #, python-brace-format
 msgid "Unknown environment: {name}"
-msgstr ""
+msgstr "Environnement inconnu : {name}"
 
 #: openexpress/settings.py
 msgid ""
@@ -10340,27 +10357,27 @@ msgstr ""
 #: openexpress/settings.py
 #, python-brace-format
 msgid "Application key not found in {path}"
-msgstr ""
+msgstr "Clé d’application introuvable dans {path}"
 
 #: openexpress/settings.py
 #, python-brace-format
 msgid "URL signing data not found in {path}"
-msgstr ""
+msgstr "Données de signature d’URL introuvables dans {path}"
 
 #. TRANSLATORS: who made a file of Garmin Connect's queue: the open device
 #: openexpress/sync.py
 msgid "this device"
-msgstr ""
+msgstr "cet appareil"
 
 #. TRANSLATORS: who made a file of Garmin Connect's queue: a product not on the account
 #: openexpress/sync.py
 #, python-brace-format
 msgid "Garmin product {number}"
-msgstr ""
+msgstr "Produit Garmin {number}"
 
 #: openexpress/sync.py
 msgid "ECG (needs a Garmin Health account)"
-msgstr ""
+msgstr "ECG (nécessite un compte Garmin Health)"
 
 #. TRANSLATORS: sync dry run, after "skipped: ": diagnostic data kept back unless
 #. the option is given; keep "--include-diagnostics"
@@ -10371,36 +10388,40 @@ msgstr ""
 #: openexpress/sync.py
 #, python-brace-format
 msgid "consent not given ({consents})"
-msgstr ""
+msgstr "consentement non donné ({consents})"
 
 #. TRANSLATORS: a step of the progress of a sync; {what}: a kind of data, e.g.
 #. "activities", "monitoring" ("Uploading activities · 3 of 8")
 #: openexpress/sync.py
 #, python-brace-format
 msgid "Uploading {what}"
-msgstr ""
+msgstr "Envoi de {what}"
 
 #: openexpress/sync.py
 msgid "too many uploads; files of this kind wait for the next sync"
 msgstr ""
+"trop d’envois ; les fichiers de ce type attendent la prochaine "
+"synchronisation"
 
 #: openexpress/sync.py
 #, python-brace-format
 msgid "server rejected the file (codes {codes})"
-msgstr ""
+msgstr "le serveur a rejeté le fichier (codes {codes})"
 
 #: openexpress/sync.py
 msgid "device does not accept this type"
-msgstr ""
+msgstr "l’appareil n’accepte pas ce type"
 
 #. TRANSLATORS: a step of the progress of a sync ("… · 5 of 21")
 #: openexpress/sync.py
 msgid "Downloading from Garmin Connect"
-msgstr ""
+msgstr "Téléchargement depuis Garmin Connect"
 
 #: openexpress/trueup.py
 msgid "Stopped waiting for TrueUp; Garmin Connect sends it with the next sync."
 msgstr ""
+"Attente de TrueUp arrêtée ; Garmin Connect l’enverra avec la prochaine "
+"synchronisation."
 
 #: openexpress/trueup.py
 #, python-brace-format
@@ -10415,11 +10436,11 @@ msgstr ""
 #: openexpress/trueup.py
 #, ignore-same, python-brace-format
 msgid "TrueUp: {time}…"
-msgstr ""
+msgstr "TrueUp : {time}…"
 
 #: openexpress/trueup.py
 msgid "TrueUp: waiting for Garmin Connect…"
-msgstr ""
+msgstr "TrueUp : en attente de Garmin Connect…"
 
 #: openexpress/updates.py
 #, ignore-newline-count
@@ -10487,48 +10508,48 @@ msgstr ""
 #. TRANSLATORS: kind of update: a file that belongs to a map (Garmin/SID/*.sid)
 #: openexpress/updates.py
 msgid "Map support file"
-msgstr ""
+msgstr "Fichier de support de carte"
 
 #. TRANSLATORS: kind of update
 #: openexpress/updates.py
 msgid "Software"
-msgstr ""
+msgstr "Logiciel"
 
 #. TRANSLATORS: kind of update
 #: openexpress/updates.py
 #, ignore-reused
 msgid "Configuration"
-msgstr ""
+msgstr "Configuration"
 
 #. TRANSLATORS: kind of update: a file that describes other updates
 #: openexpress/updates.py
 msgid "Update information"
-msgstr ""
+msgstr "Informations de mise à jour"
 
 #. TRANSLATORS: importance of an update
 #: openexpress/updates.py
 msgid "Critical"
-msgstr ""
+msgstr "Critique"
 
 #. TRANSLATORS: importance of an update
 #: openexpress/updates.py
 msgid "Recommended"
-msgstr ""
+msgstr "Recommandée"
 
 #. TRANSLATORS: importance of an update
 #: openexpress/updates.py
 msgid "Optional"
-msgstr ""
+msgstr "Facultative"
 
 #. TRANSLATORS: importance of an update, when the server does not say
 #: openexpress/updates.py
 msgid "Unspecified"
-msgstr ""
+msgstr "Non spécifiée"
 
 #: openexpress/updates.py
 #, python-brace-format
 msgid "Not in the list: {items}"
-msgstr ""
+msgstr "Absent de la liste : {items}"
 
 #: openexpress/updates.py
 #, python-brace-format
@@ -10540,51 +10561,51 @@ msgstr ""
 #: openexpress/updates.py
 #, python-brace-format
 msgid "{part}: the server did not provide a download URL"
-msgstr ""
+msgstr "{part} : le serveur n’a pas fourni d’URL de téléchargement"
 
 #: openexpress/updates.py
 #, python-brace-format
 msgid "{part}: the RGN format is not supported by openExpress"
-msgstr ""
+msgstr "{part} : le format RGN n’est pas pris en charge par openExpress"
 
 #. TRANSLATORS: title of a notification of the background sync:
 #. the first sync of a device waits for the user's choice
 #: openexpress/watch.py
 #, python-brace-format
 msgid "{device}: choose how to sync it first"
-msgstr ""
+msgstr "{device} : choisissez d’abord comment le synchroniser"
 
 #: openexpress/watch.py
 msgid "Open openExpress and choose how to sync the device."
-msgstr ""
+msgstr "Ouvrez openExpress et choisissez comment synchroniser l’appareil."
 
 #. TRANSLATORS: title of the notification while the background service
 #. syncs; {device}: the device's name
 #: openexpress/watch.py
 #, python-brace-format
 msgid "Syncing {device}"
-msgstr ""
+msgstr "Synchronisation de {device}"
 
 #. TRANSLATORS: notification body while the watch is syncing
 #: openexpress/watch.py
 msgid "In progress…"
-msgstr ""
+msgstr "En cours…"
 
 #. TRANSLATORS: title of a notification of the background sync, over what it did
 #: openexpress/watch.py
 #, python-brace-format
 msgid "{device} synced"
-msgstr ""
+msgstr "{device} synchronisé"
 
 #. TRANSLATORS: title of a notification of the background sync, over why
 #: openexpress/watch.py
 #, python-brace-format
 msgid "{device} not synced"
-msgstr ""
+msgstr "{device} non synchronisé"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid "Manage your Garmin device on Linux"
-msgstr ""
+msgstr "Gérez votre appareil Garmin sous Linux"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid ""
@@ -10649,7 +10670,7 @@ msgstr ""
 #. usage data
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid "No telemetry"
-msgstr ""
+msgstr "Aucune télémétrie"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid ""
@@ -10682,11 +10703,11 @@ msgstr ""
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid "Connect IQ apps"
-msgstr ""
+msgstr "Applications Connect IQ"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid "Music, podcasts and audiobooks"
-msgstr ""
+msgstr "Musique, balados et livres audio"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid ""
