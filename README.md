@@ -233,7 +233,8 @@ openExpress speaks English, Polish, German, Czech and, in part, French. To add y
 correct one, translate it in your browser on
 [Hosted Weblate](https://hosted.weblate.org/projects/openexpress/) (Polish, which the project
 keeps itself: an issue or a pull request):
-[Translating openExpress](docs/translating.md).
+[Translating openExpress](docs/translating.md). To see your translation in the program before a
+release, see [Trying a translation in the window](docs/translating.md#trying-a-translation-in-the-window).
 
 ## Documentation
 

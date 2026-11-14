@@ -99,6 +99,19 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.10.5" date="2026-11-14">
+      <description translate="no">
+        <p>A translation release.</p>
+        <ul>
+          <li>French, a new translation by Alex Giroux on Hosted Weblate, is in the program; texts
+          not translated yet stay in English.</li>
+          <li>Czech translation updated by prajzner through Hosted Weblate.</li>
+          <li>German and Czech: the texts added since their last update stay in English until they
+          are translated.</li>
+        </ul>
+        <p>Thanks to Alex Giroux and prajzner.</p>
+      </description>
+    </release>
     <release version="0.10.4" date="2026-11-14">
       <description translate="no">
         <p>A small release: satellite data for two watches, experimental and off by default.</p>
