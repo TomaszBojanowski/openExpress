@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-12 19:05+0100\n"
+"POT-Creation-Date: 2026-11-13 22:07+0100\n"
 "PO-Revision-Date: 2026-11-07 18:00+0100\n"
 "Last-Translator: BeGiBue\n"
 "Language-Team: none\n"
@@ -1959,6 +1959,88 @@ msgstr "Letzte Synchronisierung: {text}"
 #, python-brace-format
 msgid "Device software: {text}"
 msgstr "Gerätesoftware: {text}"
+
+#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned on
+#: openexpress/cli.py
+#, fuzzy
+#| msgid "none"
+msgctxt "satellite data"
+msgid "on"
+msgstr "keine"
+
+#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):": turned off
+#: openexpress/cli.py
+msgctxt "satellite data"
+msgid "off"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status`, after "Satellite data (experimental):"
+#: openexpress/cli.py
+msgctxt "satellite data"
+msgid "off (the switch is on the device page in the window)"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: the last sync did not update
+#. them; {reason} says why
+#: openexpress/cli.py openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "Nothing was uploaded: {reason}"
+msgctxt "satellite data"
+msgid "not updated: {reason}"
+msgstr "Nichts wurde hochgeladen: {reason}"
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: on, nothing written yet,
+#. as the watch's own satellite data (e.g. from the phone) is current
+#: openexpress/cli.py openexpress/gui/words.py
+#, fuzzy
+#| msgid "Already on the device: {count}"
+msgid "the data on the device is current"
+msgstr "Bereits auf dem Gerät: {count}"
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: on, not written yet
+#: openexpress/cli.py openexpress/gui/words.py
+msgid "the next sync updates it"
+msgstr ""
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data: when the last sync wrote them,
+#. e.g. "updated yesterday, 20:39"
+#: openexpress/cli.py openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "Created: {when}"
+msgctxt "satellite data"
+msgid "updated {when}"
+msgstr "Erstellt: {when}"
+
+#. TRANSLATORS: `openexpress status`: the GPS satellite data of a watch that keeps it as
+#. CPE.BIN; {text} says whether it is on and what the last sync did
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Satellite data (experimental): {text}"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync --apply`: the satellite data written to the device
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Satellite data updated ({size})"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync` (the dry run)
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Satellite data: would be updated ({size})"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync`: the device has Garmin's current file already
+#: openexpress/cli.py
+msgid "Satellite data already current"
+msgstr ""
+
+#. TRANSLATORS: `openexpress sync`; {reason} says why
+#: openexpress/cli.py
+#, fuzzy, python-brace-format
+#| msgid "{device} was not forgotten: {reason}"
+msgid "Satellite data not updated: {reason}"
+msgstr "{device} wurde nicht vergessen: {reason}"
 
 #: openexpress/cli.py
 msgid "an update is ready: unplug the device to install it"
@@ -5311,7 +5393,7 @@ msgstr "Keine GPS-Positionen in dieser Aktivität"
 #: openexpress/gui/activities_page.py openexpress/gui/activity_page.py
 #: openexpress/gui/app.py openexpress/gui/apps_page.py
 #: openexpress/gui/detection.py openexpress/gui/device_page.py
-#: openexpress/gui/window_tasks.py
+#: openexpress/gui/preferences.py openexpress/gui/window_tasks.py
 msgid "Another operation is in progress"
 msgstr "Ein anderer Vorgang läuft"
 
@@ -6566,6 +6648,15 @@ msgid "Garmin Connect could not be asked for the picture. Try again later."
 msgstr ""
 "Garmin Connect konnte nicht nach dem Bild gefragt werden. Versuchen Sie es "
 "später erneut."
+
+#. TRANSLATORS: row of the device page, with a switch: the GPS satellite data of a watch
+#. that keeps it as CPE.BIN, written with each sync while on
+#: openexpress/gui/device_page.py
+#, fuzzy
+#| msgctxt "storage kind"
+#| msgid "Updates and Satellite Data"
+msgid "Satellite Data"
+msgstr "Updates und Satellitendaten"
 
 #. TRANSLATORS: subtitle of "Primary Training Device" while not logged in
 #: openexpress/gui/device_page.py
@@ -9684,6 +9775,98 @@ msgstr "Keine Herzfrequenz, Höhe oder Geschwindigkeit in dieser Aktivität"
 msgid "no reading"
 msgstr "kein Messwert"
 
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: "
+#: openexpress/gui/words.py
+#, fuzzy
+#| msgid "Removing a file waiting for the device: {name}"
+msgid "Garmin's file is not in the format the device has"
+msgstr "Eine auf das Gerät wartende Datei wird entfernt: {name}"
+
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: "
+#: openexpress/gui/words.py
+#, fuzzy
+#| msgid "The GPX file could not be written there. Choose another folder."
+msgid "the file could not be written to the device"
+msgstr ""
+"Die GPX-Datei konnte dort nicht geschrieben werden. Wählen Sie einen anderen "
+"Ordner."
+
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: ": the watch
+#. keeps them hidden from the file manager and the app cannot open its own connection to
+#. the watch here (e.g. a Flatpak without access to USB)
+#: openexpress/gui/words.py
+#, fuzzy
+#| msgid "The app list on the device has entries that cannot be read"
+msgid "the device's hidden files cannot be reached here"
+msgstr ""
+"Die App-Liste auf dem Gerät hat Einträge, die nicht gelesen werden können"
+
+#. TRANSLATORS: why the satellite data was not updated, after "not updated: ": Garmin's
+#. server answered that it was asked too often; {time} is when it may be asked again,
+#. e.g. "14:05"
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Garmin's server asks to wait until {time}"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status` and `sync`: the watch did not take the satellite
+#. data file written (left it as written after it was unplugged, or renamed it)
+#: openexpress/gui/words.py
+#, fuzzy
+#| msgid "The device did not remove the file."
+#| msgid_plural "The device did not remove the {count} files."
+msgid "the device did not take the last file"
+msgstr "Das Gerät hat die Datei nicht entfernt."
+
+#. TRANSLATORS: `openexpress status` and `sync`: the satellite data file written was not
+#. on the watch twice in a row
+#: openexpress/gui/words.py
+msgid "the written file disappeared twice"
+msgstr ""
+
+#. TRANSLATORS: `openexpress status` and `sync`: the watch renamed the file written to
+#. CPE_BAD.bin
+#: openexpress/gui/words.py
+msgid "the device rejected the last file (CPE_BAD.bin)"
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row Satellite Data: the watch did not take the file
+#. written (left it as written after it was unplugged, or renamed it), so the switch
+#. was turned off
+#: openexpress/gui/words.py
+#, fuzzy
+#| msgid "The device did not remove the file."
+#| msgid_plural "The device did not remove the {count} files."
+msgid "Turned off: the device did not take the last file"
+msgstr "Das Gerät hat die Datei nicht entfernt."
+
+#. TRANSLATORS: subtitle of the row Satellite Data: the file written was not on the
+#. watch twice in a row, so the switch was turned off
+#: openexpress/gui/words.py
+msgid "Turned off: the written file disappeared twice"
+msgstr ""
+
+#. TRANSLATORS: subtitle of the row Satellite Data: the watch renamed the file written to
+#. CPE_BAD.bin, so the switch was turned off
+#: openexpress/gui/words.py
+msgid "Turned off: the device rejected the last file (CPE_BAD.bin)"
+msgstr ""
+
+#. TRANSLATORS: the first part of the subtitle of the row Satellite Data: the feature is
+#. experimental (in Polish plural, as "dane satelitarne")
+#: openexpress/gui/words.py
+#, fuzzy
+#| msgctxt "chip"
+#| msgid "Experimental"
+msgctxt "satellite data"
+msgid "Experimental"
+msgstr "Experimentell"
+
+#. TRANSLATORS: in the subtitle of the row Satellite Data while its switch is off
+#: openexpress/gui/words.py
+msgid "when on, each sync updates it"
+msgstr ""
+
 #. TRANSLATORS: under the summary of the page Device Status of a watch that hides its crash
 #. logs; "below" is the row "Crash Logs" with its button "Copy"; one sentence, no full stop
 #: openexpress/gui/words.py
@@ -9839,6 +10022,30 @@ msgstr "."
 msgid "{minutes} min {seconds} s"
 msgstr "{minutes} min {seconds} s"
 
+#. TRANSLATORS: setup: the file chosen is not Garmin Express's installer for Windows;
+#. {file} is its name
+#: openexpress/installer.py
+#, fuzzy, python-brace-format
+#| msgid ""
+#| "One-time setup: choose the Garmin Express installer for Windows "
+#| "(GarminExpress.exe from garmin.com). openExpress only reads it."
+msgid ""
+"{file} is not the Garmin Express installer for Windows. Download "
+"GarminExpress.exe from garmin.com/express and choose it."
+msgstr ""
+"Einmalige Einrichtung: Wählen Sie den Garmin Express-Installer für Windows "
+"(GarminExpress.exe von garmin.com). openExpress liest ihn nur."
+
+#. TRANSLATORS: setup: the file chosen is Garmin Express's installer, but the application key
+#. could not be read from it; {file} is its name
+#: openexpress/installer.py
+#, python-brace-format
+msgid ""
+"{file} is a Garmin Express installer, but openExpress cannot read the "
+"application key from it: Garmin may have changed the installer. Please "
+"report this on GitHub."
+msgstr ""
+
 #: openexpress/installer.py
 msgid "The 7z tool is required (package p7zip or 7zip)."
 msgstr "Das Werkzeug 7z wird benötigt (Paket p7zip oder 7zip)."
@@ -9862,18 +10069,8 @@ msgstr ""
 "nichts."
 
 #: openexpress/installer.py
-#, python-brace-format
-msgid "{file} does not look like a Garmin Express installer."
-msgstr "{file} sieht nicht wie ein Garmin Express-Installer aus."
-
-#: openexpress/installer.py
 msgid "The installer does not contain the expected MSI package."
 msgstr "Der Installer enthält nicht das erwartete MSI-Paket."
-
-#: openexpress/installer.py
-#, python-brace-format
-msgid "{name} was not found in the installer."
-msgstr "{name} wurde im Installer nicht gefunden."
 
 #. TRANSLATORS: kept to recognise the records of older versions, which said it after every
 #. sync whose device had no new file (the row says it already: "nothing to upload")
