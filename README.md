@@ -179,7 +179,8 @@ changes anything only shows its plan until you add `--apply`. Every command:
 - GPS satellite data is written only to watches that already keep it in a format openExpress
   knows (`CPE.BIN` of the Forerunner 45, `GPE.bin` and `GPES.bin` of the fēnix 8), and only when
   **Satellite Data** is turned on for them (experimental); other watches get it from the phone
-  app as before.
+  app as before. On a watch that hides these files, such as the fēnix 8, the row appears after
+  the first sync.
 - ECG recordings are not uploaded: they go to Garmin Health, which needs a sign-in of its own. A
   sync leaves them on the device and says how many there are.
 - The privacy-policy consents are not checked before a sync; the upload consent is
