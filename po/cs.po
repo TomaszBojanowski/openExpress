@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-13 17:44+0100\n"
-"PO-Revision-Date: 2026-11-13 17:35+0000\n"
+"PO-Revision-Date: 2026-11-14 00:31+0000\n"
 "Last-Translator: prajzner <prajzner@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/openexpress/"
 "openexpress/cs/>\n"
@@ -6477,10 +6477,8 @@ msgstr "Změna primárního nositelného zařízení…"
 #. TRANSLATORS: heading of the error when the primary wearable could not be
 #. changed on the account
 #: openexpress/gui/device_page.py
-#, fuzzy
-#| msgid "Primary wearable changed"
 msgid "Primary Wearable Not Changed"
-msgstr "Primární nositelné zařízení bylo změněno"
+msgstr "Primární nositelné zařízení se nepodařilo změnit"
 
 #: openexpress/gui/device_page.py
 msgid "Device Picture"
@@ -6505,10 +6503,8 @@ msgstr "Váš účet Garmin Connect nemá obrázek tohoto zařízení"
 #. TRANSLATORS: heading of the error when the device's picture could not be downloaded
 #. from the account
 #: openexpress/gui/device_page.py
-#, fuzzy
-#| msgid "Device Not Mounted"
 msgid "Picture Not Downloaded"
-msgstr "Úložiště zařízení není připojeno"
+msgstr "Obrázek zařízení se nepodařilo stáhnout"
 
 #: openexpress/gui/device_page.py
 msgid "Getting the Picture…"
@@ -6713,10 +6709,8 @@ msgstr "Mění se primární tréninkové zařízení…"
 #. TRANSLATORS: heading of the error when the primary training device could
 #. not be changed on the account
 #: openexpress/gui/device_page.py
-#, fuzzy
-#| msgid "Primary training device changed"
 msgid "Primary Training Device Not Changed"
-msgstr "Primární tréninkové zařízení bylo změněno"
+msgstr "Primární tréninkové zařízení se nepodařilo změnit"
 
 #: openexpress/gui/device_page.py openexpress/gui/words.py
 #, python-brace-format
@@ -6750,11 +6744,8 @@ msgstr "Vytváří se záloha…"
 
 #. TRANSLATORS: heading of the error when the backup of the device was not made
 #: openexpress/gui/device_page.py
-#, fuzzy
-#| msgctxt "activity source"
-#| msgid "Backup of {date}"
 msgid "Backup Not Made"
-msgstr "Záloha z {date}"
+msgstr "Zálohu se nepodařilo vytvořit"
 
 #: openexpress/gui/device_page.py
 msgid "Sync finished"
@@ -6771,10 +6762,8 @@ msgstr "Probíhá synchronizace…"
 #. TRANSLATORS: heading of the error when a sync stopped before its end
 #. (what it uploaded before stays uploaded)
 #: openexpress/gui/device_page.py
-#, fuzzy
-#| msgid "Sync finished"
 msgid "Sync Not Finished"
-msgstr "Synchronizace dokončena"
+msgstr "Synchronizaci se nepodařilo dokončit"
 
 #. TRANSLATORS: heading of the confirmation before the first sync of a device
 #: openexpress/gui/device_page.py
@@ -6812,15 +6801,6 @@ msgid "Forget Device"
 msgstr "Zapomenout zařízení"
 
 #: openexpress/gui/forget_device.py
-#, fuzzy
-#| msgid ""
-#| "openExpress forgets what it keeps of this device on this computer: what "
-#| "was uploaded from it, its last sync, the log of its connections, the maps "
-#| "of your own copied to it and the copies of its diagnostic files. Nothing "
-#| "changes on the device or on your Garmin account.\n"
-#| "\n"
-#| "Connected again, it is a new device: its first sync asks again whether to "
-#| "upload everything or new data only."
 msgid ""
 "openExpress forgets what it keeps of this device on this computer: what was "
 "uploaded from it, its last sync, its connection log, the maps of your own "
@@ -6831,13 +6811,12 @@ msgid ""
 "upload everything or new data only."
 msgstr ""
 "openExpress zapomene informace o tomto zařízení uložené v počítači: údaje o "
-"již nahraných souborech, poslední synchronizaci, historii připojení "
-"zařízení, vlastních mapách zkopírovaných do zařízení a kopiích "
-"diagnostických souborů. V samotném zařízení ani na účtu Garmin se nic "
-"nezmění.\n"
+"již nahraných souborech, poslední synchronizaci, historii připojení, "
+"vlastních mapách zkopírovaných do zařízení a kopiích diagnostických souborů. "
+"V samotném zařízení ani v účtu Garmin se nic nezmění.\n"
 "\n"
-"Při dalším připojení bude zařízení považováno za nové. Při první "
-"synchronizaci se program znovu zeptá, zda nahrát všechna data, nebo pouze "
+"Při opětovném připojení bude zařízení považováno za nové. Při první "
+"synchronizaci se aplikace znovu zeptá, zda nahrát všechna data, nebo pouze "
 "nová."
 
 #: openexpress/gui/forget_device.py
@@ -6890,18 +6869,13 @@ msgstr "Zkontrolovat znovu"
 #. TRANSLATORS: title of the Maps page when map updates of the device are not
 #. supported
 #: openexpress/gui/maps_page.py
-#, fuzzy
-#| msgid "Map updates for this device are not supported yet"
 msgid "Map Updates Not Supported Yet"
 msgstr "Aktualizace map pro toto zařízení zatím nejsou podporovány"
 
 #. TRANSLATORS: title of the Maps page when Garmin offers no map for the device
 #: openexpress/gui/maps_page.py
-#, fuzzy
-#| msgctxt "primary training device"
-#| msgid "Not available"
 msgid "No Maps Available"
-msgstr "Není k dispozici"
+msgstr "Pro toto zařízení nejsou k dispozici žádné mapy"
 
 #. TRANSLATORS: subtitle under the free space of the device on the Maps page ({size}:
 #. the space the maps take)
@@ -6980,10 +6954,9 @@ msgstr "Mapu se nepodařilo přidat"
 #. TRANSLATORS: toast after a map of the user's own was copied to the device; {name}:
 #. its title, else its file's name
 #: openexpress/gui/maps_page.py
-#, fuzzy, python-brace-format
-#| msgid "Removed {name}"
+#, python-brace-format
 msgid "Copied {name}"
-msgstr "Odebráno: {name}"
+msgstr "Zkopírováno: {name}"
 
 #: openexpress/gui/maps_page.py
 msgid "Copying the Map…"
@@ -7091,10 +7064,9 @@ msgstr "Instaluje se {name}…"
 
 #. TRANSLATORS: toast after a map of Garmin was installed; {name}: the map's name
 #: openexpress/gui/maps_page.py
-#, fuzzy, python-brace-format
-#| msgid "{name} copied; unplug the device to load it"
+#, python-brace-format
 msgid "Copied {name}; unplug the device to load it"
-msgstr "Soubor {name} byl zkopírován; odpojte zařízení, aby jej načetlo"
+msgstr "Mapa {name} byla zkopírována. Odpojte zařízení, aby se mapa načetla"
 
 #. TRANSLATORS: button that accepts the license agreement and installs the map or
 #. update
@@ -7188,10 +7160,8 @@ msgstr[2] "Zkopírováno {count} souborů"
 #. TRANSLATORS: heading of the error when music, podcasts or audiobooks
 #. could not be copied to the device
 #: openexpress/gui/music_page.py
-#, fuzzy
-#| msgid "Music on the Device"
 msgid "Music Not Copied"
-msgstr "Hudba v zařízení"
+msgstr "Hudbu se nepodařilo zkopírovat"
 
 #: openexpress/gui/music_page.py
 msgid "Nothing new to copy"
@@ -7274,10 +7244,8 @@ msgstr "Playlist „{name}“ byl přidán"
 #. TRANSLATORS: heading of the error when a playlist could not be added to
 #. the device
 #: openexpress/gui/music_page.py
-#, fuzzy
-#| msgid "Map Not Added"
 msgid "Playlist Not Added"
-msgstr "Mapu se nepodařilo přidat"
+msgstr "Playlist se nepodařilo přidat"
 
 #. TRANSLATORS: heading of the message when no track of a playlist can be added
 #: openexpress/gui/music_page.py
@@ -7482,10 +7450,8 @@ msgstr "Synchronizace na pozadí vypnuta"
 #. TRANSLATORS: heading of the error when the sync in the background could not be
 #. turned on or off
 #: openexpress/gui/preferences.py
-#, fuzzy
-#| msgid "Background sync enabled"
 msgid "Background Sync Not Changed"
-msgstr "Synchronizace na pozadí zapnuta"
+msgstr "Nastavení synchronizace na pozadí se nepodařilo změnit"
 
 #: openexpress/gui/preferences.py
 msgid "Background sync could not be turned on or off."
@@ -7634,10 +7600,8 @@ msgstr "Načítá se instalátor…"
 #. TRANSLATORS: heading of the error when the application key could not
 #. be read from Garmin Express's installer
 #: openexpress/gui/preferences.py
-#, fuzzy
-#| msgid "Install: {command}"
 msgid "Installer Not Read"
-msgstr "Instalace: {command}"
+msgstr "Instalační soubor se nepodařilo přečíst"
 
 #: openexpress/gui/preferences.py
 msgid "Choose the Garmin Express Installer First"
@@ -7671,10 +7635,8 @@ msgstr "Probíhá přihlašování…"
 #. TRANSLATORS: heading of the error when signing in to Garmin
 #. Connect did not end
 #: openexpress/gui/preferences.py
-#, fuzzy
-#| msgid "Removal Not Finished"
 msgid "Sign-In Not Finished"
-msgstr "Odstraňování nebylo dokončeno"
+msgstr "Přihlášení nebylo dokončeno"
 
 #: openexpress/gui/preferences.py
 msgid "Signed out"
@@ -7732,14 +7694,6 @@ msgid "Report copied: paste it into the form"
 msgstr "Hlášení zkopírováno: vložte jej do formuláře"
 
 #: openexpress/gui/report_dialog.py
-#, fuzzy
-#| msgid ""
-#| "Unofficial Linux app for Garmin watches: sync with Garmin Connect, "
-#| "software updates, maps, Connect IQ apps and music.\n"
-#| "\n"
-#| "openExpress is not affiliated with, endorsed by or supported by Garmin "
-#| "Ltd. Garmin, fēnix, Garmin Connect and Garmin Express are trademarks of "
-#| "Garmin Ltd. or its subsidiaries."
 msgid ""
 "Unofficial Linux app for Garmin watches and bike computers: sync with Garmin "
 "Connect, software updates, maps, Connect IQ apps and music.\n"
@@ -7748,8 +7702,9 @@ msgid ""
 "Garmin, fēnix, Garmin Connect and Garmin Express are trademarks of Garmin "
 "Ltd. or its subsidiaries."
 msgstr ""
-"Neoficiální linuxová aplikace pro hodinky Garmin: synchronizace s Garmin "
-"Connect, aktualizace softwaru, mapy, aplikace Connect IQ a hudba.\n"
+"Neoficiální aplikace pro Linux určená pro hodinky a cyklopočítače Garmin: "
+"synchronizace s Garmin Connect, aktualizace softwaru, mapy, aplikace Connect "
+"IQ a hudba.\n"
 "\n"
 "openExpress není propojen se společností Garmin Ltd., není jí schválen ani "
 "podporován. Garmin, fēnix, Garmin Connect a Garmin Express jsou ochranné "
@@ -8003,10 +7958,8 @@ msgstr "Kopírování záznamů o pádech…"
 
 #. TRANSLATORS: heading of the error when the crash logs could not be copied
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Error Logs Not Read"
 msgid "Crash Logs Not Copied"
-msgstr "Chybové protokoly nebyly načteny"
+msgstr "Protokoly o pádech systému se nepodařilo zkopírovat"
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
@@ -8032,10 +7985,8 @@ msgstr "Kopírování výpisů paměti…"
 
 #. TRANSLATORS: heading of the error when the memory dumps could not be copied
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Memory Dumps"
 msgid "Memory Dumps Not Copied"
-msgstr "Výpisy paměti"
+msgstr "Výpisy paměti se nepodařilo zkopírovat"
 
 #. TRANSLATORS: a kind of file in the storage of the page Device Status
 #: openexpress/gui/status_page.py
@@ -8341,10 +8292,8 @@ msgstr "zařízení přestalo odpovídat"
 #. TRANSLATORS: why a removal from the device did not go to its end, or was not counted
 #. after it
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "the device could not be read after the removal"
 msgid "the device could not be read again after the removal"
-msgstr "po odstranění se nepodařilo načíst zařízení"
+msgstr "Po odstranění souborů se nepodařilo znovu načíst zařízení"
 
 #. TRANSLATORS: heading of the message when the device was unplugged or opened again
 #. while a confirmation of the page Device Status was open
@@ -8353,16 +8302,12 @@ msgid "Nothing Removed"
 msgstr "Není co odstranit"
 
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid ""
-#| "The device was unplugged or connected again since the question. Look at "
-#| "the list again."
 msgid ""
 "The device was unplugged or plugged in again while the confirmation was "
 "open. Check the list again."
 msgstr ""
-"Zařízení bylo od zobrazení dotazu odpojeno nebo znovu připojeno. "
-"Zkontrolujte seznam znovu."
+"Během zobrazení potvrzovacího dialogu bylo zařízení odpojeno nebo znovu "
+"připojeno. Zkontrolujte seznam znovu."
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
@@ -8411,18 +8356,13 @@ msgid "Remove the Update File?"
 msgstr "Odstranit soubor aktualizace?"
 
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid ""
-#| "The device took in {name} {version} ({size}) but did not install it. The "
-#| "file will be removed from the device; the Updates page will offer the "
-#| "update again."
+#, python-brace-format
 msgid ""
 "The file of {name} {version} ({size}) will be removed from the device; the "
 "Updates page will offer the update again."
 msgstr ""
-"Zařízení přijalo aktualizaci {name} {version} ({size}), ale nenainstalovalo "
-"ji. Soubor bude ze zařízení odstraněn; aktualizace bude znovu nabídnuta na "
-"stránce Aktualizace."
+"Soubor aktualizace {name} ve verzi {version} ({size}) bude ze zařízení "
+"odstraněn. Aktualizace bude znovu nabídnuta na stránce Aktualizace."
 
 #. TRANSLATORS: why a removal from the device did not go to its end
 #: openexpress/gui/status_page.py
@@ -8437,18 +8377,14 @@ msgid "{done}. Then {why}."
 msgstr "{done}. Důvod: {why}."
 
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid ""
-#| "The device did not remove {count} of the files; the others are removed."
-#| msgid_plural ""
-#| "The device did not remove {count} of the files; the others are removed."
+#, python-brace-format
 msgid ""
 "The device did not remove {count} of the files; the others were removed."
 msgid_plural ""
 "The device did not remove {count} of the files; the others were removed."
-msgstr[0] "Zařízení neodstranilo {count} soubor; ostatní byly odstraněny."
-msgstr[1] "Zařízení neodstranilo {count} soubory; ostatní byly odstraněny."
-msgstr[2] "Zařízení neodstranilo {count} souborů; ostatní byly odstraněny."
+msgstr[0] "Zařízení neodstranilo {count} soubor. Ostatní soubory byly odstraněny."
+msgstr[1] "Zařízení neodstranilo {count} soubory. Ostatní soubory byly odstraněny."
+msgstr[2] "Zařízení neodstranilo {count} souborů. Ostatní soubory byly odstraněny."
 
 #: openexpress/gui/status_page.py
 #, python-brace-format
@@ -8622,26 +8558,21 @@ msgstr "naposledy {when}"
 #. TRANSLATORS: banner on top of the page Device Status of a device not connected: what
 #. it shows is from its records, as of its last connection
 #: openexpress/gui/status_page.py
-#, fuzzy, python-brace-format
-#| msgid ""
-#| "Device not connected – as of {when}; connect it to free up space or copy "
-#| "its logs"
+#, python-brace-format
 msgid ""
 "Not connected – as of {when}; connect it to free up space or copy diagnostic "
 "files"
 msgstr ""
-"Zařízení není připojeno – stav k {when}; připojte jej pro uvolnění místa "
-"nebo zkopírování protokolů"
+"Zařízení není připojeno – údaje platné k {when}. Připojte zařízení, abyste "
+"mohli uvolnit místo nebo zkopírovat diagnostické soubory"
 
 #. TRANSLATORS: banner on top of the page Device Status of a device not connected whose
 #. last connection is not known
 #: openexpress/gui/status_page.py
-#, fuzzy
-#| msgid "Device not connected – connect it to free up space or copy its logs"
 msgid "Not connected – connect it to free up space or copy diagnostic files"
 msgstr ""
 "Zařízení není připojeno – připojte jej, abyste mohli uvolnit místo nebo "
-"zkopírovat diagnostické záznamy"
+"zkopírovat diagnostické soubory"
 
 #. TRANSLATORS: the page Device Status of a device that keeps no diagnostic data
 #: openexpress/gui/status_page.py
@@ -9662,8 +9593,6 @@ msgstr ""
 #. TRANSLATORS: subtitle of the row Device Status of a device that keeps no error logs or
 #. memory dumps openExpress can read (its page says so in a sentence)
 #: openexpress/gui/words.py
-#, fuzzy
-#| msgid "No Diagnostic Data"
 msgid "No diagnostic data"
 msgstr "Žádná diagnostická data"
 
@@ -9679,9 +9608,7 @@ msgstr[2] "{count} pádů za posledních 30 dní"
 #. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
 #. "{count} Crashes in the Last 30 Days", as a sentence
 #: openexpress/gui/words.py
-#, fuzzy, python-brace-format
-#| msgid "{count} Crash in the Last 30 Days"
-#| msgid_plural "{count} Crashes in the Last 30 Days"
+#, python-brace-format
 msgid "{count} crash in the last 30 days"
 msgid_plural "{count} crashes in the last 30 days"
 msgstr[0] "{count} pád za posledních 30 dní"
@@ -9703,10 +9630,8 @@ msgstr "Pokaždé stejná chyba"
 #. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
 #. "Little Free Space", as a sentence
 #: openexpress/gui/words.py
-#, fuzzy
-#| msgid "Little Free Space"
 msgid "Little free space"
-msgstr "Nedostatek volného místa"
+msgstr "Málo volného místa"
 
 #. TRANSLATORS: title of the summary of the page Device Status
 #: openexpress/gui/words.py
@@ -9716,18 +9641,14 @@ msgstr "Nedostatek volného místa"
 #. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary
 #. "Error Logs Not Read", as a sentence
 #: openexpress/gui/words.py
-#, fuzzy
-#| msgid "Error Logs Not Read"
 msgid "Error logs not read"
 msgstr "Chybové protokoly nebyly načteny"
 
 #. TRANSLATORS: subtitle of the row Device Status: as the title of the page's summary "No
 #. Problems Found", as a sentence
 #: openexpress/gui/words.py
-#, fuzzy
-#| msgid "No Problems Found"
 msgid "No problems found"
-msgstr "Nebyly nalezeny žádné problémy"
+msgstr "Nebyly zjištěny žádné problémy"
 
 #. TRANSLATORS: title of the summary of the page Device Status
 #: openexpress/gui/words.py
@@ -9816,16 +9737,13 @@ msgstr "{minutes} min {seconds} s"
 #. TRANSLATORS: setup: the file chosen is not Garmin Express's installer for Windows;
 #. {file} is its name
 #: openexpress/installer.py
-#, fuzzy, python-brace-format
-#| msgid ""
-#| "One-time setup: choose the Garmin Express installer for Windows "
-#| "(GarminExpress.exe from garmin.com). openExpress only reads it."
+#, python-brace-format
 msgid ""
 "{file} is not the Garmin Express installer for Windows. Download "
 "GarminExpress.exe from garmin.com/express and choose it."
 msgstr ""
-"Jednorázové nastavení: vyberte instalační soubor Garmin Express pro Windows "
-"(GarminExpress.exe z garmin.com). openExpress ho pouze načte."
+"Soubor {file} není instalátorem Garmin Express pro Windows. Stáhněte soubor "
+"GarminExpress.exe ze stránky garmin.com/express a vyberte jej."
 
 #. TRANSLATORS: setup: the file chosen is Garmin Express's installer, but the application key
 #. could not be read from it; {file} is its name
@@ -9836,6 +9754,9 @@ msgid ""
 "application key from it: Garmin may have changed the installer. Please "
 "report this on GitHub."
 msgstr ""
+"Soubor {file} je instalátorem Garmin Express, ale aplikaci openExpress se z "
+"něj nepodařilo načíst aplikační klíč. Garmin mohl instalátor změnit. "
+"Nahlaste prosím tento problém na GitHubu."
 
 #: openexpress/installer.py
 msgid "The 7z tool is required (package p7zip or 7zip)."
@@ -11451,16 +11372,13 @@ msgstr ""
 "frekvence a tréninkový efekt"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
-#, fuzzy
-#| msgid ""
-#| "See the device's crashes, software updates and what takes its space, and "
-#| "free up space taken by old memory dumps"
 msgid ""
 "See the device's crashes, software updates and storage, and free up space "
 "taken by older memory dumps and updates it did not install"
 msgstr ""
-"Zobrazte záznamy o pádech zařízení, aktualizace softwaru a využití úložiště. "
-"Uvolněte místo odstraněním starých výpisů paměti"
+"Zobrazte informace o pádech zařízení, aktualizacích softwaru a využití "
+"úložiště. Uvolněte místo odstraněním starších výpisů paměti a souborů "
+"aktualizací, které se nenainstalovaly"
 
 #: openexpress/data/io.github.tomaszbojanowski.OpenExpress.metainfo.xml.in
 msgid "Make backups of the device"
