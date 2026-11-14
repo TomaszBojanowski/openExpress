@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: openexpress 0.10.4\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-13 22:07+0100\n"
-"PO-Revision-Date: 2026-11-14 07:06+0000\n"
+"PO-Revision-Date: 2026-11-14 07:23+0000\n"
 "Last-Translator: Tomasz Bojanowski "
 "<tbojanowski@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/openexpress/"
@@ -9111,7 +9111,7 @@ msgstr ""
 #: openexpress/i18n.py
 msgctxt "language name"
 msgid "English"
-msgstr ""
+msgstr "Français"
 
 #. TRANSLATORS: how long ago, under a minute: alone ("just now · 3 new files") or after a
 #. word ("Last seen just now")
