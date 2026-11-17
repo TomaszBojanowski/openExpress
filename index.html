@@ -31,7 +31,7 @@
     <h1>openExpress</h1>
     <p class="summary">Manage your Garmin device on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
-    <p class="new"><a href="#device-status">New in 0.10.0: the Device Status page</a></p>
+    <p class="new"><a href="#updates">New in 0.11.0: car navigators such as the Drive&nbsp;53&nbsp;EX</a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -164,9 +164,9 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
     </a>
   </section>
 
-  <section class="updates" aria-labelledby="updates-title">
+  <section class="updates" id="updates" aria-labelledby="updates-title">
     <h2 id="updates-title">Software updates</h2>
-    <p>Updates for the device, downloaded from Garmin and checked before they are written to it.</p>
+    <p>Updates for the device, downloaded from Garmin and checked before they are written to it. A car navigator that hides the folder of its software and maps, such as the Drive&nbsp;53&nbsp;EX, now gets its software updates and its time zone map in that folder too, confirmed on one Drive&nbsp;53&nbsp;EX; its maps can be installed only as a command-line trial for now, confirmed once there.</p>
     <div class="shot-row">
       <figure class="shot">
         <a class="zoom" href="screenshots/full/light-updates.webp" data-dark="screenshots/full/dark-updates.webp">
@@ -200,7 +200,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
 
   <section class="updates" id="satellite-data" aria-labelledby="satellite-title">
     <h2 id="satellite-title">Satellite data (experimental)</h2>
-    <p>Satellite data helps a watch get its first GPS fix sooner after a break; usually the phone app keeps it current. With Satellite Data turned on, openExpress keeps it current when the watch syncs, without the phone: it only refreshes the files the watch already keeps, downloaded from Garmin's server without your account or any detail of the watch. Off by default; tried on a Forerunner&nbsp;45 and a fēnix&nbsp;8. On a watch that hides these files, such as the fēnix&nbsp;8, the row appears after the first sync.</p>
+    <p>Satellite data helps a device get its first GPS fix sooner after a break; usually the phone app keeps it current. With Satellite Data turned on, openExpress keeps it current when the device syncs, without the phone: it only refreshes the files the device already keeps, downloaded from Garmin's server without your account or any detail of the device. Off by default; tried on a Forerunner&nbsp;45, a fēnix&nbsp;8 and an Edge&nbsp;1050 bike computer. On a watch that hides these files, such as the fēnix&nbsp;8, the row appears after the first sync.</p>
     <div class="shot-row single">
       <figure class="shot">
         <a class="zoom" href="screenshots/full/light-satellite.webp" data-dark="screenshots/full/dark-satellite.webp">
@@ -292,7 +292,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
 
   <section class="devices" aria-labelledby="devices-title">
     <h2 id="devices-title">Devices</h2>
-    <p>Tested by the developer on a fēnix 8, an Edge 1050 and a Varia RTL515, and reported working by users on more fēnix, Instinct, Edge, Forerunner and inReach models. Other Garmin watches and bike computers that connect over USB should work too – reports are welcome. What works on each: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/devices.md">Supported devices</a>.</p>
+    <p>Tested by the developer on a fēnix 8, an Edge 1050 and a Varia RTL515, and reported working by users on more fēnix, Instinct, Edge, Forerunner and inReach models. A user confirmed software updates and, as a command-line trial, a map update on a Drive&nbsp;53&nbsp;EX car navigator. Other Garmin watches and bike computers that connect over USB should work too – reports are welcome. What works on each: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/devices.md">Supported devices</a>.</p>
   </section>
 
   <section class="requirements" aria-labelledby="requirements-title">
@@ -313,7 +313,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         </div>
       </li>
     </ul>
-    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.10.6">0.10.6</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
+    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.11.0">0.11.0</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
   </section>
 
   <section class="privacy" aria-labelledby="privacy-title">
