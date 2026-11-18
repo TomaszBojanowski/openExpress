@@ -17,6 +17,7 @@ import io
 import logging
 import os
 import struct
+import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from typing import BinaryIO, Protocol
@@ -90,6 +91,15 @@ READ_SIZE = 64 * 1024
 READ_CHUNK = 1024 * 1024  # the pieces of a file read back, handed on as they come
 WRITE_CHUNK = 1024 * 1024
 TIMEOUT_MS = 30000  # each bulk transfer: a piece written, a read
+# OpenSession, answered at once by a device that listens: one that does not is mostly stuck in
+# a transaction of before (Session.open), not slow.
+OPEN_TIMEOUT_MS = 5000
+# PTP over USB's class request Cancel (Still Image class, 5.2.1): the transaction the device is
+# in, abandoned. Its data: the cancellation code and the transaction's ID.
+CANCEL_REQUEST, CANCELLATION_CODE = 0x64, 0x4001
+GET_DEVICE_STATUS = 0x67  # its answer: a length, then a response code (OK once ready)
+CANCEL_WAIT_S = 2.0  # for the device to be ready after Cancel
+DRAIN_TIMEOUT_MS = 300  # a read of what a device still had to send: it sends at once or never
 # After the data of a large object, the device may take long to answer (it stores the file whole
 # first), as it may to give one back or to delete one: then at least LARGE_ANSWER_MS, more for a
 # larger one at SLOWEST_PACE. No answer by then breaks the session; nothing is tried again here.
@@ -271,6 +281,10 @@ class Transport(Protocol):
 
     def close(self) -> None: ...
 
+    # Optional (Session.open asks for it with getattr): the transaction the device may still be
+    # in cancelled. Never raises.
+    # def cancel(self) -> None: ...
+
 
 class _Endpoint(ctypes.Structure):
     _fields_ = [("bLength", ctypes.c_uint8), ("bDescriptorType", ctypes.c_uint8),
@@ -340,6 +354,9 @@ def load_libusb():
         "libusb_bulk_transfer": (c_int, [p, ctypes.c_ubyte, ctypes.c_char_p, c_int,
                                          ctypes.POINTER(c_int), ctypes.c_uint]),
         "libusb_error_name": (ctypes.c_char_p, [c_int]),
+        "libusb_control_transfer": (c_int, [p, ctypes.c_uint8, ctypes.c_uint8, ctypes.c_uint16,
+                                            ctypes.c_uint16, ctypes.c_char_p, ctypes.c_uint16,
+                                            ctypes.c_uint]),
     }
     for function, (restype, argtypes) in signatures.items():
         if function == "libusb_wrap_sys_device" and not hasattr(lib, function):
@@ -476,6 +493,42 @@ class LibusbTransport:
                 error=self._lib.libusb_error_name(result).decode()))
         return buffer.raw[:done.value]
 
+    def cancel(self) -> None:
+        """The transaction the device may still be in cancelled (CANCEL_REQUEST, whatever its
+        ID: the device has one at most), its status asked until it is OK again (Get Device
+        Status, as the class asks before the next command) and what it still had to send
+        read and dropped. A device whose transaction was cut off (its USB connection reset as
+        it started, or a GetObject cut short by LIBUSB_ERROR_IO) otherwise takes
+        no command again until it is unplugged; seen on a fēnix 8, which then said its
+        session was open. The pipes are not cleared: a fēnix 8 then drops the next packets.
+        Never raises."""
+        if not self._handle:
+            return
+        data = struct.pack("<HI", CANCELLATION_CODE, 0)
+        done = self._lib.libusb_control_transfer(self._handle, 0x21, CANCEL_REQUEST, 0,
+                                                 self._interface, data, len(data), 2000)
+        if done < 0:
+            log.info("PTP: Cancel not taken (%s)", self._lib.libusb_error_name(done).decode())
+        deadline = time.monotonic() + CANCEL_WAIT_S
+        while self._device_status() not in (OK, None) and time.monotonic() < deadline:
+            time.sleep(0.1)
+        usual, self.timeout_ms = self.timeout_ms, DRAIN_TIMEOUT_MS
+        try:
+            for _read in range(16):
+                if not self.read(self.packet_size * 64):
+                    break
+        except PtpError:
+            pass  # nothing left to send: what is wanted
+        finally:
+            self.timeout_ms = usual
+
+    def _device_status(self) -> int | None:
+        """The response code of the class request Get Device Status; None: not told."""
+        answer = ctypes.create_string_buffer(64)
+        size = self._lib.libusb_control_transfer(self._handle, 0xA1, GET_DEVICE_STATUS, 0,
+                                                 self._interface, answer, 64, 2000)
+        return struct.unpack_from("<H", answer.raw, 2)[0] if size >= 4 else None
+
     def close(self) -> None:
         if self._handle:
             self._lib.libusb_release_interface(self._handle, self._interface)
@@ -539,7 +592,19 @@ class Session:
         self.close()
 
     def open(self) -> None:
-        code, _data, _params = self.transact(OPEN_SESSION, SESSION_ID)
+        """The session opened. A device that does not take OpenSession in OPEN_TIMEOUT_MS is
+        mostly still in a transaction that was cut off: it is cancelled (Transport.cancel),
+        and OpenSession sent once more."""
+        try:
+            code = self._open_session()
+        except PtpError as e:
+            cancel = getattr(self.transport, "cancel", None)
+            if cancel is None:
+                raise
+            log.warning("PTP: OpenSession not taken (%s); the device's transaction cancelled", e)
+            cancel()
+            self._broken, self._transaction = False, 0
+            code = self._open_session()
         if code == SESSION_ALREADY_OPEN:
             # Left behind by a client that did not close it. Start over.
             self.transact(CLOSE_SESSION)
@@ -548,6 +613,14 @@ class Session:
         if code != OK:
             raise PtpRefused(OPEN_SESSION, code)
         self._open = True
+
+    def _open_session(self) -> int:
+        usual = self.transport.timeout_ms
+        self.transport.timeout_ms = min(usual, OPEN_TIMEOUT_MS)  # also for the command sent
+        try:
+            return self.transact(OPEN_SESSION, SESSION_ID)[0]
+        finally:
+            self.transport.timeout_ms = usual
 
     def close(self) -> None:
         try:

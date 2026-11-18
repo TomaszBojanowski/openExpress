@@ -159,6 +159,82 @@ def test_silent_device(device):
     assert device.closed
 
 
+def test_a_device_stuck_in_a_transaction_of_before_is_cancelled_then_opened(device):
+    """A fēnix 8 whose transfer was cut off (it reset its USB connection as it started) took
+    no command until the transaction was cancelled: OpenSession waits OPEN_TIMEOUT_MS, the
+    transport cancels, and OpenSession goes again."""
+    device.silent = True
+    cancelled = []
+
+    def cancel():
+        cancelled.append(1)
+        device.silent = False
+
+    device.cancel = cancel
+    with ptp.Session(device) as session:
+        assert session.storages() == [STORAGE]
+    assert cancelled == [1]
+    assert device.read_limits[0] == ptp.OPEN_TIMEOUT_MS
+    assert device.timeout_ms == ptp.TIMEOUT_MS  # as it was, once open
+    assert device.operations == [ptp.OPEN_SESSION, ptp.GET_STORAGE_IDS, ptp.CLOSE_SESSION]
+
+
+def test_a_device_that_takes_no_opensession_even_cancelled_is_given_up_after_one_more_try(
+        device):
+    device.silent = True
+    cancelled = []
+    device.cancel = lambda: cancelled.append(1)
+    with pytest.raises(ptp.PtpError, match="did not answer"):
+        ptp.Session(device).open()
+    assert cancelled == [1] and len(device.transfers) == 2  # once more, not again and again
+
+
+def test_without_a_way_to_cancel_a_device_that_takes_no_opensession_is_an_error_at_once(device):
+    device.silent = True
+    with pytest.raises(ptp.PtpError, match="did not answer"):
+        ptp.Session(device).open()
+    assert len(device.transfers) == 1  # OpenSession sent once
+
+
+def test_libusb_cancels_waits_until_the_device_is_ready_and_drops_what_it_still_sent(
+        monkeypatch):
+    sent, statuses, reads = [], [ptp.DEVICE_BUSY, ptp.OK], [b"stale answer", b""]
+
+    class Lib(FakeLibusb):
+        def libusb_control_transfer(self, handle, kind, request, value, index, data, size,
+                                    timeout):
+            sent.append((kind, request, index))
+            if request == ptp.GET_DEVICE_STATUS:
+                data.raw = struct.pack("<HH", 4, statuses.pop(0)) + bytes(60)
+                return 4
+            return size
+
+    monkeypatch.setattr(ptp.time, "sleep", lambda seconds: None)
+    transport = ptp.LibusbTransport(Lib(), None, 99, 2, 0x03, 0x81, 512)
+    monkeypatch.setattr(transport, "read", lambda size: reads.pop(0))
+    transport.cancel()
+    assert sent == [(0x21, ptp.CANCEL_REQUEST, 2), (0xA1, ptp.GET_DEVICE_STATUS, 2),
+                    (0xA1, ptp.GET_DEVICE_STATUS, 2)]
+    assert reads == [] and transport.timeout_ms == ptp.TIMEOUT_MS
+    assert "libusb_clear_halt" not in transport._lib.calls  # a fēnix 8 drops what follows
+
+
+def test_a_device_that_says_its_session_is_open_after_the_cancel_has_it_closed_and_opened(
+        device):
+    """As the fēnix 8 answered once its transaction was cancelled."""
+    device.silent = True
+    device.session_open = True
+
+    def cancel():
+        device.silent = False
+
+    device.cancel = cancel
+    with ptp.Session(device) as session:
+        assert session.storages() == [STORAGE]
+    assert device.operations == [ptp.OPEN_SESSION, ptp.CLOSE_SESSION, ptp.OPEN_SESSION,
+                                 ptp.GET_STORAGE_IDS, ptp.CLOSE_SESSION]
+
+
 def test_free_space(device):
     device.free = 123456
     with ptp.Session(device) as session:
