@@ -1439,6 +1439,18 @@ def test_a_write_sends_the_file_as_it_is_read_and_tells_its_bytes(navigator, tmp
     assert fake.sent(ptp.GET_OBJECT) == 1 and fake.parts == []  # read back whole by default
 
 
+def test_a_file_over_a_part_is_read_back_whole_in_parts(navigator, tmp_path, small_pieces,
+                                                         monkeypatch):
+    """A fēnix 8 cut a GetObject of a whole file short about once in three hundred."""
+    monkeypatch.setattr(ptp, "READ_PART", 1000)
+    fake = navigator_session()
+    new = bytes(range(256)) * 10  # 2 560 bytes: three parts
+    _write(OverUsb(navigator, fake), tmp_path, new)
+    assert fake.sent(ptp.GET_OBJECT) == 0
+    assert fake.parts == [(0, 1000), (1000, 1000), (2000, 560)]
+    assert fake.data_at(".System/B000000.update") == new
+
+
 def test_the_log_tells_the_time_of_the_copy_and_of_the_check_apart(navigator, tmp_path, caplog):
     import logging
     import re

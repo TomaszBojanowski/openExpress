@@ -88,6 +88,12 @@ SESSION_ID = 1
 MAX_OBJECT_SIZE = 0xFFFFFFFF - HEADER.size
 READ_SIZE = 64 * 1024
 READ_CHUNK = 1024 * 1024  # the pieces of a file read back, handed on as they come
+# A file is read in parts of this size (GetPartialObject) by a device that reads parts: a
+# fēnix 8 cut about one GetObject of a whole file in three hundred short (LIBUSB_ERROR_IO), was
+# stuck until its transaction was cancelled, and sent 1.1 MB/s; read in parts, 840 files gave
+# no error at 5.4 MB/s. An Edge 1040 reads as fast either way. The same parts as gvfs reads
+# on Linux (GetPartialObject, gio_storage.READ_CHUNK at a time).
+READ_PART = 256 * 1024
 WRITE_CHUNK = 1024 * 1024
 TIMEOUT_MS = 30000  # each bulk transfer: a piece written, a read
 # After the data of a large object, the device may take long to answer (it stores the file whole
@@ -520,6 +526,7 @@ class Session:
         self._open = False
         self._broken = False  # the conversation is out of step; send nothing more
         self._empty = 0  # reads in a row that brought nothing
+        self._listed: list[int] | None = None  # the operations the device lists, once asked
 
     @property
     def broken(self) -> bool:
@@ -695,8 +702,16 @@ class Session:
     # --- storage and objects -------------------------------------------------------------
 
     def operations(self) -> list[int]:
-        """The operations the device says it supports (GetDeviceInfo)."""
-        return operations_supported(self._ok(GET_DEVICE_INFO)[0])
+        """The operations the device says it supports (GetDeviceInfo), asked once."""
+        if self._listed is None:
+            self._listed = operations_supported(self._ok(GET_DEVICE_INFO)[0])
+        return self._listed
+
+    def _reads_parts(self) -> bool:
+        try:
+            return GET_PARTIAL_OBJECT in self.operations()
+        except PtpRefused:
+            return False
 
     def storages(self) -> list[int]:
         return u32_array(self._ok(GET_STORAGE_IDS)[0])
@@ -758,11 +773,17 @@ class Session:
         return bytes(content)
 
     def read_into(self, handle: int, data_in: Callable[[bytes], None],
-                  size: int | None = None) -> int:
+                  size: int | None = None, in_parts: bool = False) -> int:
         """The object's content given to `data_in` piece by piece as the device sends it,
         READ_CHUNK bytes at most at a time, never held whole; the bytes read. Raises PtpRefused
         when the device does not give it (nothing was given to `data_in`). `size`: the
-        object's, when known: a large one may take the device longer (answer_limit_ms)."""
+        object's, when known: a large one may take the device longer (answer_limit_ms).
+        `in_parts`: read READ_PART bytes at a time where the device reads parts (not for an
+        app's PRG, which GetObject gives encrypted)."""
+        if in_parts and size is not None and size > READ_PART and self._reads_parts():
+            read = self._read_in_parts(handle, data_in, size)
+            if read is not None:
+                return read
         read = 0
 
         def counted(piece: bytes) -> None:
@@ -771,6 +792,24 @@ class Session:
             data_in(piece)
 
         self._ok(GET_OBJECT, handle, data_in=counted, answer_ms=answer_limit_ms(size))
+        return read
+
+    def _read_in_parts(self, handle: int, data_in: Callable[[bytes], None],
+                       size: int) -> int | None:
+        """The object read READ_PART bytes at a time (GetPartialObject); None when the device
+        refuses the first part (nothing given to `data_in`: GetObject reads it then)."""
+        read = 0
+        while read < size:
+            try:
+                piece = self.read_part(handle, read, min(READ_PART, size - read))
+            except PtpRefused:
+                if read:
+                    raise
+                return None
+            if not piece:
+                break  # the object is shorter than said: what there is
+            data_in(piece)
+            read += len(piece)
         return read
 
     def read_part(self, handle: int, offset: int, size: int) -> bytes:

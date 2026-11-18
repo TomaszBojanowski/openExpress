@@ -515,6 +515,45 @@ def test_an_object_is_read_in_pieces_never_whole(device, monkeypatch):
     assert b"".join(pieces) == data and max(len(p) for p in pieces) <= 1000
 
 
+def test_a_large_object_is_read_in_parts_where_the_device_reads_parts(device, monkeypatch):
+    """A fēnix 8 cut a GetObject of a whole file short about once in three hundred, and sent
+    1.1 MB/s; in parts of 256 KB none was cut, at 5.4 MB/s."""
+    monkeypatch.setattr(ptp, "READ_PART", 1000)
+    data = bytes(range(256)) * 20  # 5120 bytes: six parts
+    handle = device.add("GARMIN/Activity/RUN.FIT", data)
+    pieces = []
+    with ptp.Session(device) as session:
+        read = session.read_into(handle, pieces.append, size=len(data), in_parts=True)
+        assert read == len(data)
+    assert b"".join(pieces) == data
+    assert device.operations.count(ptp.GET_PARTIAL_OBJECT) == 6
+    assert ptp.GET_OBJECT not in device.operations
+
+
+@pytest.mark.parametrize("why", ["not listed", "refused"])
+def test_a_device_that_does_not_read_parts_reads_the_object_whole(device, monkeypatch, why):
+    monkeypatch.setattr(ptp, "READ_PART", 1000)
+    if why == "not listed":
+        device.supported.remove(ptp.GET_PARTIAL_OBJECT)
+    else:
+        device.refuse[ptp.GET_PARTIAL_OBJECT] = ptp.OPERATION_NOT_SUPPORTED
+    data = b"z" * 5000
+    handle = device.add("GARMIN/Activity/RUN.FIT", data)
+    pieces = []
+    with ptp.Session(device) as session:
+        read = session.read_into(handle, pieces.append, size=len(data), in_parts=True)
+        assert read == len(data)
+    assert b"".join(pieces) == data and ptp.GET_OBJECT in device.operations
+
+
+def test_an_object_is_read_whole_unless_parts_are_asked_for(device, monkeypatch):
+    monkeypatch.setattr(ptp, "READ_PART", 1000)
+    handle = device.add("GARMIN/Apps/APP.PRG", b"app" * 1000)
+    with ptp.Session(device) as session:
+        session.read_into(handle, lambda piece: None, size=3000)
+    assert ptp.GET_PARTIAL_OBJECT not in device.operations
+
+
 def test_an_object_read_in_pieces_split_over_many_reads(device, monkeypatch):
     monkeypatch.setattr(ptp, "READ_CHUNK", 1000)
     device.read_chunk = 7

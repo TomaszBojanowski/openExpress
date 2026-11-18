@@ -697,7 +697,7 @@ def _compare_whole(session, handle: int, local: Path | bytes, size: int, md5: st
             if told is not None:
                 told(done, size)
 
-        session.read_into(handle, compare, size=size)
+        session.read_into(handle, compare, size=size, in_parts=True)
     if (not same or done != size
             or (md5 is not None and digest.hexdigest() != md5.casefold())):
         raise ptp.PtpWriteError("the file read back differs from the one written")
