@@ -31,7 +31,7 @@
     <h1>openExpress</h1>
     <p class="summary">Manage your Garmin device on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
-    <p class="new"><a href="#updates">New in 0.11.0: car navigators such as the Drive&nbsp;53&nbsp;EX</a></p>
+    <p class="new"><a href="#sensors">New in 0.12.0: your sensors' batteries and solar charging</a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -172,10 +172,10 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <a class="zoom" href="screenshots/full/light-updates.webp" data-dark="screenshots/full/dark-updates.webp">
           <picture>
             <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-updates.webp">
-            <img src="screenshots/light-updates.webp" width="1400" height="1036" loading="lazy" alt="The Updates page of an Edge 1050: version 33.21 available, a beta of 97.7 MB, with Install and Check Again, and Reinstall Components under Advanced">
+            <img src="screenshots/light-updates.webp" width="1400" height="1036" loading="lazy" alt="The Updates page of a fēnix 8: 3 updates available, the system software 23.39 → 24.20 of 61.8 MB with Install, Install All and Check Again, an audio prompt bundle and a map support file with Install, and Reinstall Components under Advanced">
           </picture>
         </a>
-        <figcaption>The update Garmin offers: its version, its size, and whether it is a&nbsp;beta</figcaption>
+        <figcaption>The updates Garmin offers: their versions and their sizes</figcaption>
       </figure>
       <figure class="shot">
         <a class="zoom" href="screenshots/full/light-update-confirm.webp" data-dark="screenshots/full/dark-update-confirm.webp">
@@ -210,6 +210,22 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
           </picture>
         </a>
         <figcaption>Turned on: refreshed by the sync just made</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="updates" id="sensors" aria-labelledby="sensors-title">
+    <h2 id="sensors-title">Sensors and solar charging</h2>
+    <p>On the device page, Account Sensors lists the sensors on your Garmin Connect account with their batteries and when each was last connected, low batteries first. For a watch or bike computer that charges from the sun, Solar Charging says how much activity time the sun added today and in the last 7&nbsp;days. openExpress only reads them from your account; on the command line: <code>openexpress sensors</code> and <code>openexpress solar</code>.</p>
+    <div class="shot-row single">
+      <figure class="shot">
+        <a class="zoom" href="screenshots/full/light-account.webp" data-dark="screenshots/full/dark-account.webp">
+          <picture>
+            <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-account.webp">
+            <img src="screenshots/light-account.webp" width="1400" height="1036" loading="lazy" alt="The device page of a fēnix 8 Solar: the Garmin Connect account with Account Sensors expanded on five sensors, their batteries and last connections, and Solar Charging: under a minute in the last 7 days">
+          </picture>
+        </a>
+        <figcaption>The account's five sensors with their batteries, and solar charging</figcaption>
       </figure>
     </div>
   </section>
@@ -255,7 +271,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 6.2A5.4 5.4 0 0 0 3.4 4.6"/><path d="M3 1.9v2.9h2.9"/><path d="M2.8 9.8a5.4 5.4 0 0 0 9.8 1.6"/><path d="M13 14.1v-2.9h-2.9"/></svg></span>
         <div>
           <h3>Sync with Garmin Connect</h3>
-          <p>New activities, sleep, HRV and other data go up; courses, workouts and Connect IQ apps queued in Garmin Connect come down to the device. TrueUp too. A device not yet on your account can be added from openExpress (experimental).</p>
+          <p>New activities, sleep, HRV and other data go up; courses, workouts and Connect IQ apps queued in Garmin Connect come down to the device. TrueUp too. A device not yet on your account can be added from openExpress (experimental). Shows the batteries of the sensors on your account and the solar charging of a device that charges from the sun.</p>
         </div>
       </li>
       <li class="card">
@@ -313,7 +329,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         </div>
       </li>
     </ul>
-    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.11.1">0.11.1</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
+    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.12.0">0.12.0</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
   </section>
 
   <section class="privacy" aria-labelledby="privacy-title">
