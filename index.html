@@ -32,6 +32,7 @@
     <p class="summary">Manage your Garmin device on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
     <p class="new"><a href="#sensors">New in 0.12.0: your sensors' batteries and solar charging</a></p>
+    <p class="new fixed"><a href="#updates">Fixed in 0.12.1: Install All on watches, voice prompts included</a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -167,6 +168,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
   <section class="updates" id="updates" aria-labelledby="updates-title">
     <h2 id="updates-title">Software updates</h2>
     <p>Updates for the device, downloaded from Garmin and checked before they are written to it. A car navigator that hides the folder of its software and maps, such as the Drive&nbsp;53&nbsp;EX, now gets its software updates and its time zone map in that folder too, confirmed on one Drive&nbsp;53&nbsp;EX; its maps can be installed only as a command-line trial for now, confirmed once there.</p>
+    <p>Some watches keep part of their files (voice prompts, speech recognition and keyboard models) in folders that the ordinary USB connection does not show. Up to 0.12.0, an update for such a file ended with “Cannot create directory GARMIN/PROMPTS” and stopped Install All. openExpress&nbsp;0.12.1 writes these files through its own USB connection, as it already does for a car navigator, and checks each one after the copy. Install All now goes on when one file is refused and says at the end what was not installed. Confirmed with the voice prompts on one fēnix&nbsp;8.</p>
     <div class="shot-row">
       <figure class="shot">
         <a class="zoom" href="screenshots/full/light-updates.webp" data-dark="screenshots/full/dark-updates.webp">
@@ -181,7 +183,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <a class="zoom" href="screenshots/full/light-update-confirm.webp" data-dark="screenshots/full/dark-update-confirm.webp">
           <picture>
             <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-update-confirm.webp">
-            <img src="screenshots/light-update-confirm.webp" width="1400" height="1036" loading="lazy" alt="The confirmation dialog before an update of an Edge 1050 is installed: both versions, its size and where it goes on the device, that it is a beta, the license agreement and a warning about a system update">
+            <img src="screenshots/light-update-confirm.webp" width="1400" height="1036" loading="lazy" alt="The confirmation dialog before the System Software Bundle 23.39 → 24.20 of a fēnix 8 is installed: its size, 61.8 MB, where it goes on the device, the license agreement and a warning about a system update">
           </picture>
         </a>
         <figcaption>Before anything is written: the version, its size and where it goes</figcaption>
@@ -190,7 +192,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <a class="zoom" href="screenshots/full/light-update-ready.webp" data-dark="screenshots/full/dark-update-ready.webp">
           <picture>
             <source media="(prefers-color-scheme: dark)" srcset="screenshots/dark-update-ready.webp">
-            <img src="screenshots/light-update-ready.webp" width="1400" height="1036" loading="lazy" alt="The Updates page after the copy: Update ready: unplug the device to install it, 33.20 → 33.21, a beta, with Check Again">
+            <img src="screenshots/light-update-ready.webp" width="1400" height="1036" loading="lazy" alt="The Updates page of a fēnix 8 after the copy: Updates ready: unplug the device to install them, 1 more available, 23.39 → 24.20, the System Software Bundle and a map support file, with Check Again; the audio prompt bundle still offered">
           </picture>
         </a>
         <figcaption>Copied: the device installs it once unplugged</figcaption>
@@ -329,7 +331,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         </div>
       </li>
     </ul>
-    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.12.0">0.12.0</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
+    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.12.1">0.12.1</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
   </section>
 
   <section class="privacy" aria-labelledby="privacy-title">
