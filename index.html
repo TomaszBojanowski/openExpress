@@ -167,7 +167,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
 
   <section class="updates" id="updates" aria-labelledby="updates-title">
     <h2 id="updates-title">Software updates</h2>
-    <p>Updates for the device, downloaded from Garmin and checked before they are written to it. A car navigator that hides the folder of its software and maps, such as the Drive&nbsp;53&nbsp;EX, now gets its software updates and its time zone map in that folder too, confirmed on one Drive&nbsp;53&nbsp;EX; its maps can be installed only as a command-line trial for now, confirmed once there.</p>
+    <p>Updates for the device, downloaded from Garmin and checked before they are written to it. A car navigator that hides the folder of its software and maps, such as the Drive&nbsp;53&nbsp;EX, gets its software updates and its time zone map in that folder too, confirmed on one Drive&nbsp;53&nbsp;EX; its maps can be installed only as a command-line trial, which installed one map update there.</p>
     <p>Some watches keep part of their files (voice prompts, speech recognition and keyboard models) in folders that the ordinary USB connection does not show. Up to 0.12.0, an update for such a file ended with “Cannot create directory GARMIN/PROMPTS” and stopped Install All. openExpress&nbsp;0.12.1 writes these files through its own USB connection, as it already does for a car navigator, and checks each one after the copy. Install All now goes on when one file is refused and says at the end what was not installed. Confirmed with the voice prompts on one fēnix&nbsp;8.</p>
     <div class="shot-row">
       <figure class="shot">
@@ -273,7 +273,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.2 6.2A5.4 5.4 0 0 0 3.4 4.6"/><path d="M3 1.9v2.9h2.9"/><path d="M2.8 9.8a5.4 5.4 0 0 0 9.8 1.6"/><path d="M13 14.1v-2.9h-2.9"/></svg></span>
         <div>
           <h3>Sync with Garmin Connect</h3>
-          <p>New activities, sleep, HRV and other data go up; courses, workouts and Connect IQ apps queued in Garmin Connect come down to the device. TrueUp too. A device not yet on your account can be added from openExpress (experimental). Shows the batteries of the sensors on your account and the solar charging of a device that charges from the sun.</p>
+          <p>New activities, sleep, HRV and other data go up; courses, workouts and Connect IQ apps queued in Garmin Connect come down to the device. TrueUp too. A device not yet on your account can be added from openExpress (experimental). Shows and sets the primary training device and the primary wearable.</p>
         </div>
       </li>
       <li class="card">
@@ -294,7 +294,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <span class="chip"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2.5" width="12" height="3.5" rx="1"/><path d="M3 6v6.5a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V6"/><path d="M6.3 9h3.4"/></svg></span>
         <div>
           <h3>Backups and diagnostics</h3>
-          <p>Backups of the device and copies of its diagnostic files, kept on your computer. Shows and sets the primary training device and the primary wearable.</p>
+          <p>Backups of the device and copies of its diagnostic files, kept on your computer.</p>
         </div>
       </li>
     </ul>
