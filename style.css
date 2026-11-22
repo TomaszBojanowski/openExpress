@@ -476,6 +476,46 @@ footer p { margin: 0 0 12px; }
   list-style: none;
 }
 
+/* openPath: its banner and drawing across the section, three cards in a row, a reader's story and
+   the small print under them; every part of it as wide as the banner. */
+.openpath-picture {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 0 24px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+}
+
+.openpath h2 { margin-top: 8px; }
+
+.cards.three { grid-template-columns: repeat(3, 1fr); margin-bottom: 20px; }
+.cards.three > .card:last-child:nth-child(odd) { grid-column: auto; }
+
+.story {
+  margin: 0 0 18px;
+  padding: 16px 20px;
+  border-left: 4px solid var(--chip-fg);
+  border-radius: 0 14px 14px 0;
+  background: var(--card);
+}
+
+.story p { margin: 0; font-style: italic; }
+
+.fine {
+  margin: 0;
+  color: var(--dim);
+  font-size: 0.92rem;
+}
+
+.also-new {
+  margin: 24px 0 0;
+  padding: 12px 18px;
+  border-radius: 14px;
+  background: var(--badge-bg);
+  border: 1px solid var(--badge-border);
+}
+
 /* Phones: everything in one column. */
 @media (max-width: 640px) {
   body { font-size: 16px; }
@@ -494,7 +534,7 @@ footer p { margin: 0 0 12px; }
     grid-template-areas: "text" "image";
     gap: 18px;
   }
-  .cards { grid-template-columns: 1fr; grid-auto-rows: auto; }
+  .cards, .cards.three { grid-template-columns: 1fr; grid-auto-rows: auto; }
   .needs { grid-template-columns: 1fr; }
 }
 

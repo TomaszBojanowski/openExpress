@@ -31,8 +31,7 @@
     <h1>openExpress</h1>
     <p class="summary">Manage your Garmin device on Linux</p>
     <p class="lead">An unofficial app for Garmin watches and bike computers: sync with Garmin Connect, software updates, maps, Connect IQ apps and music, over USB.</p>
-    <p class="new"><a href="#sensors">New in 0.12.0: your sensors' batteries and solar charging</a></p>
-    <p class="new fixed"><a href="#updates">Fixed in 0.12.1: Install All on watches, voice prompts included</a></p>
+    <p class="new"><a href="#openpath">New in 0.13.0: openPath, and large files read faster</a></p>
     <p class="unofficial">Unofficial and independent: not affiliated with, endorsed by or supported by Garmin.</p>
     <p class="actions">
       <a class="button install" href="https://flatpak.bojanowski.me/io.github.tomaszbojanowski.OpenExpress.flatpakref">Install</a>
@@ -163,6 +162,38 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         <img src="screenshots/light-apps.webp" width="1400" height="1036" loading="lazy" alt="The Apps page: two apps with updates, Update All, the order restored from a copy and an app of the account ready to install">
       </picture>
     </a>
+  </section>
+
+  <section class="openpath" id="openpath" aria-labelledby="openpath-title">
+    <img class="openpath-picture" src="openpath/openpath-baner.png" width="2400" height="800" alt="openPath: straight to the device, past the file manager">
+    <h2 id="openpath-title">Reaches what the file manager cannot</h2>
+    <p>Newer Garmin watches keep part of their storage out of the file manager’s sight. Voice packages, fonts and some updates live there, and a tool that sees only what the file manager shows cannot put them in place. openExpress has its own direct USB connection for exactly that. We call it openPath.</p>
+    <img class="openpath-picture" src="openpath/openpath-drogi.png" width="2400" height="880" loading="lazy" alt="Two routes from the computer to the watch: the file manager takes a detour; openPath goes straight">
+    <ul class="cards three">
+      <li class="card">
+        <div>
+          <h3>Reads what the watch hides.</h3>
+          <p>Hidden folders, hidden files, hidden crash logs: openPath lists them, so openExpress knows what is really on the watch.</p>
+        </div>
+      </li>
+      <li class="card">
+        <div>
+          <h3>Writes where updates belong.</h3>
+          <p>Voice packages, fonts and language files go straight into the hidden folders they were made for.</p>
+        </div>
+      </li>
+      <li class="card">
+        <div>
+          <h3>Gives the watch back.</h3>
+          <p>openPath takes the watch for a moment, does its work, and returns it to the file manager.</p>
+        </div>
+      </li>
+    </ul>
+    <blockquote class="story">
+      <p>A Venu&nbsp;X1 owner spent days getting “Cannot create directory” from older versions, because the language files of an update had to go into a folder the watch hides. After updating openExpress, openPath wrote them there and the update went through.</p>
+    </blockquote>
+    <p class="fine">openPath works on the watches that need it: fēnix&nbsp;8, epix, Venu&nbsp;2 and Venu&nbsp;X1 so far. Devices that hide nothing where updates go, like the Edge&nbsp;1050, are updated the ordinary way.</p>
+    <p class="also-new"><strong>Also new in 0.13.0:</strong> Large files are read from the device in one piece. On a fēnix&nbsp;8 (software 24.20), a 54&nbsp;MB file takes 4.4&nbsp;s instead of 19.4&nbsp;s.</p>
   </section>
 
   <section class="updates" id="updates" aria-labelledby="updates-title">
@@ -310,7 +341,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
 
   <section class="devices" aria-labelledby="devices-title">
     <h2 id="devices-title">Devices</h2>
-    <p>Tested by the developer on a fēnix 8, an Edge 1050 and a Varia RTL515, and reported working by users on more fēnix, Instinct, Edge, Forerunner and inReach models. A user confirmed software updates and, as a command-line trial, a map update on a Drive&nbsp;53&nbsp;EX car navigator. Other Garmin watches and bike computers that connect over USB should work too – reports are welcome. What works on each: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/devices.md">Supported devices</a>.</p>
+    <p>Tested by the developer on a fēnix 8, an Edge 1050 and a Varia RTL515, and reported working by users on more fēnix, Venu, Instinct, Edge, Forerunner and inReach models. A user confirmed software updates and, as a command-line trial, a map update on a Drive&nbsp;53&nbsp;EX car navigator. Other Garmin watches and bike computers that connect over USB should work too – reports are welcome. What works on each: <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/devices.md">Supported devices</a>.</p>
   </section>
 
   <section class="requirements" aria-labelledby="requirements-title">
@@ -331,7 +362,7 @@ flatpak install --user bojanowski io.github.tomaszbojanowski.OpenExpress</code><
         </div>
       </li>
     </ul>
-    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.12.3">0.12.3</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
+    <p class="note">Current version: <a href="https://github.com/TomaszBojanowski/openExpress/releases/tag/v0.13.0">0.13.0</a>. Updates arrive with <code>flatpak update</code> or in GNOME Software. Without the repository, download the <code>.flatpak</code> bundle from <a href="https://github.com/TomaszBojanowski/openExpress/releases">Releases</a>; a bundle does not update itself. <a href="https://github.com/TomaszBojanowski/openExpress/blob/main/docs/install.md">Other ways to install</a>.</p>
   </section>
 
   <section class="privacy" aria-labelledby="privacy-title">
