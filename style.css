@@ -25,8 +25,6 @@
   /* Icons and small labels in the icon's orange. */
   --chip-bg: #ffd2bb;
   --chip-fg: #8a2f0c;
-  --fix-bg: #cfeedd;
-  --fix-fg: #0d5a32;
   --badge-bg: rgb(237 97 51 / 12%);
   --badge-fg: #6b2a10;
   --badge-border: rgb(237 97 51 / 25%);
@@ -59,8 +57,6 @@
     --shot-shadow: rgb(0 0 0 / 55%);
     --chip-bg: rgb(255 150 91 / 15%);
     --chip-fg: #ffa96b;
-    --fix-bg: rgb(98 214 152 / 16%);
-    --fix-fg: #8be3b4;
     --badge-bg: rgb(255 150 91 / 12%);
     --badge-fg: #f6dccd;
     --badge-border: rgb(255 150 91 / 20%);
@@ -154,14 +150,6 @@ code, pre {
 }
 
 .new a:hover { text-decoration: underline; }
-
-/* A fix to know about: under the label of what is new, in the colour of a fix, to its section. */
-.new.fixed { margin-top: 8px; }
-
-.new.fixed a {
-  background: var(--fix-bg);
-  color: var(--fix-fg);
-}
 
 /* That openExpress is not Garmin's: said at once, under what it does. */
 .unofficial {
