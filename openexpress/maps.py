@@ -168,6 +168,14 @@ class UniversalMap:
         return self.would_update and self.restricted is not True
 
     @property
+    def newer_on_device(self) -> bool:
+        """The device has a newer version of the map than the one the server offers: the
+        version, files and sizes of the answer are then those of the server's older version,
+        not of the files on the device."""
+        return (self.state == 3 and self.waiting is None and not self.unseen
+                and not self.partly_written)
+
+    @property
     def occupies(self) -> bool:
         """Its files are on the device for good: listed and not waiting to be removed, or
         written and waiting to be taken in. Only shown ("Maps use"); which files are kept
@@ -212,6 +220,11 @@ class UniversalMap:
         if self.would_update:  # held back: not offered in the account's country
             # TRANSLATORS: map status
             return _("update not offered in your account's country")
+        if self.newer_on_device:
+            # TRANSLATORS: map status (the Maps page, `openexpress maps`): the device has a newer
+            # version of the map than the one Garmin's server offers for it; {version}: Garmin's
+            # version, e.g. 9.0
+            return _("newer than version {version} Garmin offers").format(version=self.version)
         if self.installed:
             # TRANSLATORS: map status
             return _("up to date")

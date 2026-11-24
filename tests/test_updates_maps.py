@@ -662,6 +662,63 @@ def test_maps_page_does_not_repeat_the_name_as_the_type(name, map_type, subtitle
     assert (row.get_title(), row.get_subtitle()) == (name, subtitle)
 
 
+# --- a map newer on the device than the version Garmin offers ---------------------------------
+
+NEWER = "newer than version 9.0 Garmin offers"
+
+
+def newer_on_the_device(server):
+    """The answer with West as Garmin's server gives a map the device has in a newer version
+    than the one it offers (installationstate 3): the version, files and sizes of the answer are
+    those of Garmin's older version, not of the files on the device."""
+    answer = maps_response(server)
+    answer["maps"][0].update(installationstate=3, isreinstall=False,
+                             release={"majorversion": 9, "minorversion": 0})
+    return answer
+
+
+def test_a_map_newer_on_the_device_says_so_with_garmins_version(server):
+    west = maps.parse_maps(newer_on_the_device(server))[0]
+    status = west.status
+    assert status == NEWER
+    assert not west.update_available and west.installed
+    with in_language("pl"):
+        polish = west.status
+    assert polish == "nowsza niż wersja 9.0 oferowana przez Garmina"
+
+
+@pytest.mark.needs_display
+def test_the_row_of_a_map_newer_on_the_device_shows_no_version_or_size_of_garmins(
+        server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    answer = newer_on_the_device(server)
+    answer["maps"] = answer["maps"][:1]
+    answer["maps"][0].update(displayname="Base maps", maptype="Base maps")
+    win, _reloads = maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(answer))
+    (on_device,) = win.sections["maps"].groups
+    subtitle = on_device.rows[-1].get_subtitle()
+    assert subtitle == NEWER
+
+
+def test_cli_lists_a_map_newer_on_the_device_without_garmins_version_or_size(
+        server, device_root, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.device.xmldevice import parse
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(newer_on_the_device(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    assert cli.main(["maps"]) == 0
+    line = next(x for x in capsys.readouterr().out.splitlines() if "TopoActive West" in x)
+    words = line.split()
+    assert words[2:] == NEWER.split()
+
+
 # --- a map that cannot be removed -----------------------------------------------------------
 
 
@@ -1926,7 +1983,7 @@ def test_a_partial_map_is_incomplete_not_installed(server):
 def test_a_newer_map_on_the_device_is_no_update(server):
     east = _with_state(server, "East", 3)["East"]
     assert east.installed and not east.incomplete and not east.update_available
-    assert east.status == "up to date"
+    assert east.status == "newer than version 2026.11 Garmin offers"
 
 
 def test_a_partial_map_still_keeps_its_shared_file(server):

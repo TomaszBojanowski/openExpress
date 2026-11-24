@@ -2346,7 +2346,10 @@ def cmd_maps(args) -> int:
         print((_("Maps for {device} (all):") if args.all
                else _("Maps for {device} (installed):")).format(device=dev.description))
         for m in sorted(shown, key=lambda m: (m not in on_device, m.map_type, m.name)):
-            print(f"  {m.name:48} {m.version:>9}  {human_size(m.size):>9}  {m.status}")
+            # Of a map newer on the device, the version and the size the server lists are those
+            # of its older version: only the status, which names that version.
+            version, size = ("", "") if m.newer_on_device else (m.version, human_size(m.size))
+            print(f"  {m.name:48} {version:>9}  {size:>9}  {m.status}")
             if (note := mp.restriction_note(m)) is not None:
                 print("    " + note)
             if m.hidden_folder is not None and not m.unseen:
