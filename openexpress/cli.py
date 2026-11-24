@@ -1262,7 +1262,7 @@ def _satellite_status(unit_id: int | None, now) -> str | None:
     elif state.error:
         text = caption(on, pgettext("satellite data", "not updated: {reason}").format(
             reason=words.satellite_reason(state.error)))
-    elif state.written_at is None:
+    elif satellite.shows_device_data(state):
         text = caption(on, _("the data on the device is current") if state.current
                        else _("the next sync updates it"))
     else:

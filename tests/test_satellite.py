@@ -1007,13 +1007,9 @@ def test_written_in_this_connection_the_row_says_it_is_taken_in_once_unplugged(
     assert not satellite.waits_to_be_taken(satellite.load(UNIT), device, storage)
 
 
-def test_newer_data_from_the_phone_is_said_current_not_how_old_ours_is(tmp_path, clock,
-                                                                       monkeypatch):
+def newer_from_the_phone(tmp_path, clock, monkeypatch) -> satellite.State:
     """Ours written 13 hours ago; meanwhile the phone gave the watch a GPES.bin 2 hours old. The
-    sync finds it young enough and writes nothing: the row says the data is current, not
-    "updated 13 hours ago"."""
-    from openexpress.gui import words
-
+    sync finds it young enough and writes nothing."""
     storage, device, _server, _served = written_once(tmp_path, clock, monkeypatch)
     unplugged(storage)  # the watch unpacked ours
     clock.current += timedelta(hours=13)
@@ -1022,8 +1018,29 @@ def test_newer_data_from_the_phone_is_said_current_not_how_old_ours_is(tmp_path,
     assert satellite.update(device, storage) == satellite.Result("current")
     state = satellite.load(UNIT)
     assert satellite.newer_than_written(state)
+    return state
+
+
+def test_newer_data_from_the_phone_is_said_current_not_how_old_ours_is(tmp_path, clock,
+                                                                       monkeypatch):
+    """The row says the data is current, not "updated 13 hours ago"."""
+    from openexpress.gui import words
+
+    state = newer_from_the_phone(tmp_path, clock, monkeypatch)
     assert words.satellite_subtitle(state, clock.current) == (
         f"Experimental{NB}· the data on the device is current")
+
+
+def test_the_line_of_status_says_newer_data_from_the_phone_is_current(tmp_path, clock,
+                                                                     monkeypatch):
+    """`openexpress status` says what the row says, in English and in Polish."""
+    newer_from_the_phone(tmp_path, clock, monkeypatch)
+    english = cli._satellite_status(UNIT, clock.current)
+    with in_language("pl"):
+        polish = cli._satellite_status(UNIT, clock.current)
+    assert (english, polish) == (
+        f"Satellite data (experimental): on{NB}· the data on the device is current",
+        f"Dane satelitarne (eksperymentalne): włączone{NB}· dane na urządzeniu są aktualne")
 
 
 def test_ours_still_the_newest_keeps_its_age(tmp_path, clock, monkeypatch):

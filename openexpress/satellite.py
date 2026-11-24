@@ -625,6 +625,14 @@ def newer_than_written(state: State) -> bool:
     return bool(times) and max(times) > state.written_at
 
 
+def shows_device_data(state: State) -> bool:
+    """Whether what is said of the satellite data is said of the device's own rather than of
+    the file this computer wrote last: nothing written yet, or the device's data current and
+    newer than that file (from the phone). The row of the device page and `openexpress
+    status` say it alike."""
+    return state.written_at is None or (state.current and newer_than_written(state))
+
+
 def _connection(device, storage) -> str | None:
     from openexpress import history
 
