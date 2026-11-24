@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 22:36+0100\n"
+"POT-Creation-Date: 2026-11-24 08:40+0100\n"
 "PO-Revision-Date: 2026-11-24 07:05+0000\n"
 "Last-Translator: Alex Giroux <alexgiroux1@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/openexpress/"
@@ -875,9 +875,9 @@ msgid ""
 "them again."
 msgstr ""
 "La liste des applications pour l’appareil n’a pas pu être écrite ({error}), "
-"et la liste qui attendait l’appareil n’a pas pu être remise en place non plus"
-" : elle a été supprimée, donc les changements d’application qui attendaient "
-"l’appareil sont perdus. Refaites-les."
+"et la liste qui attendait l’appareil n’a pas pu être remise en place non "
+"plus : elle a été supprimée, donc les changements d’application qui "
+"attendaient l’appareil sont perdus. Refaites-les."
 
 #: openexpress/ciq.py openexpress/device/storage.py
 #, python-brace-format
@@ -1638,16 +1638,16 @@ msgstr "aucun crash dans les journaux d’erreur"
 msgid "last crash: {crash}"
 msgstr "Dernier crash : {crash}"
 
-#: openexpress/cli.py
-#, python-brace-format
-msgid "USB drive"
-msgstr "Clé USB"
-
 #. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
 #: openexpress/cli.py
 #, python-brace-format
 msgid "USB drive ({name})"
 msgstr "Clé USB ({name})"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "USB drive"
+msgstr "Clé USB"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -2276,6 +2276,15 @@ msgstr "Données satellitaires déjà à jour"
 msgid "Satellite data not updated: {reason}"
 msgstr "Données satellitaires non mises à jour : {reason}"
 
+#. TRANSLATORS: after "Device software:" in openexpress status, of a device connected
+#. as a USB drive: an update openExpress copied is installed once the drive is ejected
+#: openexpress/cli.py
+#, fuzzy, python-brace-format
+#| msgid "Update ready: eject the device to install it"
+#| msgid_plural "Updates ready: eject the device to install them"
+msgid "an update is ready: eject the device to install it"
+msgstr "Mise à jour prête : éjectez l’appareil pour l’installer"
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid "an update is ready: unplug the device to install it"
@@ -2357,8 +2366,7 @@ msgid "Devices this installation has seen:"
 msgstr "Appareils que cette installation a vus :"
 
 #. TRANSLATORS: the version of a device's software, under its name ("Software 23.39")
-#: openexpress/cli.py openexpress/gui/device_page.py
-#: openexpress/gui/start_window.py openexpress/gui/words.py
+#: openexpress/cli.py openexpress/gui/words.py
 #, python-brace-format
 msgid "Software {version}"
 msgstr "{version} logiciel"
@@ -2598,7 +2606,8 @@ msgstr "endommagé : le CRC ne correspond pas"
 #: openexpress/cli.py
 #, python-brace-format
 msgid "damaged: {count} B after the end do not belong to a FIT file"
-msgstr "endommagé : {count} B après la fin n’appartiennent pas à un fichier FIT"
+msgstr ""
+"endommagé : {count} B après la fin n’appartiennent pas à un fichier FIT"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -4216,8 +4225,9 @@ msgid ""
 "the application key from the Garmin Express installer, and the settings: "
 "Garmin's servers, the languages, the copy of the device's diagnostic files"
 msgstr ""
-"la clé d’application depuis l’installateur Garmin Express, et les paramètres "
-": serveurs Garmin, langues, copie des fichiers de diagnostic de l’appareil"
+"la clé d’application depuis l’installateur Garmin Express, et les "
+"paramètres : serveurs Garmin, langues, copie des fichiers de diagnostic de "
+"l’appareil"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -4299,8 +4309,8 @@ msgid ""
 "print the last lines of the log instead, filtered, for the “Log” field of "
 "the report form"
 msgstr ""
-"imprimez plutôt les dernières lignes du journal, filtrés, pour le champ « "
-"Journal » du formulaire de rapport"
+"imprimez plutôt les dernières lignes du journal, filtrés, pour le champ "
+"« Journal » du formulaire de rapport"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -5161,8 +5171,17 @@ msgid ""
 "This is a bug in openExpress. To report it, run openexpress report --log and "
 "follow what it prints."
 msgstr ""
-"C’est un bug dans openExpress. Pour le signaler, exécutez openexpress "
-"report --log et suivez ce qu’il imprime."
+"C’est un bug dans openExpress. Pour le signaler, exécutez openexpress report "
+"--log et suivez ce qu’il imprime."
+
+#: openexpress/connect.py
+#, python-brace-format
+msgid ""
+"Internal error: this device was not checked against your Garmin account. "
+"Nothing was transferred."
+msgstr ""
+"Erreur interne : cet appareil n’a pas été vérifié par rapport à votre compte "
+"Garmin. Rien n’a été transféré."
 
 #: openexpress/connect.py
 #, python-brace-format
@@ -5175,15 +5194,6 @@ msgstr ""
 "l’installateur Garmin Express pour Windows (dans la fenêtre : Préférences, "
 "Configuration ; en ligne de commande : openexpress setup --from-installer "
 "GarminExpress.exe)."
-
-#: openexpress/connect.py
-#, python-brace-format
-msgid ""
-"Internal error: this device was not checked against your Garmin account. "
-"Nothing was transferred."
-msgstr ""
-"Erreur interne : cet appareil n’a pas été vérifié par rapport à votre compte "
-"Garmin. Rien n’a été transféré."
 
 #: openexpress/connect.py
 #, python-brace-format
@@ -8045,27 +8055,6 @@ msgstr "Créer"
 msgid "Part Number"
 msgstr "Numéro de pièce"
 
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
-#. has none set
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "Not set"
-msgstr "Non défini"
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
-#. device shown
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "This device"
-msgstr "Cet appareil"
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
-#. of the account, its name not known
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "Another device"
-msgstr "Autre appareil"
-
 #: openexpress/gui/device_page.py
 #, python-brace-format
 msgid "Change the Primary Training Device?"
@@ -10347,8 +10336,8 @@ msgid ""
 "openExpress could not read the folder {folder} this time; use “{button}” to "
 "try once more"
 msgstr ""
-"openExpress n’a pas pu lire le dossier {folder} cette fois ; utilisez « "
-"{button} » pour réessayer une fois de plus"
+"openExpress n’a pas pu lire le dossier {folder} cette fois ; utilisez "
+"« {button} » pour réessayer une fois de plus"
 
 #. TRANSLATORS: on the Updates page, a line under its heading, without a full stop;
 #. {folder}: a folder the device hides from the file manager, e.g. .System
@@ -10874,6 +10863,27 @@ msgid "{count} activity to upload now"
 msgid_plural "{count} activities to upload now"
 msgstr[0] "{count}activité à télécharger maintenant"
 msgstr[1] "{count} activités à télécharger maintenant"
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
+#. has none set
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Not set"
+msgstr "Non défini"
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
+#. device shown
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "This device"
+msgstr "Cet appareil"
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
+#. of the account, its name not known
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Another device"
+msgstr "Autre appareil"
 
 #. TRANSLATORS: "Primary wearable" is Garmin's name of the setting (in Polish its manuals
 #. say "Podstawowe urządzenie noszone na ciele")
@@ -11873,28 +11883,29 @@ msgstr ""
 "{name} n’était pas écrit : le fichier là-bas ne pouvait pas être copié en "
 "entier sur cet ordinateur en premier. Rien n’a été modifié sur l’appareil."
 
-#. TRANSLATORS: a step of the trial on the command line: a small file written into a folder
-#. the device hides, read back and deleted, before anything there is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides: a small file
+#. written there, read back and deleted, before anything there is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Trying a small test file in {folder}…"
 msgstr "Essayer un petit fichier de test en {folder}…"
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update, whose file now on
-#. the device is copied to this computer before it is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update, whose file now on the device is copied to this computer before it is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Copying the old {name} to this computer"
 msgstr "Copie de l’ancien {name} sur cet ordinateur"
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an update
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Removing the old {name} from the device"
 msgstr "Retrait de l’ancien {name} de l’appareil"
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update whose new file was
-#. not written whole, so its old one is written back from the copy on this computer
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update whose new file was not written whole, so its old one is written back from the copy
+#. on this computer
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Putting the old {name} back on the device"
