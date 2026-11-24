@@ -94,7 +94,7 @@ def _update_route(folder: str, storage: LocalStorage, inside: dict[str, str],
         return REFUSED
     if u.hidden_folder is not None:
         return OWN_SESSION_TOP
-    return OWN_SESSION if u.folder_hidden is not None else ORDINARY
+    return OWN_SESSION if u.hidden_inside is not None else ORDINARY
 
 
 def _map_route(folder: str, storage: LocalStorage, device) -> str:
@@ -187,7 +187,7 @@ def file_routes(data: dict, root: Path) -> dict[str, str]:
         _marked(storage, u, inside, hidden_folders.Listing(), session=True)
         if not updates.installable([u]):
             out[path] = REFUSED
-        elif u.hidden_folder is not None or u.folder_hidden is not None:
+        elif u.hidden_folder is not None or u.hidden_inside is not None:
             out[path] = OWN_SESSION
         else:
             out[path] = ORDINARY

@@ -2043,20 +2043,20 @@ def cmd_updates(args) -> int:
     # Nor to a folder the device hides inside a folder that is seen: the others go on. Tried
     # with --hidden-folder-trial: only those, each named.
     trial = args.hidden_folder_trial
-    inside = [u for u in chosen if (u.folder_hidden is not None if trial else u.refused_inside)]
+    inside = [u for u in chosen if (u.hidden_inside is not None if trial else u.refused_inside)]
     if trial:
         if args.install == ["all"]:
             # TRANSLATORS: `openexpress updates --install all --hidden-folder-trial`
             print(_("--hidden-folder-trial takes the part numbers of the updates to try, not "
                     "“all”."), file=sys.stderr)
             return 2
-        for u in [u for u in chosen if u.folder_hidden is None and not u.is_metadata]:
+        for u in [u for u in chosen if u.hidden_inside is None and not u.is_metadata]:
             # TRANSLATORS: `openexpress updates --install PART --hidden-folder-trial`
             print(_("Not tried: {name} {version} does not go to a folder the device hides "
                     "inside GARMIN.").format(name=u.title, version=u.version))
             refused.append(u)
         tried = {u.part_number.upper() for u in inside}
-        chosen = [u for u in chosen if u.folder_hidden is not None or (
+        chosen = [u for u in chosen if u.hidden_inside is not None or (
             u.is_metadata and u.part_number.upper().removesuffix("-META") in tried)]
         if not inside:
             return 1
@@ -2108,7 +2108,7 @@ def cmd_updates(args) -> int:
     for u in upd.sort_for_install(chosen):
         print(f"  {u.part_number} {u.version}  {u.title}{_beta_mark(u)}  ({human_size(u.size)}) "
               f"-> {u.device_path}")
-        if trial and u.folder_hidden is not None:
+        if trial and u.hidden_inside is not None:
             # TRANSLATORS: `openexpress updates --install PART --hidden-folder-trial`, under
             # the update; {folder}: the folder the device hides; {copies}: a folder on this
             # computer
@@ -2116,7 +2116,7 @@ def cmd_updates(args) -> int:
                                "direct USB connection; the file there now is copied to "
                                "{copies} first and put back if the new one is not written "
                                "whole; the first refusal stops the trial").format(
-                folder=u.folder_hidden, copies=_hidden_trial_folder()))
+                folder=u.hidden_inside, copies=_hidden_trial_folder()))
     print(_("Space: {needed} needed, {free} free").format(needed=human_size(need),
                                                          free=human_size(free)))
     eulas = sorted({u.eula_url for u in chosen if u.eula_url})
@@ -2355,9 +2355,9 @@ def cmd_maps(args) -> int:
 
     if args.maps_cmd == "update":
         targets = [m for m in all_maps if m.update_available and m.hidden_folder is None
-                   and m.folder_hidden is None]
+                   and m.hidden_inside is None]
         for m in all_maps:
-            if m.update_available and (m.hidden_folder or m.folder_hidden) is not None:
+            if m.update_available and (m.hidden_folder or m.hidden_inside) is not None:
                 print(mp.cannot_install_message(m))
         incomplete = sum(1 for m in all_maps if m.incomplete)
         for m in all_maps:

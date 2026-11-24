@@ -167,10 +167,10 @@ def _hidden_inside_updates(writable=False):
                      8_800_000, reinstall=True, on_device=True)]
     for u, folder in zip(items[1:4], ("Garmin/Prompts", "Garmin/ASR/Updates",
                                       "Garmin/KBD/Updates"), strict=True):
-        u.folder_hidden = folder
-    items[5].folder_hidden = "Garmin/ExtData"
+        u.hidden_inside = folder
+    items[5].hidden_inside = "Garmin/ExtData"
     for u in items:
-        u.folder_writable = writable and u.folder_hidden is not None
+        u.folder_writable = writable and u.hidden_inside is not None
     return items
 
 
