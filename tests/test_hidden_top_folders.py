@@ -2426,7 +2426,7 @@ def test_the_command_line_reads_the_folders_maps_need_besides_those_known(trial_
     hidden_folders.forget(trial_cli.storage)
     assert main(["maps"]) == 0
     out = capsys.readouterr().out
-    assert "cannot be read" not in out and "update available" in out
+    assert "cannot be read" not in out and " available · " in out and "to download" in out
     assert {".System/Map", ".System/JCV"} <= trial_cli.fake.folders_listed()
 
 

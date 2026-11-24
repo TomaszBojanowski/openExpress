@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 22:06+0100\n"
+"POT-Creation-Date: 2026-11-24 23:54+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -7630,20 +7630,6 @@ msgstr ""
 msgid "Remove Anyway"
 msgstr ""
 
-#. TRANSLATORS: on the Maps page, in the row of a map with an update: {version} the
-#. version Garmin offers, e.g. 2027.20
-#: openexpress/gui/maps_page.py
-#, python-brace-format
-msgid "{version} available"
-msgstr ""
-
-#. TRANSLATORS: on the Maps page, in the row of a map with an update: {size} what the
-#. update downloads, e.g. 8.3 GB
-#: openexpress/gui/maps_page.py
-#, python-brace-format
-msgid "{size} to download"
-msgstr ""
-
 #: openexpress/gui/maps_page.py
 #, python-brace-format
 msgid "Map Not Installed"
@@ -11164,6 +11150,20 @@ msgstr ""
 #: openexpress/maps.py
 #, python-brace-format
 msgid "available"
+msgstr ""
+
+#. TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update:
+#. {version} the version Garmin offers, e.g. 2027.20
+#: openexpress/maps.py
+#, python-brace-format
+msgid "{version} available"
+msgstr ""
+
+#. TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update: {size}
+#. what the update downloads, e.g. 8.3 GB
+#: openexpress/maps.py
+#, python-brace-format
+msgid "{size} to download"
 msgstr ""
 
 #: openexpress/maps.py

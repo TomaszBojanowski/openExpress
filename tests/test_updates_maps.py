@@ -719,6 +719,35 @@ def test_cli_lists_a_map_newer_on_the_device_without_garmins_version_or_size(
     assert words[2:] == NEWER.split()
 
 
+# --- an update in `openexpress maps` -----------------------------------------------------------
+
+
+@pytest.mark.parametrize("lang,said", [
+    ("en", "2026.11 available · 9.0 kB to download"),
+    ("pl", "dostępna wersja 2026.11 · 9,0 kB do pobrania"),
+])
+def test_cli_lists_an_update_in_the_words_of_the_window(server, device_root, monkeypatch, capsys,
+                                                        lang, said):
+    """The version and the size of the answer are those of the update, not of the map on the
+    device: said as the window says them, not in the column of the version."""
+    from openexpress import cli, i18n
+    from openexpress.device.xmldevice import parse
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(maps_response(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    try:
+        assert cli.main(["--lang", lang, "maps"]) == 0
+    finally:
+        i18n.setup("en")
+    line = next(x for x in capsys.readouterr().out.splitlines() if "TopoActive East" in x)
+    shown = " ".join(line.split()[2:])
+    assert shown == said
+
+
 # --- the old files of an update: only those the device has ------------------------------------
 # East's answer names two old files to remove besides the shared DEM.img, E.img and E.gma; the
 # device has only E.img, or neither.

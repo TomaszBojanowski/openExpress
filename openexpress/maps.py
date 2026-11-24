@@ -236,6 +236,19 @@ class UniversalMap:
         return _("available")
 
 
+def update_words(m: UniversalMap) -> list[str]:
+    """An update of `m` in the words of its row on the Maps page and of `openexpress maps`: the
+    version Garmin offers and what it downloads, those of the update and not of the map on the
+    device."""
+    # TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update:
+    # {version} the version Garmin offers, e.g. 2027.20
+    available = _("{version} available").format(version=m.version)
+    # TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update: {size}
+    # what the update downloads, e.g. 8.3 GB
+    download = _("{size} to download").format(size=human_size(m.size))
+    return [available, download]
+
+
 def _device_path(name: str) -> str:
     """Turn a path from the server into a device path ("\\" becomes "/")."""
     return name.replace("\\", "/")

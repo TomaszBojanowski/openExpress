@@ -2346,12 +2346,17 @@ def cmd_maps(args) -> int:
         print((_("Maps for {device} (all):") if args.all
                else _("Maps for {device} (installed):")).format(device=dev.description))
         for m in sorted(shown, key=lambda m: (m not in on_device, m.map_type, m.name)):
-            # Of a map newer on the device, or with an update not offered in the account's
-            # country, the version and the size the server lists are not those of its files on
-            # the device: only the status.
-            shown = not (m.newer_on_device or (m.would_update and not m.update_available))
-            version, size = (m.version, human_size(m.size)) if shown else ("", "")
-            print(f"  {m.name:48} {version:>9}  {size:>9}  {m.status}")
+            # The version and the size the server lists are those of the files on the device
+            # only for a map without an update and not newer there: an update is said in the
+            # words of the window, a map newer on the device or with an update not offered in
+            # the account's country by its status alone.
+            if m.update_available:
+                version, size, status = "", "", " · ".join(mp.update_words(m))
+            elif m.newer_on_device or m.would_update:
+                version, size, status = "", "", m.status
+            else:
+                version, size, status = m.version, human_size(m.size), m.status
+            print(f"  {m.name:48} {version:>9}  {size:>9}  {status}")
             if (note := mp.restriction_note(m)) is not None:
                 print("    " + note)
             if m.hidden_folder is not None and not m.unseen:

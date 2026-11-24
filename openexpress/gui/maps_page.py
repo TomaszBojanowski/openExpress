@@ -411,13 +411,7 @@ class MapsPage:
         if m.update_available:
             # The version and the size the server lists are those of the update, not of the
             # map on the device.
-            # TRANSLATORS: on the Maps page, in the row of a map with an update: {version} the
-            # version Garmin offers, e.g. 2027.20
-            available = _("{version} available").format(version=m.version)
-            # TRANSLATORS: on the Maps page, in the row of a map with an update: {size} what the
-            # update downloads, e.g. 8.3 GB
-            download = _("{size} to download").format(size=human_size(m.size))
-            parts = [kind, available, download]
+            parts = [kind, *mp.update_words(m)]
         elif m.newer_on_device or m.would_update:
             # The version and the size the server lists are not those of the files on the
             # device: of its older version, or of an update not offered in the account's country.
