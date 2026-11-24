@@ -662,6 +662,192 @@ def test_maps_page_does_not_repeat_the_name_as_the_type(name, map_type, subtitle
     assert (row.get_title(), row.get_subtitle()) == (name, subtitle)
 
 
+# --- a map newer on the device than the version Garmin offers ---------------------------------
+
+NEWER = "newer than version 9.0 Garmin offers"
+
+
+def newer_on_the_device(server):
+    """The answer with West as Garmin's server gives a map the device has in a newer version
+    than the one it offers (installationstate 3): the version, files and sizes of the answer are
+    those of Garmin's older version, not of the files on the device."""
+    answer = maps_response(server)
+    answer["maps"][0].update(installationstate=3, isreinstall=False,
+                             release={"majorversion": 9, "minorversion": 0})
+    return answer
+
+
+def test_a_map_newer_on_the_device_says_so_with_garmins_version(server):
+    west = maps.parse_maps(newer_on_the_device(server))[0]
+    status = west.status
+    assert status == NEWER
+    assert not west.update_available and west.installed
+    with in_language("pl"):
+        polish = west.status
+    assert polish == "nowsza niż wersja 9.0 oferowana przez Garmina"
+
+
+@pytest.mark.needs_display
+def test_the_row_of_a_map_newer_on_the_device_shows_no_version_or_size_of_garmins(
+        server, device_root):
+    from openexpress.gui.app import MainWindow
+
+    answer = newer_on_the_device(server)
+    answer["maps"] = answer["maps"][:1]
+    answer["maps"][0].update(displayname="Base maps", maptype="Base maps")
+    win, _reloads = maps_window(LocalStorage(device_root))
+    MainWindow.show_maps(win, maps.read_maps(answer))
+    (on_device,) = win.sections["maps"].groups
+    subtitle = on_device.rows[-1].get_subtitle()
+    assert subtitle == NEWER
+
+
+def test_cli_lists_a_map_newer_on_the_device_without_garmins_version_or_size(
+        server, device_root, monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.device.xmldevice import parse
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(newer_on_the_device(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    assert cli.main(["maps"]) == 0
+    line = next(x for x in capsys.readouterr().out.splitlines() if "TopoActive West" in x)
+    words = line.split()
+    assert words[2:] == NEWER.split()
+
+
+REFUSED_NEWER = ("Map “TopoActive West” cannot be installed: the device has a newer version than "
+                 "version 9.0 Garmin offers. Installing it would replace the newer version with "
+                 "the older one.")
+
+
+@pytest.mark.parametrize("apply", [[], ["--apply"]])
+def test_cli_refuses_to_install_a_map_newer_on_the_device(server, device_root, monkeypatch, capsys,
+                                                          apply):
+    """Refused before anything is listed or downloaded, as the other refusals of a plan: the
+    install would write Garmin's older version over the device's newer one."""
+    from openexpress import cli
+    from openexpress.device.xmldevice import parse
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(newer_on_the_device(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    assert cli.main(["maps", "install", "TopoActive West", *apply]) == 1
+    said = capsys.readouterr()
+    assert REFUSED_NEWER in said.err and "Updating map" not in said.out
+    assert not (device_root / "GARMIN" / "W.img").exists()
+
+
+def test_a_map_newer_on_the_device_is_not_installed(server, device_root, xdg):
+    all_maps = maps.parse_maps(newer_on_the_device(server))
+    with pytest.raises(maps.MapError) as refused:
+        maps.install(all_maps[0], all_maps, LocalStorage(device_root),
+                     lambda ident: {"unlocks": []})
+    said = str(refused.value)
+    assert said == REFUSED_NEWER
+    assert not (device_root / "GARMIN" / "W.img").exists()
+    with in_language("pl"):
+        polish = maps.newer_on_device_message(all_maps[0])
+    assert polish == ("Nie można zainstalować mapy „TopoActive West”: urządzenie ma nowszą wersję "
+                      "niż wersja 9.0 oferowana przez Garmina. Instalacja zastąpiłaby nowszą "
+                      "wersję starszą.")
+
+
+# --- an update in `openexpress maps` -----------------------------------------------------------
+
+
+@pytest.mark.parametrize("lang,said", [
+    ("en", "2026.11 available · 9.0 kB to download"),
+    ("pl", "dostępna wersja 2026.11 · 9,0 kB do pobrania"),
+])
+def test_cli_lists_an_update_in_the_words_of_the_window(server, device_root, monkeypatch, capsys,
+                                                        lang, said):
+    """The version and the size of the answer are those of the update, not of the map on the
+    device: said as the window says them, not in the column of the version."""
+    from openexpress import cli, i18n
+    from openexpress.device.xmldevice import parse
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(maps_response(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    try:
+        assert cli.main(["--lang", lang, "maps"]) == 0
+    finally:
+        i18n.setup("en")
+    line = next(x for x in capsys.readouterr().out.splitlines() if "TopoActive East" in x)
+    shown = " ".join(line.split()[2:])
+    assert shown == said
+
+
+# --- the old files of an update: only those the device has ------------------------------------
+# East's answer names two old files to remove besides the shared DEM.img, E.img and E.gma; the
+# device has only E.img, or neither.
+
+
+def test_an_old_file_the_device_does_not_have_is_not_counted_as_removed(server, device_root, xdg):
+    (device_root / "GARMIN" / "E.img").write_bytes(b"old")
+    all_maps = maps.parse_maps(maps_response(server))
+    rep = maps.install(all_maps[1], all_maps, LocalStorage(device_root),
+                       lambda ident: {"unlocks": []})
+    removed = sorted(rep.removed)
+    assert removed == ["Garmin/E.img"]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("there,said", [(("E.img",), ["Old files to remove: 1"]), ((), [])])
+def test_the_question_before_an_update_counts_only_the_old_files_the_device_has(
+        server, device_root, monkeypatch, there, said):
+    import types
+
+    from fakes import window_methods
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+
+    for name in there:
+        (device_root / "GARMIN" / name).write_bytes(b"old")
+    all_maps = maps.parse_maps(maps_response(server))
+    asked = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda d, parent: asked.append(d))
+    client = types.SimpleNamespace(consumer=types.SimpleNamespace(url_salt="salt"))
+    win = stand_in(session=device_session(storage=LocalStorage(device_root), client=client),
+                   maps_cache=all_maps, run_task=RunNow())
+    window_methods(win, ["_ask_install_map"])
+    MainWindow.confirm_map(win, all_maps[1])
+    (question,) = asked
+    lines = question.get_body().splitlines()
+    old = [line for line in lines if line.startswith("Old files to remove")]
+    assert old == said
+
+
+def test_cli_install_plan_lists_only_the_old_files_the_device_has(server, device_root,
+                                                                  monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.device.xmldevice import parse
+
+    (device_root / "GARMIN" / "E.img").write_bytes(b"old")
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(maps_response(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    assert cli.main(["maps", "install", "TopoActive East"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    removed = [line.strip() for line in out if line.startswith("  - ")]
+    assert removed == ["- Garmin/E.img"]
+
+
 # --- a map that cannot be removed -----------------------------------------------------------
 
 
@@ -1367,12 +1553,12 @@ def test_the_space_of_an_update_counts_the_old_files_that_go(server, device_root
     removing = maps.removal_list(all_maps, east, rewriting=True)
     storage = LocalStorage(device_root)
     storage.replaces_atomically = True  # a drive: a file written over stays until the new one is whole
-    needed, change = maps.space_plan(storage, east, removing)
+    needed, change, old = maps.space_plan(storage, east, removing)
     assert change == east.size - 500 - 1 - len(DEM)  # E.img and E.gma go, DEM.img is written over
     assert needed == east.size - 500 - 1  # the old DEM.img still there while it is written
+    assert old == removing  # both on the device
     storage.replaces_atomically = False  # MTP: a file written over is deleted first
-    assert maps.space_plan(storage, east, removing) == (change, change)
-    assert maps.space_needed(storage, east, removing) == change
+    assert maps.space_plan(storage, east, removing) == (change, change, removing)
 
 
 def test_a_map_written_but_not_taken_in_waits_for_unplugging(server, device_root, xdg):
@@ -1592,7 +1778,7 @@ def test_space_counts_a_file_once_whatever_its_spelling(device_root):
     put(device_root, **{"D1.img": b"x" * 3000})
     m = _a_map("Map", 1, ["GARMIN/d1.IMG"], ["Garmin/D1.img"])
     m.files[0].size = 7000
-    assert maps.space_needed(LocalStorage(device_root), m, ["Garmin/D1.img"]) == 4000
+    assert maps.space_plan(LocalStorage(device_root), m, ["Garmin/D1.img"]).needed == 4000
 
 
 # --- a failed copy keeps the old map file -------------------------------------------------------
@@ -1625,9 +1811,9 @@ def test_a_drive_needs_room_for_the_new_map_beside_the_old(server, device_root, 
     class OverMtp(LocalStorage):
         replaces_atomically = False
 
-    assert maps.space_needed(LocalStorage(device_root), east, []) == east.size
+    assert maps.space_plan(LocalStorage(device_root), east, []).needed == east.size
     replaced = len(b"old E2") + len(b"old")  # E2.img and the shared DEM.img
-    assert maps.space_needed(OverMtp(device_root), east, []) == east.size - replaced
+    assert maps.space_plan(OverMtp(device_root), east, []).needed == east.size - replaced
 
 
 # --- an invalid MD5 never turns off the check ---------------------------------------------------
@@ -1850,8 +2036,8 @@ def _files_map(paths, size=10_000):
 
 
 def _space_with_one_size_per_file(storage, m, removing):
-    """The space a map needs, worked out with one size() for each file: what space_needed
-    gives, listing each folder once."""
+    """The space a map needs, worked out with one size() for each file: what space_plan
+    gives as needed, listing each folder once."""
     freed = sum(storage.size(p) or 0 for p in removing)
     gone = {p.casefold() for p in removing}
     replaced = sum(storage.size(f.device_path) or 0 for f in m.files
@@ -1872,7 +2058,7 @@ def test_the_space_a_map_needs_lists_each_folder_once(device_root):
     removing = ["Garmin/Maps/Old0.img", "Garmin/Maps/Old1.img"]
     expected = _space_with_one_size_per_file(LocalStorage(device_root), m, removing)
     storage = _ListingOverMtp(device_root)
-    assert maps.space_needed(storage, m, removing) == expected
+    assert maps.space_plan(storage, m, removing).needed == expected
     assert sorted(storage.listed) == sorted(["", "Garmin", "Garmin/Maps"])
 
 
@@ -1896,8 +2082,8 @@ def test_the_space_a_map_needs_is_what_it_was(device_root, paths, removing):
     (device_root / "Garmin/Maps/Folder.img").mkdir(parents=True, exist_ok=True)
     m = _files_map(paths, size=100_000)
     expected = _space_with_one_size_per_file(_ListingOverMtp(device_root), m, removing)
-    assert maps.space_needed(_ListingOverMtp(device_root), m, removing) == expected
-    assert maps.space_needed(LocalStorage(device_root), m, removing) == m.size - sum(
+    assert maps.space_plan(_ListingOverMtp(device_root), m, removing).needed == expected
+    assert maps.space_plan(LocalStorage(device_root), m, removing).needed == m.size - sum(
         LocalStorage(device_root).size(p) or 0 for p in removing)
 
 
@@ -1926,7 +2112,7 @@ def test_a_partial_map_is_incomplete_not_installed(server):
 def test_a_newer_map_on_the_device_is_no_update(server):
     east = _with_state(server, "East", 3)["East"]
     assert east.installed and not east.incomplete and not east.update_available
-    assert east.status == "up to date"
+    assert east.status == "newer than version 2026.11 Garmin offers"
 
 
 def test_a_partial_map_still_keeps_its_shared_file(server):

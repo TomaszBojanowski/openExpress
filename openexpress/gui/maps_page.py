@@ -402,21 +402,20 @@ class MapsPage:
     @staticmethod
     def _map_subtitle(m) -> str:
         """Type, version, size and status of an installed map; with an update, the version
-        offered and what it downloads instead; without the type when the map is named like its
-        type ("Base maps")."""
+        offered and what it downloads instead; of a map newer on the device or with an update not
+        offered in the account's country, only its status; without the type when the map is
+        named like its type ("Base maps")."""
         from openexpress import maps as mp
 
         kind = _kind(m)
         if m.update_available:
             # The version and the size the server lists are those of the update, not of the
             # map on the device.
-            # TRANSLATORS: on the Maps page, in the row of a map with an update: {version} the
-            # version Garmin offers, e.g. 2027.20
-            available = _("{version} available").format(version=m.version)
-            # TRANSLATORS: on the Maps page, in the row of a map with an update: {size} what the
-            # update downloads, e.g. 8.3 GB
-            download = _("{size} to download").format(size=human_size(m.size))
-            parts = [kind, available, download]
+            parts = [kind, *mp.update_words(m)]
+        elif m.newer_on_device or m.would_update:
+            # The version and the size the server lists are not those of the files on the
+            # device: of its older version, or of an update not offered in the account's country.
+            parts = [kind, m.status]
         else:
             parts = [kind, m.version, human_size(m.size), m.status]
         note = mp.restriction_note(m)  # the account's country not known: only marked
@@ -452,8 +451,8 @@ class MapsPage:
                 log.info("maps: the device or its list changed while the space was checked, "
                          "nothing asked")
                 return
-            (need, change), free = result
-            self._ask_install_map(m, need, change, free, removing)
+            plan, free = result
+            self._ask_install_map(m, plan.needed, plan.change, free, plan.old)
 
         def failed(_e):
             return self.session is not s  # gone meanwhile: the window says so already
@@ -465,7 +464,8 @@ class MapsPage:
     def _ask_install_map(self, m, need: int, change: int, free: int | None,
                          removing: list[str]) -> None:
         """The question before a map is installed, with the size of its files and the space
-        free once it is done, or what is missing (read in the background by confirm_map:
+        free once it is done, or what is missing, and how many old files it removes: `removing`,
+        those of Garmin's list the device has (read in the background by confirm_map:
         maps.space_plan)."""
         from openexpress import maps as mp
 

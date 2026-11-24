@@ -23,6 +23,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import NamedTuple
 
 from openexpress import answers, applog, awake, cache, download, hidden_folders, paths, updates
 from openexpress.connect import ApiError, unexpected_answer_text
@@ -168,6 +169,14 @@ class UniversalMap:
         return self.would_update and self.restricted is not True
 
     @property
+    def newer_on_device(self) -> bool:
+        """The device has a newer version of the map than the one the server offers: the
+        version, files and sizes of the answer are then those of the server's older version,
+        not of the files on the device."""
+        return (self.state == 3 and self.waiting is None and not self.unseen
+                and not self.partly_written)
+
+    @property
     def occupies(self) -> bool:
         """Its files are on the device for good: listed and not waiting to be removed, or
         written and waiting to be taken in. Only shown ("Maps use"); which files are kept
@@ -212,6 +221,11 @@ class UniversalMap:
         if self.would_update:  # held back: not offered in the account's country
             # TRANSLATORS: map status
             return _("update not offered in your account's country")
+        if self.newer_on_device:
+            # TRANSLATORS: map status (the Maps page, `openexpress maps`): the device has a newer
+            # version of the map than the one Garmin's server offers for it; {version}: Garmin's
+            # version, e.g. 9.0
+            return _("newer than version {version} Garmin offers").format(version=self.version)
         if self.installed:
             # TRANSLATORS: map status
             return _("up to date")
@@ -220,6 +234,19 @@ class UniversalMap:
             return _("not offered in your account's country")
         # TRANSLATORS: map status (can be installed)
         return _("available")
+
+
+def update_words(m: UniversalMap) -> list[str]:
+    """An update of `m` in the words of its row on the Maps page and of `openexpress maps`: the
+    version Garmin offers and what it downloads, those of the update and not of the map on the
+    device."""
+    # TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update:
+    # {version} the version Garmin offers, e.g. 2027.20
+    available = _("{version} available").format(version=m.version)
+    # TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update: {size}
+    # what the update downloads, e.g. 8.3 GB
+    download = _("{size} to download").format(size=human_size(m.size))
+    return [available, download]
 
 
 def _device_path(name: str) -> str:
@@ -961,6 +988,15 @@ def log_states(storage: Storage, maps: list[UniversalMap]) -> None:
         log.info("maps: states: %s", states)
 
 
+def newer_on_device_message(m: UniversalMap) -> str:
+    # TRANSLATORS: `openexpress maps install`, refused before anything: the device has a newer
+    # version of the map than the one Garmin's server offers ({version}, e.g. 9.0), and the
+    # install would write that older version over it
+    return _("Map “{name}” cannot be installed: the device has a newer version than version "
+             "{version} Garmin offers. Installing it would replace the newer version with the "
+             "older one.").format(name=m.name, version=m.version)
+
+
 def waiting_message(m: UniversalMap) -> str:
     return _("Map “{name}” is on the device already and will be loaded after the device is "
              "unplugged. Unplug the device first.").format(name=m.name)
@@ -983,10 +1019,19 @@ def removal_list(maps: list[UniversalMap], target: UniversalMap, rewriting: bool
     return [p for p in target.files_to_remove if p.casefold() not in keep | new]
 
 
-def space_plan(storage: Storage, m: UniversalMap, removing: list[str]) -> tuple[int, int]:
-    """(needed, change): the space the install needs free while it writes, and how much less
-    space is free once it is done (negative: more), the old files removed and those written
-    over giving theirs back."""
+class SpacePlan(NamedTuple):
+    """An install's space on the device, and the old files it removes."""
+    needed: int  # free while it writes
+    change: int  # how much less is free once it is done (negative: more)
+    # Those of the old files Garmin lists that the device has: the only ones removed, and
+    # counted in the question and the log.
+    old: list[str]
+
+
+def space_plan(storage: Storage, m: UniversalMap, removing: list[str]) -> SpacePlan:
+    """The space the install needs free while it writes, how much less space is free once it
+    is done, the old files removed and those written over giving theirs back, and which of the
+    old files `removing` names the device has."""
     gone = {p.casefold() for p in removing}
     replacing = [f.device_path for f in m.files if f.device_path.casefold() not in gone]
     # Every folder of these files listed once (over MTP each listing is a round trip).
@@ -997,11 +1042,7 @@ def space_plan(storage: Storage, m: UniversalMap, removing: list[str]) -> tuple[
     # A file being replaced frees its space before the new one is written over MTP only; on
     # a drive it stays until the new one is whole.
     needed = m.size - freed - (0 if storage.replaces_atomically else replaced)
-    return max(0, needed), change
-
-
-def space_needed(storage: Storage, m: UniversalMap, removing: list[str]) -> int:
-    return space_plan(storage, m, removing)[0]
+    return SpacePlan(max(0, needed), change, [p for p in removing if sizes[p] is not None])
 
 
 def write_order(m: UniversalMap) -> list[MapFile]:
@@ -1039,14 +1080,17 @@ def _install(
 ) -> MapReport:
     if m.waiting == WAIT_INSTALL:
         raise MapError(waiting_message(m))
+    if m.newer_on_device:  # Garmin's older version would replace it
+        raise MapError(newer_on_device_message(m))
     if not can_install(m, hidden_trial=hidden_trial):
         raise MapError(cannot_install_message(m))
     removing = removal_list(all_maps, m, rewriting=True)
     if m.hidden_folder is not None:
         return _install_hidden(m, removing, storage, activate, session, progress, url_salt,
                                sleep)
-    need = space_needed(storage, m, removing)
-    storage.require_space(need, SPACE_MARGIN, error=MapError)
+    plan = space_plan(storage, m, removing)
+    storage.require_space(plan.needed, SPACE_MARGIN, error=MapError)
+    removing = plan.old  # Garmin's list may name old files the device does not have
 
     local = _download(m, session, progress, url_salt)
     unlocks = _activation(m, activate, say_to(progress))
@@ -1071,8 +1115,8 @@ def _write_all(m, all_maps, storage, removing, files, local, unlocks, progress, 
         # replaces ("Removing old map files · 2 of 5")
         say(Step(_("Removing old map files"), n, len(removing)))
         log.debug("map install: removing %s", p)
-        storage.delete(p)
-        report.removed.append(p)
+        if storage.delete(p):  # one gone since the space was read is not counted
+            report.removed.append(p)
     shared = protected_files(all_maps, m)
     copying, checking = copying_text(m.name), checking_text(m.name)
     copy_total = sum(f.size or 0 for f in files)

@@ -2346,7 +2346,17 @@ def cmd_maps(args) -> int:
         print((_("Maps for {device} (all):") if args.all
                else _("Maps for {device} (installed):")).format(device=dev.description))
         for m in sorted(shown, key=lambda m: (m not in on_device, m.map_type, m.name)):
-            print(f"  {m.name:48} {m.version:>9}  {human_size(m.size):>9}  {m.status}")
+            # The version and the size the server lists are those of the files on the device
+            # only for a map without an update and not newer there: an update is said in the
+            # words of the window, a map newer on the device or with an update not offered in
+            # the account's country by its status alone.
+            if m.update_available:
+                version, size, status = "", "", " · ".join(mp.update_words(m))
+            elif m.newer_on_device or m.would_update:
+                version, size, status = "", "", m.status
+            else:
+                version, size, status = m.version, human_size(m.size), m.status
+            print(f"  {m.name:48} {version:>9}  {size:>9}  {status}")
             if (note := mp.restriction_note(m)) is not None:
                 print("    " + note)
             if m.hidden_folder is not None and not m.unseen:
@@ -2423,6 +2433,9 @@ def cmd_maps(args) -> int:
         if m.waiting == mp.WAIT_INSTALL:
             # Refused before anything is listed: it is written already.
             raise mp.MapError(mp.waiting_message(m))
+        if m.newer_on_device:
+            # Refused before anything is listed: Garmin's older version would replace it.
+            raise mp.MapError(mp.newer_on_device_message(m))
         trial = getattr(args, "hidden_folder_trial", False)
         hidden = m.hidden_folder is not None
         removing = mp.removal_list(all_maps, m, rewriting=True)
@@ -2433,8 +2446,12 @@ def cmd_maps(args) -> int:
             raise mp.MapError(refused[0])
         if not refused and not mp.can_install(m, hidden_trial=trial):
             raise mp.MapError(mp.cannot_install_message(m))
-        need, free = (mp.hidden_space(st, m, removing) if hidden
-                      else (mp.space_needed(st, m, removing), st.free_space()))
+        if hidden:
+            need, free = mp.hidden_space(st, m, removing)
+        else:
+            plan = mp.space_plan(st, m, removing)
+            # Only the old files the device has are removed: only those are listed.
+            need, free, removing = plan.needed, st.free_space(), plan.old
         if m.installed:
             msg = ngettext("Updating map {name} {version}: {count} file, download {size}, "
                            "space on the device {needed} ({free} free)",
