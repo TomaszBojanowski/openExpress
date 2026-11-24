@@ -2433,6 +2433,9 @@ def cmd_maps(args) -> int:
         if m.waiting == mp.WAIT_INSTALL:
             # Refused before anything is listed: it is written already.
             raise mp.MapError(mp.waiting_message(m))
+        if m.newer_on_device:
+            # Refused before anything is listed: Garmin's older version would replace it.
+            raise mp.MapError(mp.newer_on_device_message(m))
         trial = getattr(args, "hidden_folder_trial", False)
         hidden = m.hidden_folder is not None
         removing = mp.removal_list(all_maps, m, rewriting=True)

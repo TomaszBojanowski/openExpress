@@ -719,6 +719,46 @@ def test_cli_lists_a_map_newer_on_the_device_without_garmins_version_or_size(
     assert words[2:] == NEWER.split()
 
 
+REFUSED_NEWER = ("Map “TopoActive West” cannot be installed: the device has a newer version than "
+                 "version 9.0 Garmin offers. Installing it would replace the newer version with "
+                 "the older one.")
+
+
+@pytest.mark.parametrize("apply", [[], ["--apply"]])
+def test_cli_refuses_to_install_a_map_newer_on_the_device(server, device_root, monkeypatch, capsys,
+                                                          apply):
+    """Refused before anything is listed or downloaded, as the other refusals of a plan: the
+    install would write Garmin's older version over the device's newer one."""
+    from openexpress import cli
+    from openexpress.device.xmldevice import parse
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(newer_on_the_device(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    assert cli.main(["maps", "install", "TopoActive West", *apply]) == 1
+    said = capsys.readouterr()
+    assert REFUSED_NEWER in said.err and "Updating map" not in said.out
+    assert not (device_root / "GARMIN" / "W.img").exists()
+
+
+def test_a_map_newer_on_the_device_is_not_installed(server, device_root, xdg):
+    all_maps = maps.parse_maps(newer_on_the_device(server))
+    with pytest.raises(maps.MapError) as refused:
+        maps.install(all_maps[0], all_maps, LocalStorage(device_root),
+                     lambda ident: {"unlocks": []})
+    said = str(refused.value)
+    assert said == REFUSED_NEWER
+    assert not (device_root / "GARMIN" / "W.img").exists()
+    with in_language("pl"):
+        polish = maps.newer_on_device_message(all_maps[0])
+    assert polish == ("Nie można zainstalować mapy „TopoActive West”: urządzenie ma nowszą wersję "
+                      "niż wersja 9.0 oferowana przez Garmina. Instalacja zastąpiłaby nowszą "
+                      "wersję starszą.")
+
+
 # --- an update in `openexpress maps` -----------------------------------------------------------
 
 

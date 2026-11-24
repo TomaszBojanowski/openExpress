@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.2\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 23:54+0100\n"
+"POT-Creation-Date: 2026-11-25 00:02+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -11334,6 +11334,17 @@ msgstr ""
 #: openexpress/maps.py
 #, python-brace-format
 msgid "openExpress does not install maps into the folder {folder} yet."
+msgstr ""
+
+#. TRANSLATORS: `openexpress maps install`, refused before anything: the device has a newer
+#. version of the map than the one Garmin's server offers ({version}, e.g. 9.0), and the
+#. install would write that older version over it
+#: openexpress/maps.py
+#, python-brace-format
+msgid ""
+"Map “{name}” cannot be installed: the device has a newer version than "
+"version {version} Garmin offers. Installing it would replace the newer "
+"version with the older one."
 msgstr ""
 
 #: openexpress/maps.py

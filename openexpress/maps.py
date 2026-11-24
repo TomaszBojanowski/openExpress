@@ -988,6 +988,15 @@ def log_states(storage: Storage, maps: list[UniversalMap]) -> None:
         log.info("maps: states: %s", states)
 
 
+def newer_on_device_message(m: UniversalMap) -> str:
+    # TRANSLATORS: `openexpress maps install`, refused before anything: the device has a newer
+    # version of the map than the one Garmin's server offers ({version}, e.g. 9.0), and the
+    # install would write that older version over it
+    return _("Map “{name}” cannot be installed: the device has a newer version than version "
+             "{version} Garmin offers. Installing it would replace the newer version with the "
+             "older one.").format(name=m.name, version=m.version)
+
+
 def waiting_message(m: UniversalMap) -> str:
     return _("Map “{name}” is on the device already and will be loaded after the device is "
              "unplugged. Unplug the device first.").format(name=m.name)
@@ -1071,6 +1080,8 @@ def _install(
 ) -> MapReport:
     if m.waiting == WAIT_INSTALL:
         raise MapError(waiting_message(m))
+    if m.newer_on_device:  # Garmin's older version would replace it
+        raise MapError(newer_on_device_message(m))
     if not can_install(m, hidden_trial=hidden_trial):
         raise MapError(cannot_install_message(m))
     removing = removal_list(all_maps, m, rewriting=True)
