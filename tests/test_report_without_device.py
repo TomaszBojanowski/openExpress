@@ -3,7 +3,7 @@ opened (not supported, not ready, starting, a drive not mounted, several, none):
 what is on USB and of the system, never a serial number; the log as always. All of /sys is
 made up."""
 import pytest
-from fakes import garmin_on_usb
+from fakes import descendants, garmin_on_usb
 
 from openexpress import report
 from openexpress.device import gio_storage
@@ -11,14 +11,6 @@ from openexpress.device import gio_storage
 SERIAL = "MADEUPSERIAL"
 MINI = ('- Garmin devices on USB: 091e:0b89 "Garmin USB inReach", interfaces: HID (03), mass '
         'storage (08)')
-
-
-@pytest.fixture
-def usb(tmp_path, monkeypatch):
-    folder = tmp_path / "usb"
-    folder.mkdir()
-    monkeypatch.setattr(gio_storage, "SYSFS_USB", folder)
-    return folder
 
 
 def _mini(usb):
@@ -135,7 +127,7 @@ def test_the_window_shows_the_report_without_a_device(usb, monkeypatch):
         "No device is open: the report says what is connected over USB. Open on GitHub")
     view = dialog.get_extra_child()
     assert view is not None
-    buffer = next(w for w in _descendants(view) if hasattr(w, "get_buffer")).get_buffer()
+    buffer = next(w for w in descendants(view) if hasattr(w, "get_buffer")).get_buffer()
     text = buffer.get_text(buffer.get_start_iter(), buffer.get_end_iter(), False)
     assert _device_section(text) == [
         "### Device", "- Not opened: not supported (HID without MTP)", MINI,
@@ -143,10 +135,3 @@ def test_the_window_shows_the_report_without_a_device(usb, monkeypatch):
     assert "Logged in" not in text  # the window without a device does not know it
     assert dialog.has_response("copy") and SERIAL not in text
 
-
-def _descendants(widget):
-    child = widget.get_first_child()
-    while child is not None:
-        yield child
-        yield from _descendants(child)
-        child = child.get_next_sibling()

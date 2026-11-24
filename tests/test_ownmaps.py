@@ -5,7 +5,7 @@ import types
 
 import pytest
 import requests
-from fakes import RunNow, window_methods
+from fakes import RunNow, in_language, window_methods
 
 from openexpress import ownmaps
 from openexpress.cli import main
@@ -257,14 +257,9 @@ def test_maps_command_lists_own_maps_with_their_names(maps_cli, capsys):
 
 
 def test_own_maps_in_polish(maps_cli, capsys):
-    from openexpress import i18n
-
     (maps_cli / "GARMIN" / "copy.img").write_bytes(b"not a map")
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert main(["--path", str(maps_cli), "maps"]) == 0
-    finally:
-        i18n.setup("en")
     out = capsys.readouterr().out
     assert "Własne mapy (nie od Garmina):" in out and "(nazwa nieodczytana)" in out
 
@@ -504,7 +499,6 @@ def test_a_map_the_drive_keeps_with_other_bytes_is_removed_and_not_listed(maps_c
 def test_the_check_of_a_map_on_a_drive_is_a_step_of_its_own(map_folder, my_map, monkeypatch):
     """On a drive the map is read back after the copy: its own step, by the map's name, its
     bar from the start to the end."""
-    from openexpress.device import storage
     from openexpress.progress import Step
 
     monkeypatch.setattr(storage, "CHECK_TOLD_FROM", 0)
@@ -581,8 +575,6 @@ def test_words_with_the_file_and_nothing_left_behind_are_said_alone(maps_cli, my
             "ręcznie.")),
 ], ids=["removed", "kept"])
 def test_what_became_of_the_incomplete_file_in_polish(map_folder, my_map, keep_the_rest, ending):
-    from fakes import in_language
-
     from openexpress.maps import MapError
 
     class Fails(FailingWrite):
@@ -655,17 +647,12 @@ def test_refusals_keep_the_names_out_of_the_log_too(maps_cli, my_map, tmp_path, 
 
 
 def test_add_in_polish(maps_cli, my_map, capsys):
-    from openexpress import i18n
-
     (maps_cli / "GARMIN" / "taken.img").write_bytes(b"x")
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert main(["--path", str(maps_cli), "maps", "add", str(my_map)]) == 0
         out = capsys.readouterr().out.splitlines()
         assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--name", "taken.img"]) == 1
         err = capsys.readouterr().err
-    finally:
-        i18n.setup("en")
     assert out[0] == "Mapa: Sometown cyclemap/latin1 Example.org"
     assert out[1] == "  osm-test.img (2,0 kB) zostanie zapisany jako GARMIN/osm-test.img"
     assert out[2].startswith("Wolne miejsce na urządzeniu: ")
@@ -858,17 +845,12 @@ def test_removal_leaves_only_the_size_in_the_log(added, log_file, capsys):
 
 
 def test_remove_own_in_polish(added, capsys):
-    from openexpress import i18n
-
     (added / "GARMIN" / "by-hand.img").write_bytes(b"x")
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert main(["--path", str(added), "maps", "remove", "--own", "osm-test.img"]) == 0
         out = capsys.readouterr().out.splitlines()
         assert main(["--path", str(added), "maps", "remove", "--own", "by-hand.img"]) == 1
         err = capsys.readouterr().err.strip()
-    finally:
-        i18n.setup("en")
     assert out[0] == "Usuwanie własnej mapy: Sometown cyclemap/latin1 Example.org"
     assert out[1] == "  - GARMIN/osm-test.img  (2,0 kB)"
     assert err == ("Błąd: Plik by-hand.img nie został skopiowany przez tę instalację openExpressu "
@@ -1364,15 +1346,10 @@ def test_own_maps_show_under_the_message_that_map_updates_are_not_supported():
 
 @pytest.mark.needs_display
 def test_own_maps_in_the_window_in_polish(window_device, my_map):
-    from openexpress import i18n
-
     win, _dev, _root = window_device
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         win.show_own_maps(view_of(("by-hand.img", 2000, None)))
         win.add_own_map(my_map)  # osm-test.img is on the made-up device already
-    finally:
-        i18n.setup("en")
     (group,) = win.sections["maps"].groups
     assert group.get_title() == "Własne mapy"
     note = "plik nierozpoznany jako mapa; usuń go w\u00a0menedżerze plików"  # it has no header
@@ -1417,17 +1394,12 @@ def test_a_map_folder_that_cannot_be_found_keeps_the_described_spelling(tmp_path
 
 
 def test_free_space_is_said_once_with_what_the_map_takes(maps_cli, my_map, monkeypatch, capsys):
-    from openexpress import i18n
-
     monkeypatch.setattr(LocalStorage, "free_space", lambda self: 12_400_000_000)
     assert main(["--path", str(maps_cli), "maps", "add", str(my_map), "--apply"]) == 0
     assert "Free space on the device: 12.4 GB (the map takes 2.0 kB)" in capsys.readouterr().out
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert main(["--path", str(maps_cli), "maps", "remove", "--own", "osm-test.img"]) == 0
         out = capsys.readouterr().out
-    finally:
-        i18n.setup("en")
     assert "Wolne miejsce na urządzeniu: 12,4 GB (usunięcie zwolni 2,0 kB)" in out
     assert "teraz" not in out and "potem" not in out
 
@@ -1491,8 +1463,6 @@ def test_confirmation_keeps_a_date_in_the_name_together(tmp_path):
 
 @pytest.mark.needs_display
 def test_a_refusal_is_titled_by_what_could_not_be_done(window_device, my_map):
-    from openexpress import i18n
-
     win, dev, root = window_device
     st = win.session.storage
     win.add_own_map(my_map)  # osm-test.img is on the made-up device already
@@ -1500,11 +1470,8 @@ def test_a_refusal_is_titled_by_what_could_not_be_done(window_device, my_map):
 
     ownmaps.add(ownmaps.plan_add(dev, st, win.maps_cache, my_map, "ours.img"), dev, st)
     (root / "Garmin" / "ours.img").write_bytes(b"another file")
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         win.confirm_remove_own(ownmaps.OwnMap("ours.img", 2000, "Mine", "Garmin/ours.img"))
-    finally:
-        i18n.setup("en")
     assert win.shown[-1][:2] == ("error", "Nie usunięto mapy")
     assert not any(title in ("Own Maps", "Własne mapy") for _kind, title, *_r in win.shown
                    if _kind == "error")
@@ -1711,17 +1678,12 @@ def test_foreign_map_rows_do_not_keep_themselves_alive():
 
 @pytest.mark.needs_display
 def test_foreign_maps_in_the_window_in_polish(window_device):
-    from openexpress import i18n
-
     win, _dev, _root = window_device
     own, view = shown_on_the_page(win, "osm-test.img")
     win.answer = "cancel"
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         win.show_own_maps(view)
         win.confirm_remove_own(own, foreign=True)
-    finally:
-        i18n.setup("en")
     rows = rows_of(win.sections["maps"].groups[0])
     assert ("Sometown cyclemap", "osm-test.img\u00a0· 1,5\u00a0kB\u00a0· nieskopiowana przez tę instalację",
             True) in rows

@@ -2,10 +2,8 @@
 ascent and whether it has positions; of a file the device was still writing only when it was
 created; of a damaged one what it reads. Made-up files only (fakes.fit_file)."""
 
-from datetime import UTC, datetime
-
 import pytest
-from fakes import FitData, FitDefinition, fit_file
+from fakes import FIT_EPOCH, FitData, FitDefinition, fit_file
 
 from openexpress import fit
 
@@ -14,7 +12,6 @@ ENUM, UINT16, SINT32, UINT32 = 0x00, 0x84, 0x85, 0x86
 TIMESTAMP = 253
 RUNNING, CYCLING, SWIMMING, MULTISPORT = 1, 2, 5, 18
 CREATED = 1_100_000_000  # a made-up time, in seconds of the FIT protocol
-FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
 WARSAW = (624_000_000, 250_000_000)  # a made-up position in semicircles
 
 FILE_ID_MESSAGES = (FitDefinition(0, FILE_ID, ((0, ENUM), (4, UINT32))), FitData(0, (4, CREATED)))

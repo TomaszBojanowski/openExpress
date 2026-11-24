@@ -23,11 +23,13 @@ from fakes import (
     gpx_route,
     gpx_track,
     gpx_waypoint,
+    in_language,
     program_style,
     record_sync,
     start_section,
     window_picture,
 )
+from fakes import iterate as _iterate
 
 NARROWEST = 360  # the width of gui_settings.MIN_WINDOW
 FONT = "Adwaita Sans 11"  # GNOME's: the widths are measured in it
@@ -71,8 +73,6 @@ def _session(device, drive=False, space=(52_140_000_000, 64_000_000_000)):
 
 def _device_errors():
     """A crash the device logged lately, its hidden crash logs and five memory dumps."""
-    from datetime import datetime
-
     from openexpress import diagnostics
 
     crash = diagnostics.ErrorEntry("RTL Trap", datetime(2026, 10, 20, 22, 24, 6), "0x003",
@@ -85,8 +85,6 @@ def _status_facts():
     it shows at first (Show All as its last row in the narrowest window), every kind of file,
     older dumps and an update the device did not install, its copies and its hidden crash
     logs."""
-    from datetime import datetime, timedelta
-
     from openexpress import status
     from openexpress.crashes import Crash
 
@@ -128,8 +126,6 @@ def _update(name, version, path, size, beta=False, system=False, reinstall=False
 def _updates(copied: bool):
     """A beta of the system software (to install, or copied already) with long names of
     components around it."""
-    from datetime import datetime
-
     items = [
         _update("Edge 1050 Software Bundle", "33.13", "Garmin/GUPDATE.GSP", 97_700_000,
                 beta=True, system=True, on_device=copied),
@@ -171,10 +167,10 @@ def _hidden_inside_updates(writable=False):
                      8_800_000, reinstall=True, on_device=True)]
     for u, folder in zip(items[1:4], ("Garmin/Prompts", "Garmin/ASR/Updates",
                                       "Garmin/KBD/Updates"), strict=True):
-        u.folder_hidden = folder
-    items[5].folder_hidden = "Garmin/ExtData"
+        u.hidden_inside = folder
+    items[5].hidden_inside = "Garmin/ExtData"
     for u in items:
-        u.folder_writable = writable and u.folder_hidden is not None
+        u.folder_writable = writable and u.hidden_inside is not None
     return items
 
 
@@ -249,8 +245,6 @@ def _music():
 def _activities():
     """What the Activities page shows: the longest Polish name of a sport, the longest state, a
     copy in a backup, and more to read (the button below the rows)."""
-    from datetime import datetime
-
     from openexpress import activities, fit
 
     def read(name, found, source=activities.Source.DEVICE, backup=None):
@@ -405,8 +399,6 @@ def _navigator_maps(read: bool = False):
 def _navigator_status_facts():
     """Device Status of the navigator once .System was read: its maps and its update files
     counted from what the session read, the rest of the used space "system"; no diagnostics."""
-    from datetime import datetime, timedelta
-
     from openexpress import status
 
     now = datetime(2026, 10, 21, 12, 0)
@@ -587,14 +579,6 @@ def _courses(empty: bool, uncounted: bool = False):
     if uncounted:
         return courses.Overview("Garmin/NewFiles", found, waiting, None, ("locations",))
     return courses.Overview("Garmin/NewFiles", found, waiting, 1234, locations_file=True)
-
-
-def _iterate(seconds):
-    from gi.repository import GLib
-
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        GLib.MainContext.default().iteration(False)
 
 
 @pytest.fixture
@@ -816,8 +800,6 @@ def _long_hike(sport=HIKING):
     """A hike (or a ride) with all five tiles at their longest (two by two in a narrow window)
     and the chart of three series (its switch: the longest names), its row a copy in a backup
     with positions (the GPX button in its header bar)."""
-    from datetime import datetime
-
     from openexpress import activities, fit
 
     start = int(datetime(2026, 12, 31, 23, 59).timestamp())
@@ -1180,15 +1162,11 @@ def test_captions_break_only_where_they_should(narrow_window, language, page):
 def test_the_line_of_the_last_sync_keeps_its_separators_too(language, clock):
     """When the last sync was and its numbers, joined in the command line's words (service):
     in the window "·" stays with the part before it."""
-    from openexpress import i18n
     from openexpress.gui.words import last_sync_words
 
-    i18n.setup(language)
-    try:
+    with in_language(language):
         line = last_sync_words({"time": time.time() - 3 * 86400, "uploaded": 6,
                                     "downloaded": 7, "new_files": {"FIT_TYPE_4": 8}})
-    finally:
-        i18n.setup("en")
     assert line.count("\u00a0· ") == 2 and _breaks_badly([line]) == []
 
 
@@ -1773,7 +1751,6 @@ def test_done_says_what_was_not_installed_and_why(narrow_window, language, width
     """The message after Install All: the device's software copied, a file the device refused
     as it was written not: Done, the steps, the one not installed and why; it fits the narrowest
     window. With OPENEXPRESS_HIDDEN_INSIDE_SHOTS, a picture."""
-    import types
     from pathlib import Path
 
     from gi.repository import Adw, Gtk

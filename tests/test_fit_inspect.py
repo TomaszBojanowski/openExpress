@@ -4,17 +4,15 @@ only when it is. Made-up files only (fakes.fit_file); never a serial number or a
 the log."""
 
 import time
-from datetime import UTC, datetime
 
 import pytest
-from fakes import FitData, FitDefinition, fit_file
+from fakes import FIT_EPOCH, FitData, FitDefinition, fit_file
 
 from openexpress import cli
 
 ENUM, UINT8, UINT16, SINT32, UINT32, UINT32Z, STRING = 0x00, 0x02, 0x84, 0x85, 0x86, 0x8C, 0x07
 TIMESTAMP = 253
 CREATED = 1_100_000_000  # a made-up time, in seconds of the FIT protocol
-FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
 SERIAL = 3_987_654_321  # a made-up serial number of a device
 
 

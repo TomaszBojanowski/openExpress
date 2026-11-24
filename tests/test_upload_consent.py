@@ -3,7 +3,7 @@
 
 import pytest
 import requests
-from fakes import step_words
+from fakes import in_language, step_words
 from test_fixes_ui import FakeClient, fake_client  # noqa: F401 - the fixture
 
 from openexpress import last_sync, service, sync
@@ -364,8 +364,6 @@ def test_the_files_from_connect_are_counted_and_named(device_root, xdg):
 
 
 def test_the_last_sync_is_put_into_words_when_shown(xdg):
-    from openexpress import i18n
-
     summary = service.SyncSummary(uploaded=3, skipped_known=2, lines=[
         "Written before, in words.",
         {"kind": "new_files", "types": {"FIT_TYPE_49": 1, "FIT_TYPE_4": 4}},
@@ -378,11 +376,8 @@ def test_the_last_sync_is_put_into_words_when_shown(xdg):
         "Written before, in words.",
         "Files from the device: activities ×4, sleep",
         "2 files were already in Garmin Connect"]  # the unknown step left out
-    i18n.setup("pl")  # the language of the moment it is shown, not of the sync
-    try:
+    with in_language("pl"):  # the language of the moment it is shown, not of the sync
         assert step_words(lines)[1] == "Pliki z\u00a0urządzenia: aktywności ×4, sen"
-    finally:
-        i18n.setup("en")
 
 
 def test_a_last_sync_of_an_older_version_is_shown_as_it_was(xdg):

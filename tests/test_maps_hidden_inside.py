@@ -60,7 +60,7 @@ def test_a_map_into_a_folder_hidden_inside_a_seen_one_is_refused_before_anything
     before = _tree(watch)
     storage = LocalStorage(watch)
     (m,) = _maps(storage, watch)
-    assert m.folder_hidden == "Garmin/RegionMaps"
+    assert m.hidden_inside == "Garmin/RegionMaps"
     assert not maps.can_install(m) and not maps.can_install(m, hidden_trial=True)
     assert maps.cannot_install_reason(m) == REASON["en"]
     for trial in (False, True):
@@ -107,10 +107,10 @@ def test_the_command_line_refuses_it_before_it_lists_anything(watch, monkeypatch
 def test_a_map_into_that_folder_the_device_shows_is_installable(watch):
     (watch / "GARMIN" / "RegionMaps").mkdir()
     (m,) = _maps(LocalStorage(watch), watch)
-    assert m.folder_hidden is None and maps.can_install(m)
+    assert m.hidden_inside is None and maps.can_install(m)
 
 
 def test_a_map_into_a_folder_the_device_names_for_nothing_is_installable(watch):
     """A folder not named for a component may only not be there yet: made for the write."""
     (m,) = _maps(LocalStorage(watch), watch, map_entry(NAME, "Garmin/NewMaps/D0000001A.img"))
-    assert m.folder_hidden is None and maps.can_install(m)
+    assert m.hidden_inside is None and maps.can_install(m)

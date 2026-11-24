@@ -4,7 +4,7 @@ import logging
 import uuid
 
 import pytest
-from fakes import RunNow, step_words
+from fakes import RunNow, in_language, step_words
 from fakes import window as stand_in
 
 from openexpress import ciq, errors, music, proto
@@ -2074,18 +2074,13 @@ def test_a_broken_removal_ends_the_sentence_of_its_error(hidden_spot, monkeypatc
 
 
 def test_the_full_stop_comes_in_polish_too(hidden_spot):
-    from openexpress import i18n
     from openexpress.device.storage import RemountFailed
 
     st, dev, fake, app = hidden_spot
     st.remount_error = RemountFailed("Nie można zamontować urządzenia: urządzenie nie "
                                      "odpowiedziało na czas")
-    i18n.setup("pl")
-    try:
-        with pytest.raises(ciq.CiqError) as error:
-            ciq.remove(dev, st, app)
-    finally:
-        i18n.setup("en")
+    with in_language("pl"), pytest.raises(ciq.CiqError) as error:
+        ciq.remove(dev, st, app)
     assert "nie odpowiedziało na czas. Odłącz urządzenie i\u00a0podłącz je ponownie." in str(
         error.value)
 
@@ -3444,7 +3439,7 @@ def test_flatpak_window_texts(flatpak_spot):
     assert MainWindow._for_phone_text(["Face It"], ["Face It"]).startswith(
         "Face It: The Flatpak has no access to USB devices, so it cannot install apps on this "
         "device. The app waits in the queue")
-    # Outside the sandbox the wording is the old one.
+    # Outside the sandbox: the general wording.
     assert MainWindow._for_phone_text(["Face It"]).startswith("Face It: openExpress cannot")
 
 
@@ -3849,35 +3844,26 @@ def test_the_questions_say_what_is_already_there_only_when_something_is(iq_devic
 
 
 def test_the_questions_with_nothing_there_in_polish(iq_device, songs, library):
-    from openexpress import i18n
     from openexpress.gui.app import MainWindow
 
     st, dev = iq_device
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         copy = MainWindow._copy_summary(music.plan_copy(music.scan(songs, dev), dev, st))
         playlist = MainWindow._playlist_summary(music.plan_playlist(library, dev, st))
-    finally:
-        i18n.setup("en")
     assert copy == "Na urządzenie zostanie skopiowane 306\u00a0B."
     assert playlist.splitlines()[1] == "Do skopiowania: 2 pliki (306\u00a0B)"
 
 
 def test_replaced_files_in_polish(iq_device, songs):
-    from openexpress import i18n
-
     st, dev = iq_device
     on_device(st, TWO, 1500)
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         plan = music.plan_copy(music.scan(songs, dev), dev, st)
         note = music.replaced_note(plan, plan.to_copy[1][0], TWO)
         counts = []
         for n in (1, 2, 5):
             plan.replaced = {str(k): 1 for k in range(n)}
             counts.append(music.replaced_text(plan))
-    finally:
-        i18n.setup("en")
     assert note == "(zastąpi plik na urządzeniu: 1,5\u00a0kB → 203\u00a0B)"
     assert counts == ["1 plik na urządzeniu zostanie zastąpiony.",
                       "2 pliki na urządzeniu zostaną zastąpione.",
@@ -3920,8 +3906,6 @@ def test_cli_update_through_the_mounted_storage_announces_no_app_list(iq_device,
     ("every app on the device is kept as it is, in the same order", "każda aplikacja z\u00a0urządzenia zostaje bez zmian, w\u00a0tej samej kolejności"),
 ])
 def test_the_app_list_stays_as_it_is_in_polish(english, polish):
-    from fakes import in_language
-
     from openexpress.i18n import _
 
     with in_language("pl"):

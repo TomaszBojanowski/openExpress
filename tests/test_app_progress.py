@@ -1,6 +1,7 @@
 """The progress of Connect IQ apps, in the Apps page and during a sync: each app by its name
 and which of how many ("Downloading Face It · 1 of 2", "Writing Face It to the device · 1 of
 2"); never the name of a file on the device. All apps and devices are made up."""
+from fakes import in_language
 from test_ciq_music import (  # noqa: F401 - fixtures
     FACE_MESSAGE,
     OTHER_MESSAGE,
@@ -10,7 +11,7 @@ from test_ciq_music import (  # noqa: F401 - fixtures
     iq_device,
 )
 
-from openexpress import ciq, i18n
+from openexpress import ciq
 from openexpress.progress import Step
 
 NB = " "
@@ -46,12 +47,9 @@ def test_an_app_written_over_ptp_is_told_by_its_name(hidden_apps):
 def test_app_progress_in_polish(iq_device):
     st, dev = iq_device
     seen = []
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         ciq.install_queued(dev, st, CountingClient(), [FACE_MESSAGE], known={},
                            progress=seen.append)
-    finally:
-        i18n.setup("en")
     assert [str(m) for m in seen] == [f"Pobieranie Face It{NB}· 1 z{NB}1",
                                       f"Zapisywanie Face It na urządzenie{NB}· 1 z{NB}1"]
 

@@ -75,7 +75,7 @@ def test_an_update_into_a_named_folder_not_on_the_drive_yet_is_written(drive, do
     storage = UmsStorage(drive, WHERE, PLACES[place])
     assert not hidden_folders.session_possible(storage)
     u = _offered(storage)[TEXT_PART]
-    assert (u.folder_hidden, u.folder_writable, u.refused_inside) == (None, False, False)
+    assert (u.hidden_inside, u.folder_writable, u.refused_inside) == (None, False, False)
     report = updates.install([u], storage)
     assert [w.part_number for w in report.written] == [TEXT_PART] and report.failed == []
     assert (drive / "GARMIN" / "TEXT" / "made_up.ln4").read_bytes() == TEXT
@@ -128,7 +128,7 @@ def test_a_map_into_a_named_folder_not_on_the_drive_yet_is_not_taken_for_hidden(
                                                        state=1)]})
     storage = UmsStorage(drive, WHERE, PLACES["its place on USB known"])
     maps.mark_waiting(storage, found, parse((drive / "GARMIN" / "GarminDevice.xml").read_bytes()))
-    assert found[0].folder_hidden is None and maps.can_install(found[0])
+    assert found[0].hidden_inside is None and maps.can_install(found[0])
 
 
 def test_an_own_map_into_a_top_folder_not_on_the_drive_yet_is_not_refused(drive):

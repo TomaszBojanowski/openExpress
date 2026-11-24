@@ -11,10 +11,10 @@ import types
 
 import pytest
 from conftest import make_fit
-from fakes import RunNow, stale_sizes
+from fakes import RunNow, in_language, stale_sizes
 from fakes import window as stand_in
 
-from openexpress import backup, i18n, progress
+from openexpress import backup, progress
 from openexpress.device.gio_storage import DeviceNotBack
 from openexpress.device.storage import LocalStorage, RemountFailed, UmsStorage
 from openexpress.device.xmldevice import parse
@@ -87,14 +87,11 @@ def test_whole_files_are_all_backed_up(device_root, tmp_path):
 def test_the_words_of_the_summary():
     assert backup.incomplete_text(1) == TEXT
     assert backup.incomplete_text(2).startswith("2 files were still being written")
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert backup.incomplete_text(1) == (
             "1 plik był jeszcze zapisywany przez urządzenie i\u00a0nie trafił do kopii. "
             "Odłącz urządzenie i\u00a0podłącz je ponownie, a\u00a0potem zrób kopię jeszcze raz.")
         assert backup.incomplete_text(5).startswith("5 plików było jeszcze zapisywanych")
-    finally:
-        i18n.setup("en")
 
 
 def test_the_command_line_says_it_after_the_copy(device_root, tmp_path, capsys):

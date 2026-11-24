@@ -7,10 +7,9 @@ import shutil
 import types
 
 import pytest
-from fakes import garmin_on_usb, replace_in_window
+from fakes import garmin_on_usb, in_language, replace_in_window
 from fakes import window as stand_in
 
-from openexpress import i18n
 from openexpress.device import gio_storage
 from openexpress.errors import OrdinaryStop
 
@@ -23,14 +22,6 @@ CLI_TEXT = f"{WHY} To report it, run openexpress report."
 TITLE = "Device Not Supported"
 SHORT = "Garmin USB inReach\u00a0· Unsupported connection"  # on the start page
 WARNING = "dialog-warning-symbolic"  # not the program's icon, whose arrows say "wait"
-
-
-@pytest.fixture
-def usb(tmp_path, monkeypatch):
-    folder = tmp_path / "usb"
-    folder.mkdir()
-    monkeypatch.setattr(gio_storage, "SYSFS_USB", folder)
-    return folder
 
 
 def _mini(usb, classes=("03", "08"), devnum=9, **files):
@@ -105,22 +96,16 @@ def test_the_menu_item_is_named_with_the_menu_s_own_words(usb):
 
     _mini(usb)
     for language, quoted in (("en", "“{}”"), ("pl", "„{}”")):
-        i18n.setup(language)
-        try:
+        with in_language(language):
             item, text = _("Report a Device or Problem…"), gio_storage.unsupported_text()
-        finally:
-            i18n.setup("en")
         assert quoted.format(item) in text
 
 
 def test_the_words_in_polish(usb):
     _mini(usb)
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         title, short = gio_storage.unsupported_title(), gio_storage.unsupported_caption()
         window, cli = gio_storage.unsupported_text(), gio_storage.unsupported_text(window=False)
-    finally:
-        i18n.setup("en")
     why = ("openExpress działa z\u00a0urządzeniami, które łączą się jako urządzenie multimedialne "
            "(MTP) lub dysk USB. To urządzenie używa innego połączenia. Podłączone: Garmin USB "
            "inReach (USB 091e:0b89).")

@@ -7,7 +7,7 @@ import logging
 import types
 
 import pytest
-from fakes import descendants
+from fakes import descendants, in_language
 from test_ciq_music import (  # noqa: F401 - fixtures
     FACE,
     FACE_MESSAGE,
@@ -97,12 +97,8 @@ def test_changing_an_app_says_why_not(no_list):
 
 def test_why_not_in_polish(no_list):
     st, dev = no_list
-    i18n.setup("pl")
-    try:
-        with pytest.raises(ciq.CiqError) as refused:
-            ciq.set_enabled(dev, st, FACE, True)
-    finally:
-        i18n.setup("en")
+    with in_language("pl"), pytest.raises(ciq.CiqError) as refused:
+        ciq.set_enabled(dev, st, FACE, True)
     # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
     assert str(refused.value) == (
         "Urządzenie nie ma jeszcze listy aplikacji Connect IQ (nie zainstalowano na nim żadnej "
@@ -223,13 +219,10 @@ def test_the_apps_page_says_there_are_none_and_offers_the_account(no_list):
 @pytest.mark.needs_display
 def test_the_apps_page_in_polish(no_list):
     st, dev = no_list
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         state = ciq.read_installed(dev, st)
         _win, section = _apps_page(state, [])
         groups = _groups(section)
-    finally:
-        i18n.setup("en")
     assert groups["Na urządzeniu"][0] == "Brak aplikacji Connect IQ na urządzeniu"
 
 
@@ -244,11 +237,8 @@ def test_the_window_says_why_an_app_was_only_queued():
 
 
 def test_the_words_of_an_app_only_queued_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         text = ciq.no_app_list_text(["Face It"])
-    finally:
-        i18n.setup("en")
     # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
     assert text == ("Face It: urządzenie nie udostępniło jeszcze listy aplikacji Connect IQ. "
                     "Aplikacja czeka w\u00a0kolejce Garmin Connect. Gdy urządzenie pokaże listę "

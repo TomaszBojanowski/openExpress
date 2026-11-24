@@ -6,7 +6,8 @@ libadwaita 1.9 says "closed", then "response" once, so the tests never say "clos
 import logging
 
 import pytest
-from test_forget_window import _button_labelled, _turn_until
+from fakes import turn_until
+from test_forget_window import _button_labelled
 
 pytestmark = pytest.mark.needs_display
 
@@ -40,15 +41,15 @@ def host(monkeypatch):
 
 
 def click(dialog, words):
-    assert _turn_until(dialog.get_mapped)
+    assert turn_until(dialog.get_mapped)
     _button_labelled(dialog, words).emit("clicked")
-    assert _turn_until(lambda: not dialog.get_mapped())
+    assert turn_until(lambda: not dialog.get_mapped())
 
 
 def escape(dialog):
-    assert _turn_until(dialog.get_mapped)
+    assert turn_until(dialog.get_mapped)
     dialog.close()
-    assert _turn_until(lambda: not dialog.get_mapped())
+    assert turn_until(lambda: not dialog.get_mapped())
 
 
 def question(parent, ran, **kw):

@@ -50,8 +50,7 @@ def known(win, part: str):
 
 def keep(win, part: str, texture) -> None:
     """Keep a picture found (never None: a part number without one is simply not there)."""
-    if texture is not None:
-        store(win)[part] = texture
+    store(win)[part] = texture
 
 
 def with_device_picture(win, part: str, url: str | None, use: Use, read) -> None:
@@ -139,13 +138,12 @@ PNG_SIGNATURE = b"\x89PNG\r\n\x1a\n"
 PICTURE_SIGNATURES = {"image/png": PNG_SIGNATURE, "image/jpeg": b"\xff\xd8\xff"}
 
 
-def picture_from_unit_info(client, device, ask=None) -> str | None:
+def picture_from_unit_info(device, ask) -> str | None:
     """The address of the device's picture according to Garmin's update server. The rest of
     the answer (unit ID, serial number…) is dropped here and goes nowhere. `ask` gives the
-    answer (the one of the session, service.unit_info); none: it is asked here."""
+    answer (the one of the session, service.unit_info)."""
     try:
-        info = ask() if ask is not None else client.unit_info(device.unit_id,
-                                                              device.part_number)
+        info = ask()
     except Exception as e:  # noqa: BLE001 - optional; the error may quote the answer
         log.info("device picture: unit-info failed (%s)", type(e).__name__)
         return None
@@ -175,14 +173,13 @@ def note_segment(device, info) -> None:
                                         info.get("mapupdatetype"))
 
 
-def is_bike_accessory(client, device, ask=None) -> bool:
+def is_bike_accessory(device, ask) -> bool:
     """Whether Garmin's update server files the device as a bike accessory (e.g. a Varia),
     which finishes an update once it is unplugged and switched on. Only this field of the
     answer is read; the rest (unit ID, serial number…) goes nowhere. `ask` gives the answer
-    (the one of the session, service.unit_info); none: it is asked here."""
+    (the one of the session, service.unit_info)."""
     try:
-        info = ask() if ask is not None else client.unit_info(device.unit_id,
-                                                              device.part_number)
+        info = ask()
     except Exception as e:  # noqa: BLE001 - only for a note after the update; may quote the answer
         log.info("software update: unit-info failed (%s)", type(e).__name__)
         return False

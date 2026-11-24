@@ -7,7 +7,7 @@ import posixpath
 import uuid
 
 import pytest
-from fakes import RunNow, SyncClient
+from fakes import RunNow, SyncClient, in_language
 from fakes import window as stand_in
 from test_ciq_music import STORE_ID, iq_device, out_bin  # noqa: F401 - the fixtures
 from test_updates_system import disk_full_halfway
@@ -378,17 +378,12 @@ def test_an_unlock_file_not_written_is_said_without_install_again(device_root):
 
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_neither_text_says_to_install_again(device_root, language):
-    from openexpress import i18n
-
-    i18n.setup(language)
-    try:
+    with in_language(language):
         error = maps.UnlockNotWritten("Garmin/Maps/abc.gma", "x")
         for text in (str(error), error.window_text):
             assert "install" not in text.casefold() and "zainstaluj" not in text.casefold()
         if language == "pl":
             assert error.window_text.endswith("wróć do tej strony.")
-    finally:
-        i18n.setup("en")
 
 
 @pytest.mark.needs_display
@@ -467,13 +462,8 @@ def test_a_song_of_the_wrong_size_stops_the_copy_and_is_deleted(iq_device, tmp_p
     (5, "Przed nim skopiowano 5 plików."), (22, "Przed nim skopiowano 22 pliki."),
     (0, "Przed nim skopiowano 0 plików.")])
 def test_how_many_songs_were_copied_in_polish(count, words):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = music.copied_before_text(count)
-    finally:
-        i18n.setup("en")
     assert said == words
 
 

@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 from pathlib import Path
 
 import pytest
+from fakes import in_language
 
 from openexpress import catalogs, i18n
 
@@ -338,12 +339,8 @@ def test_a_guess_from_an_older_wording_is_not_shown(tmp_path, monkeypatch, guess
     catalogs.build(tmp_path / "locale", po)
     monkeypatch.setattr(i18n, "LOCALE_DIR", tmp_path / "locale")
     monkeypatch.setattr(catalogs.shutil, "which", lambda name: None)
-    i18n.setup("xx")
-    try:
-        with pytest.raises(catalogs.CatalogError) as raised:
-            catalogs._tool("msgfmt")
-    finally:
-        i18n.setup("en")
+    with in_language("xx"), pytest.raises(catalogs.CatalogError) as raised:
+        catalogs._tool("msgfmt")
     said = str(raised.value)
     assert said == (msgid.format(tool="msgfmt") if guess else "made-up msgfmt translation")
 

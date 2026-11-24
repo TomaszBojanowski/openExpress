@@ -1,23 +1,10 @@
 """A toast of the window keeps all of its words: a long one (a long name of a map or of a course
 in it) goes on to a second and a third line instead of being cut."""
 
-import time
-
 import pytest
-from fakes import descendants
+from fakes import descendants, turn_until
 
 pytestmark = pytest.mark.needs_display
-
-
-def _turn_until(done, seconds=5.0) -> bool:
-    from gi.repository import GLib
-
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        if done():
-            return True
-        GLib.MainContext.default().iteration(False)
-    return done()
 
 
 @pytest.fixture
@@ -44,6 +31,6 @@ def test_a_long_toast_goes_on_to_more_lines_instead_of_being_cut(window):
 
     window.present()
     window.toast(words)
-    assert _turn_until(shown)
+    assert turn_until(shown)
     (label,) = shown()
     assert label.get_wrap() and label.get_lines() == 3

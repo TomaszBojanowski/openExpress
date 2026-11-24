@@ -8,15 +8,14 @@ only; a folder stands for the device."""
 import logging
 import os
 import types
-from datetime import UTC, datetime
+from datetime import datetime
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import descendants, fit_activity, page_window, window, window_methods
+from fakes import FIT_EPOCH, descendants, fit_activity, page_window, window, window_methods
 
 pytestmark = pytest.mark.needs_display
 
-FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
 SEP = " · "  # between the parts of a caption
 RUNNING, CYCLING, TRAINING = 1, 2, 10
 WARSAW = (624_000_000, 250_000_000)  # a made-up position, in semicircles

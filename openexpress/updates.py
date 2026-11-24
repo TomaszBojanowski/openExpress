@@ -192,7 +192,8 @@ class SoftwareUpdate:
     # said.
     product_installed: bool | None = None
     # The folder of the device's top level its file goes to when the ordinary listing does not
-    # show it (mark_present): openExpress never writes there.
+    # show it (mark_present): openExpress writes there only through its own session, once that
+    # session has read the folder.
     hidden_folder: str | None = None
     # For one with a hidden_folder: what became of reading its folder through openExpress's own
     # USB session on this connection (hidden_folders.Listing.state); None: not tried.
@@ -205,7 +206,7 @@ class SoftwareUpdate:
     # listing does not show it: the device hides it (mark_present, hidden_inside). Written there
     # through openExpress's own session where one can be had (folder_writable), else refused
     # before anything is downloaded (refused_inside).
-    folder_hidden: str | None = None
+    hidden_inside: str | None = None
     folder_writable: bool = False
     # Whether the device hides folders its GarminDevice.xml names inside folders that are seen
     # (mark_present: hidden_inside found some): a device that hides something where updates go.
@@ -251,7 +252,7 @@ class SoftwareUpdate:
     def refused_inside(self) -> bool:
         """In a folder the device hides inside a folder that is seen, where openExpress's own
         session cannot be had (the Flatpak without USB, a device not over MTP): not installed."""
-        return self.folder_hidden is not None and not self.folder_writable
+        return self.hidden_inside is not None and not self.folder_writable
 
     @property
     def is_offer(self) -> bool:
@@ -685,9 +686,9 @@ def mark_present(storage: Storage, updates: list[SoftwareUpdate],
     listing = hidden_folders.kept(storage)  # what this connection read of folders not seen
     for u in updates:
         place(u, tops, listing)
-        u.folder_hidden = (inside or {}).get(
+        u.hidden_inside = (inside or {}).get(
             posixpath.dirname(u.device_path.replace("\\", "/")).strip("/").casefold())
-        u.folder_writable = u.folder_hidden is not None and writable
+        u.folder_writable = u.hidden_inside is not None and writable
         u.device_hides = bool(inside)
         u.file_unseen = u.file_hidden = False  # compared anew below
         u.hidden_size_same = None  # compared anew below, from what this connection read
@@ -898,7 +899,7 @@ def not_installed_inside_text(u: SoftwareUpdate) -> str:
              "from the file manager, and openExpress cannot open a direct USB connection to this "
              "device to write there (the Flatpak version needs access to USB devices for it, see "
              "the README). The other updates install as usual."
-             ).format(name=u.title, version=u.version, folder=u.folder_hidden)
+             ).format(name=u.title, version=u.version, folder=u.hidden_inside)
 
 
 def hidden_inside_reason(u: SoftwareUpdate) -> str:
@@ -907,7 +908,7 @@ def hidden_inside_reason(u: SoftwareUpdate) -> str:
     # the file manager, e.g. GARMIN/Prompts
     return _("the device keeps it in the folder {folder}, hidden from the file manager, and "
              "openExpress cannot open a direct USB connection to this device to write there (the "
-             "Flatpak version needs access to USB devices for it)").format(folder=u.folder_hidden)
+             "Flatpak version needs access to USB devices for it)").format(folder=u.hidden_inside)
 
 
 def failed_text(report: InstallReport) -> str:
@@ -962,7 +963,7 @@ def add_ons_text(count: int) -> str:
 def installable(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     """Those that may be written: none whose top folder ordinary MTP does not show, unless that
     folder was read through openExpress's own session (hidden_folders), and none whose folder
-    the device hides inside a folder that is seen (folder_hidden)."""
+    the device hides inside a folder that is seen (hidden_inside)."""
     return [u for u in updates if not u.hidden_unread and not u.refused_inside]
 
 
@@ -1319,7 +1320,7 @@ def _install(
     (_write_hidden). Two updates for one file: one of them is copied (one_per_file). `report`
     is filled as it goes: what was written before a failure is in it. `hidden_trial`: a folder
     on this computer; then an update whose folder the device hides inside a folder that is seen
-    (folder_hidden) is written there through openExpress's own session, as into a folder of the
+    (hidden_inside) is written there through openExpress's own session, as into a folder of the
     top level, the file there before copied into this folder first (report.kept), and the first
     one not written stops the rest (a trial, from the command line only)."""
     updates = one_per_file(updates)[0]  # the others are told in the log
@@ -1343,14 +1344,14 @@ def _install(
     # anything is downloaded, unless tried; the others go on.
     for u in [u for u in updates if u.refused_inside and hidden_trial is None]:
         log.info("software update: %s %s not installed: its folder %s is hidden",
-                 u.part_number, u.version, u.folder_hidden)
+                 u.part_number, u.version, u.hidden_inside)
         report.failed.append((u, hidden_inside_reason(u)))
     updates = [u for u in updates if not u.refused_inside or hidden_trial is not None]
     if not updates:
         raise UpdateError(failed_text(report))
     # A file in a hidden folder is checked against the space in its own session.
     need, free = check_space(storage, [u for u in updates if u.hidden_folder is None
-                                       and u.folder_hidden is None])
+                                       and u.hidden_inside is None])
     storage.require_space(need, space_margin(storage), error=UpdateError, free=free,
                           margin_said=True)
     # Download everything first so the watch is never left with only some of the files.
@@ -1380,7 +1381,7 @@ def _install(
         # Into a folder the device hides inside one that is seen first, so that the -META entry
         # of one not written is left out; the device's own software stays last.
         ordered = sort_for_install(updates)
-        ordered.sort(key=lambda u: u.folder_hidden is None)
+        ordered.sort(key=lambda u: u.hidden_inside is None)
         not_written = set()
         for u in ordered:
             if u.hidden_folder is not None:
@@ -1390,7 +1391,7 @@ def _install(
                 _write_hidden(storage, u, local_files[u.key], progress, report)
                 continue
             name = posixpath.basename(u.device_path.replace("\\", "/"))
-            if u.folder_hidden is not None and hidden_trial is not None:  # the trial: stops
+            if u.hidden_inside is not None and hidden_trial is not None:  # the trial: stops
                 _write_hidden(storage, u, local_files[u.key], progress, report,
                               keep_copy=hidden_trial / f"{u.part_number}-{u.version}-{name}")
                 continue
@@ -1399,7 +1400,7 @@ def _install(
                          u.part_number)
                 continue
             try:
-                if u.folder_hidden is not None:
+                if u.hidden_inside is not None:
                     # Through openExpress's own session; the file it replaces copied to this
                     # computer first, kept only when it could not be put back.
                     _write_hidden(storage, u, local_files[u.key], progress, report,

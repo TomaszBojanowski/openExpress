@@ -10,9 +10,9 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import MONITORING_URL, UPLOAD_SETTINGS, SyncAccount, SyncClient, stale_sizes
+from fakes import MONITORING_URL, UPLOAD_SETTINGS, SyncAccount, SyncClient, in_language, stale_sizes
 
-from openexpress import cli, i18n, progress, service, sync
+from openexpress import cli, progress, service, sync
 from openexpress.device.gio_storage import DeviceNotBack
 from openexpress.device.storage import LocalStorage, RemountFailed, UmsStorage
 from openexpress.device.xmldevice import parse
@@ -74,12 +74,9 @@ def test_the_words_of_the_line():
     assert service._describe_step({"kind": "still_written", "count": 3}) == [(
         ("3 files were still being written by the device – unplug it and plug it in again, then "
          "sync again"), True)]
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         words = [service._describe_step({"kind": "still_written", "count": n})[0][0]
                  for n in (1, 3, 5)]
-    finally:
-        i18n.setup("en")
     rest = f"przez urządzenie{NB}– odłącz je i{NB}podłącz ponownie, potem zsynchronizuj jeszcze raz"
     assert words == [f"1 plik był jeszcze zapisywany {rest}",
                      f"3 pliki były jeszcze zapisywane {rest}",
@@ -104,9 +101,9 @@ def test_the_synthetic_pattern_is_what_a_sync_writes():
 # --- read again after the device is mounted again ------------------------------------------
 
 
-def _uploads(root: Path, storage, config=UPLOAD_SETTINGS, said=None):
-    """The uploads of the made-up device in `root` read through `storage`: planned, then done,
-    as a sync does them."""
+def _uploads(storage, config=UPLOAD_SETTINGS, said=None):
+    """The uploads of the made-up device read through `storage`: planned, then done, as a sync
+    does them."""
     device = parse(storage.read("GARMIN/GarminDevice.xml"))
     state = sync.SyncState(UNIT)
     plan = sync.plan_uploads(device, storage, config, state)
@@ -129,7 +126,7 @@ def test_a_cut_short_file_is_read_again_after_a_refresh_and_uploaded_whole(devic
     storage = stale_sizes(_short(device_root, MONITORING))(device_root)
     said = []
     with caplog.at_level(logging.INFO, logger="openexpress"):
-        report, client, state = _uploads(device_root, storage, said=said.append)
+        report, client, state = _uploads(storage, said=said.append)
     assert len(storage.refreshes) == 1 and storage.refreshes[0] is not None  # its progress
     assert report.incomplete == [] and len(report.uploaded) == 3
     assert _sizes_to(client, MONITORING_URL) == [len(whole)]
@@ -143,7 +140,7 @@ def test_a_single_file_cut_short_when_planned_is_read_again(device_root):
     used again once the device has been refreshed."""
     whole = (device_root / SETTINGS_FILE).read_bytes()
     storage = stale_sizes(_short(device_root, SETTINGS_FILE))(device_root)
-    report, client, state = _uploads(device_root, storage, WITH_SETTINGS)
+    report, client, state = _uploads(storage, WITH_SETTINGS)
     assert len(storage.refreshes) == 1 and report.incomplete == []
     assert _sizes_to(client, SETTINGS_URL) == [len(whole)]
     assert not state.singleton_changed("FIT_TYPE_2", SETTINGS_FILE, sync.md5(whole))
@@ -152,7 +149,7 @@ def test_a_single_file_cut_short_when_planned_is_read_again(device_root):
 def test_still_cut_short_after_the_refresh_waits_for_the_next_sync(device_root):
     cut = _short(device_root, MONITORING)
     storage = stale_sizes(cut, still_written=cut)(device_root)
-    report, client, state = _uploads(device_root, storage)
+    report, client, state = _uploads(storage)
     assert len(storage.refreshes) == 1 and report.incomplete == ["FIT_TYPE_32/M1.FIT"]
     assert _sizes_to(client, MONITORING_URL) == []
     assert not state.is_completed("FIT_TYPE_32", "M1.FIT")
@@ -163,7 +160,7 @@ def test_one_refresh_a_sync(device_root):
     the settings file read cut short by the plan, and monitoring: all whole after one
     refresh."""
     storage = stale_sizes(_short(device_root, ACTIVITY, SETTINGS_FILE, MONITORING))(device_root)
-    report, client, _state = _uploads(device_root, storage, WITH_SETTINGS)
+    report, client, _state = _uploads(storage, WITH_SETTINGS)
     assert len(storage.refreshes) == 1
     assert report.incomplete == [] and len(report.uploaded) == 4
     assert _sizes_to(client, SETTINGS_URL) == [(device_root / SETTINGS_FILE).stat().st_size]
@@ -173,7 +170,7 @@ def test_monitoring_keeps_its_order(device_root):
     """The files of monitoring arrive in order: the one read again goes before the next."""
     (device_root / "GARMIN/Monitor/M2.FIT").write_bytes((device_root / MONITORING).read_bytes())
     storage = stale_sizes(_short(device_root, MONITORING))(device_root)
-    report, _client, _state = _uploads(device_root, storage)
+    report, _client, _state = _uploads(storage)
     assert [u for u in report.uploaded if u.startswith("FIT_TYPE_32/")] == [
         "FIT_TYPE_32/M1.FIT", "FIT_TYPE_32/M2.FIT"]
 
@@ -186,7 +183,7 @@ def test_a_folder_and_a_usb_drive_are_not_refreshed(device_root, kind):
     storage = (LocalStorage(device_root) if kind == "folder"
                else UmsStorage(device_root, device_root.as_uri() + "/"))
     said = []
-    report, _client, state = _uploads(device_root, storage, said=said.append)
+    report, _client, state = _uploads(storage, said=said.append)
     assert report.incomplete == ["FIT_TYPE_32/M1.FIT"]
     assert not state.is_completed("FIT_TYPE_32", "M1.FIT")
     assert progress.refreshing_text() not in said
@@ -202,7 +199,7 @@ def test_a_device_not_mounted_again_stops_the_sync_and_says_to_replug(device_roo
     uploaded before stay done."""
     storage = stale_sizes(_short(device_root, MONITORING), fails=error)(device_root)
     with pytest.raises(RemountFailed) as stopped:
-        _uploads(device_root, storage)
+        _uploads(storage)
     assert str(stopped.value) == told
     state = sync.SyncState(UNIT)
     assert state.is_completed("FIT_TYPE_4", "2026-10-01-10-00-00.fit")
@@ -211,8 +208,5 @@ def test_a_device_not_mounted_again_stops_the_sync_and_says_to_replug(device_roo
 
 def test_the_words_of_the_refresh():
     assert progress.refreshing_text() == "Refreshing the device's files…"
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert progress.refreshing_text() == "Odświeżanie plików urządzenia…"
-    finally:
-        i18n.setup("en")

@@ -211,8 +211,7 @@ def _install_task(win, s, chosen):
 
     def install():
         rep = install_updates(s, chosen, win.progress, offered=win.updates_cache)
-        return rep, mass_storage and is_bike_accessory(
-            s.client, s.device, ask=lambda: service.unit_info(s))
+        return rep, mass_storage and is_bike_accessory(s.device, lambda: service.unit_info(s))
 
     def installed(result):
         rep, bike_accessory = result
@@ -241,7 +240,7 @@ def _install_task(win, s, chosen):
 
 def folders_hidden_text(updates) -> str:
     """The note of a group of rows some of which go to a folder the device hides inside a folder
-    that is seen (folder_hidden): once for the group, the rows say it in short; each row's path
+    that is seen (hidden_inside): once for the group, the rows say it in short; each row's path
     is its tooltip, and the log names the folders. "" when none."""
     count = sum(1 for u in updates if u.refused_inside)
     if not count:
@@ -339,7 +338,7 @@ def offers_button(u, waits_for=None) -> bool:
     """Whether the row of update `u` has its Install or Reinstall button: not while the file it
     goes to holds an update copied already (`waits_for`), not when its folder was not read, and
     not when the reinstall is refused (an older version, another or an uncompared file). One
-    whose folder the device hides inside a folder that is seen has it, off (folder_hidden)."""
+    whose folder the device hides inside a folder that is seen has it, off (hidden_inside)."""
     from openexpress import updates as upd
 
     return waits_for is None and not u.hidden_unread and not upd.reinstall_refused(u)
@@ -718,7 +717,7 @@ class UpdatesPage:
     def ask_to_eject(self, s) -> None:
         """After a sync wrote the files of Garmin Connect's queue to a Garmin drive: it is to
         be ejected first, so that the device takes them; that the cable can go out is said
-        only once it is (eject_device). An update is ejected unasked (confirm_update)."""
+        only once it is (eject_device). An update is ejected unasked (_install_task)."""
         confirm(self, "eject-ask", _("Files Saved on the Device"),
                 _("Eject the device before you unplug the cable: until then it may not see "
                   "the files from Garmin Connect."),

@@ -329,7 +329,7 @@ class MapsPage:
         def refused(e):
             return self._own_map_refused(e, _("Map Not Added"))
 
-        def written(real, plan):
+        def written(plan):
             # TRANSLATORS: toast after a map of the user's own was copied to the device; {name}:
             # its title, else its file's name
             self.toast(_("Copied {name}").format(name=plan.title or plan.name))
@@ -340,7 +340,7 @@ class MapsPage:
                 _("Copying the Map…"),
                 writes_to_device(lambda: ownmaps.add(plan, s.device, s.storage,
                                                      progress=self.progress)),
-                lambda real: written(real, plan), read_again_after_failure(self, "maps", refused),
+                lambda _real: written(plan), read_again_after_failure(self, "maps", refused),
                 failed_title=_("Map Not Added"))
 
         def ask_copy(plan):

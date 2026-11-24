@@ -8,6 +8,9 @@ import types
 from datetime import datetime
 
 import pytest
+from fakes import edge_tile as _tile
+from fakes import in_language
+from fakes import labels_of as _labels
 from fakes import window as stand_in
 
 from openexpress import known_devices
@@ -59,17 +62,6 @@ NOW = 1_800_000_000.0
 DAY = 86400.0
 
 
-def _tile(**fields):
-    from openexpress.devicelist import Tile
-
-    values = dict(description="Edge 1050", part_number="006-B4440-00", software_version="33.13",
-                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
-                  image_part_number="006-B4440-00", image_url=None, category=None,
-                  update_found=None, account_known=True)
-    values.update(fields)
-    return Tile(**values)
-
-
 def _words(tile, now=NOW):
     from openexpress.gui import start
 
@@ -111,16 +103,11 @@ def test_at_most_two_chips_the_update_first():
 
 
 def test_the_chips_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert _words(_tile(update_found=NOW, kind="ums")) == [
             ("Dostępna aktualizacja", "warning"), ("Dysk USB", "dimmed")]
         assert _words(_tile(primary=True)) == [("Podstawowe", "dimmed")]
         assert _words(_tile(on_account=False)) == [("Poza kontem", "dimmed")]
-    finally:
-        i18n.setup("en")
 
 
 def test_the_words_under_a_connected_device_are_its_version_only():
@@ -163,17 +150,6 @@ def test_the_tiles_get_what_is_remembered_and_whether_the_account_is_known(clock
         assert tiles["fēnix 8"].update_found == NOW - DAY
         assert tiles["Edge 1050"].account_known is logged_in
         assert tiles["fēnix 8"].account_known is logged_in
-
-
-def _labels(widget):
-    from gi.repository import Gtk
-
-    found = [widget] if isinstance(widget, Gtk.Label) else []
-    child = widget.get_first_child()
-    while child is not None:
-        found += _labels(child)
-        child = child.get_next_sibling()
-    return found
 
 
 @pytest.mark.needs_display

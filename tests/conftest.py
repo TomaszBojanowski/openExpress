@@ -500,9 +500,19 @@ def nothing_answered_before():
 
 
 @pytest.fixture
-def xdg(tmp_path, monkeypatch):
-    monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path / "config"))
-    monkeypatch.setenv("XDG_DATA_HOME", str(tmp_path / "data"))
+def usb(tmp_path, monkeypatch):
+    """/sys/bus/usb/devices as this test's own folder, empty."""
+    from openexpress.device import gio_storage
+
+    folder = tmp_path / "usb"
+    folder.mkdir()
+    monkeypatch.setattr(gio_storage, "SYSFS_USB", folder)
+    return folder
+
+
+@pytest.fixture
+def xdg(tmp_path):
+    """The folder above this test's config and data folders (set by `private_dirs`)."""
     return tmp_path
 
 

@@ -10,7 +10,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from fakes import device_session, window_methods
+from fakes import device_session, in_language, window_methods
 from fakes import window as stand_in
 from test_updates_system import (
     BUNDLE_ENTRY,
@@ -22,7 +22,7 @@ from test_updates_system import (
     _updates_page,
 )
 
-from openexpress import i18n, updates
+from openexpress import updates
 
 NB = "\u00a0"
 
@@ -349,9 +349,6 @@ def test_the_page_of_a_device_only_on_the_account_says_where_its_version_comes_f
 def test_personal_records_in_polish_as_garmin_connect_names_them():
     from openexpress import service
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert service.type_name("FIT_TYPE_29") == "rekordy osobiste"
-    finally:
-        i18n.setup("en")
 

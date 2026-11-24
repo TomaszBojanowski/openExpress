@@ -83,6 +83,7 @@ from openexpress.gui.words import (  # noqa: E402
     checked_text,
     last_sync_subtitle,
     never_synced_tooltip,
+    primary_device_text,
     primary_wearable_text,
     satellite_subtitle,
     software_text,
@@ -111,10 +112,6 @@ def open_to_sync(s):
     count = known_devices.recorded_sync_count(known_devices.load().get(unit_id),
                                               service.sync_stamp(unit_id))
     return types.SimpleNamespace(count=count) if count is not None else None
-
-
-# What a count of the activities to upload found, kept with the device for its tile.
-remember_sync_count = tile_facts.note_count
 
 
 def refresh_last_sync_subtitle(win) -> None:
@@ -278,14 +275,13 @@ def status_changed(win) -> None:
     the crash logs found absent, a file written to the device or removed): at once while it is
     shown, else when it is chosen."""
     status_row(win)
-    sections = getattr(win, "sections", None)
-    sec = sections.get("status") if isinstance(sections, dict) else None
+    sec = win.sections.get("status")
     if sec is None:
         return
     waited = win.session is not None and win.session.page_waits  # None: unplugged
     if not (waited or sec.loaded):
         return
-    pages = getattr(win, "pages", None)
+    pages = win.pages
     shown = pages.get_visible_child_name() if pages is not None else "status"
     if shown == "status":
         win.load_section("status", force=True)
@@ -616,11 +612,6 @@ def remember_picture_address(device, url: str | None) -> None:
         known_devices.set_image_url(unit_id, url)
     except Exception as e:  # noqa: BLE001 - optional; the error may name the folder
         log.warning("devices: the address of a picture not kept (%s)", type(e).__name__)
-
-
-# What the window's check of updates found, kept with the open device for its tile and
-# its page when it is not connected.
-remember_update_found = tile_facts.note_update_check
 
 
 def show_update_record(win) -> bool:
@@ -1034,7 +1025,7 @@ class DevicePage:
                                lambda _answer: show_device_name(self, s))
         # It wraps, as the name above it: the window gets as narrow as MIN_WINDOW.
         self.software_label = Gtk.Label(
-            label=_("Software {version}").format(version=d.software_version_str), wrap=True,
+            label=software_text(d.software_version_str), wrap=True,
             justify=Gtk.Justification.CENTER)
         self.software_label.add_css_class("dim-label")
         box.append(self.software_label)
@@ -1180,17 +1171,8 @@ class DevicePage:
 
     @staticmethod
     def _primary_training_text(status) -> str:
-        if status.unit_id is None:
-            # TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
-            # has none set
-            return _("Not set")
-        if status.is_this_device:
-            # TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
-            # device shown
-            return _("This device")
-        # TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
-        # of the account, its name not known
-        return status.name or _("Another device")
+        return primary_device_text(status.unit_id is not None, status.is_this_device,
+                                   status.name)
 
     def _show_primary_training(self, row) -> None:
         """Which device the account uses as its primary training device; offers this one."""
@@ -1278,8 +1260,7 @@ class DevicePage:
                 # A drive whose kind Garmin has not told: asked once a run as well, so that
                 # the log says what unit-info tells of it (an inReach).
                 def address():
-                    return picture_from_unit_info(s.client, s.device,
-                                                  ask=lambda: service.unit_info(s))
+                    return picture_from_unit_info(s.device, lambda: service.unit_info(s))
 
                 self.in_background(lambda: remember_picture_address(s.device, address()),
                                    lambda _r: None)
@@ -1300,8 +1281,7 @@ class DevicePage:
                 path = cached_download(s.client.http, url, name) if url else None
                 if path:
                     return path, "the account"
-            url = picture_from_unit_info(s.client, s.device,
-                                         ask=lambda: service.unit_info(s))
+            url = picture_from_unit_info(s.device, lambda: service.unit_info(s))
             if not url:
                 return None, NO_ADDRESS
             remember_picture_address(s.device, url)
@@ -1388,8 +1368,8 @@ class DevicePage:
         # For the tile of the device on the start page, also when it is not open: an update
         # to install, or none (up to date, or what was found is copied now), and whether one
         # waits for the device to install it.
-        remember_update_found(getattr(self.session, "device", None),
-                              new_updates, staged, not_installed)
+        tile_facts.note_update_check(getattr(self.session, "device", None),
+                                     new_updates, staged, not_installed)
         self._render_update_state()
 
     def _check_updates_quietly(self) -> None:
@@ -1600,12 +1580,12 @@ class DevicePage:
         s = self.session
         if s is not None and getattr(s, "to_sync", None) is not None:
             s.to_sync = s.to_sync.again()
-            remember_sync_count(s.to_sync)
+            tile_facts.note_count(s.to_sync)
             refresh_last_sync_subtitle(self)
         for summary in self.connected.devices:
             if summary.to_sync is not None:
                 summary.to_sync = summary.to_sync.again()
-                remember_sync_count(summary.to_sync)
+                tile_facts.note_count(summary.to_sync)
         if self._on_start_page():
             self._update_tile_chips()
 

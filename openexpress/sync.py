@@ -923,7 +923,7 @@ def _activities_to_sync(device: GarminDevice, storage: Storage) -> ActivitiesToS
 
 
 def _activities_left(unit_id: int, listed: frozenset[str],
-                     test_drive: bool = False) -> ActivitiesToSync:
+                     test_drive: bool) -> ActivitiesToSync:
     state = state_of(unit_id, test_drive)
     if state.never_synced:
         return ActivitiesToSync(unit_id, listed, test_drive=test_drive)

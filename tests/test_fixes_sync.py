@@ -5,23 +5,17 @@ import types
 import pytest
 from conftest import fit_crc, make_fit
 from fakes import SyncClient
+from fakes import sync_setup as _setup
 from test_sync import UPLOAD_CONFIG
 
 from openexpress import sync
 from openexpress.connect import ClockSkew, UploadResult
-from openexpress.device.storage import DeviceError, LocalStorage
-from openexpress.device.xmldevice import DeviceFile, parse
+from openexpress.device.storage import DeviceError
+from openexpress.device.xmldevice import DeviceFile
 from openexpress.fit import FitError, iter_messages, parse_file_id
 
 ACT = "https://up.example/activity"
 MON = "https://up.example/monitor"
-
-
-def _setup(device_root, tmp_path):
-    st = LocalStorage(device_root)
-    dev = parse(st.read("GARMIN/GarminDevice.xml"))
-    state = sync.SyncState(dev.unit_id, base=tmp_path / "state")
-    return st, dev, state
 
 
 def _truncated_definition() -> bytes:

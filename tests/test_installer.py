@@ -14,7 +14,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from fakes import descendants, preferences_window
+from fakes import descendants, in_language, preferences_window
 from fakes import window as stand_in
 
 from openexpress import installer
@@ -243,15 +243,9 @@ def test_the_window_says_it_is_for_macos(tmp_path, in_the_window):
 
 
 def test_the_words_in_polish(tmp_path):
-    from openexpress import i18n
-
     image = _disk_image(tmp_path)
-    i18n.setup("pl")
-    try:
-        with pytest.raises(SetupError) as refused:
-            installer.consumer_from_installer(image)
-    finally:
-        i18n.setup("en")
+    with in_language("pl"), pytest.raises(SetupError) as refused:
+        installer.consumer_from_installer(image)
     # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
     assert str(refused.value) == (
         "GarminExpress.dmg to instalator dla macOS. openExpress potrzebuje instalatora Garmin "
@@ -310,13 +304,8 @@ def test_the_banner_of_the_setup_says_which_installer():
 
 
 def test_the_banner_of_the_setup_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = _banner_of_the_setup()
-    finally:
-        i18n.setup("en")
     assert said["title"] == (
         "Jednorazowa konfiguracja: wybierz instalator Garmin Express dla Windows "
         "(GarminExpress.exe z\u00a0garmin.com). openExpress tylko go odczytuje.")
@@ -517,19 +506,14 @@ def test_the_wix_layout_still_gives_both(monkeypatch, tmp_path):
 
 
 def test_the_refusals_of_an_installer_in_polish(tmp_path):
-    from openexpress import i18n
-
     other = tmp_path / "inny.exe"
     other.write_bytes(_program(0, 0))
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         with pytest.raises(SetupError) as not_one:
             installer.consumer_from_installer(other)
         with pytest.raises(SetupError) as not_read:
             installer.consumer_from_installer(_velopack(tmp_path, {
                 "lib/app/Networking.dll": NETWORKING}))
-    finally:
-        i18n.setup("en")
     assert str(not_one.value) == (
         "inny.exe to nie instalator Garmin Express dla Windows. Pobierz GarminExpress.exe ze "
         "strony garmin.com/express i\u00a0wybierz go.")

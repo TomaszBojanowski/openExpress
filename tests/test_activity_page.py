@@ -5,10 +5,11 @@ its file read again in a task from the device or from a backup's copy. Every fil
 from the public FIT protocol."""
 
 import types
-from datetime import UTC, datetime
+from datetime import datetime
 
 import pytest
 from fakes import (
+    FIT_EPOCH,
     FIT_HEART_RECORD,
     FIT_SESSION,
     FitData,
@@ -27,7 +28,6 @@ from fakes import (
 
 pytestmark = pytest.mark.needs_display
 
-FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
 START = 1_100_000_000  # a time of the FIT protocol
 HIKING, TRAINING = 17, 10
 SESSION = FIT_SESSION
@@ -727,14 +727,14 @@ def test_the_map_has_a_name_for_a_screen_reader_and_is_released_once_closed(no_t
 # --- the look of the map ---------------------------------------------------------------------
 
 
-def a_map(track=None):
-    """The map of a track (by default a straight one, 1.1 km from its start to its finish) in
-    a window on the screen."""
+def a_map():
+    """The map of a straight track, 1.1 km from its start to its finish, in a window on the
+    screen."""
     from gi.repository import GLib, Gtk
 
     from openexpress.gui import activity_map
 
-    track = track or activity_map.Track((0, 600), ((51.5, -0.16), (51.51, -0.16)))
+    track = activity_map.Track((0, 600), ((51.5, -0.16), (51.51, -0.16)))
     shown = activity_map.ActivityMap(track)
     toplevel = Gtk.Window(child=shown, default_width=800)
     toplevel.present()

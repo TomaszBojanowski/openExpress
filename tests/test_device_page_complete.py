@@ -7,7 +7,7 @@ import types
 from datetime import datetime
 
 import pytest
-from fakes import device_session, record_sync
+from fakes import device_session, in_language, record_sync
 from fakes import window as stand_in
 
 from openexpress import i18n, sync
@@ -182,11 +182,8 @@ def test_the_apps_and_music_pages_give_their_counts():
 def test_the_counts_in_polish():
     from openexpress.gui.apps_page import apps_count_text
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = [apps_count_text(n) for n in (1, 2, 5)]
-    finally:
-        i18n.setup("en")
     assert said == ["1 aplikacja Connect IQ", "2 aplikacje Connect IQ", "5 aplikacji Connect IQ"]
 
 
@@ -259,12 +256,9 @@ def test_the_backup_words_in_polish(backups):
 
     for stamp in ("2026-10-12 (17.37.37)", "2026-10-13 (17.37.37)"):
         _backup(backups, stamp)
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = backups_text(UNIT)
         none = backups_text(3000000099)
-    finally:
-        i18n.setup("en")
     assert said.startswith("Ostatnia: ") and said.endswith(f"{NB}· 2 kopie")
     assert none == "Jeszcze bez kopii"
 
@@ -326,11 +320,8 @@ def test_the_maps_page_names_the_map_update_type():
 def test_the_map_update_type_in_polish():
     from openexpress.gui import maps_page
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = maps_page.map_update_type_text("Gemini")
-    finally:
-        i18n.setup("en")
     assert said == "Typ aktualizacji map tego urządzenia u\u00a0Garmina: Gemini"
 
 
@@ -363,11 +354,8 @@ def test_the_apps_page_says_it_in_one_line():
     assert refused_dirs_text(["garmin/apps/media"]) == (
         "The device did not let openExpress create garmin/apps/media with this software "
         "version: apps that go there stay queued in Garmin Connect.")
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = refused_dirs_text(["garmin/apps/media", "garmin/apps/settings"])
-    finally:
-        i18n.setup("en")
     assert said == ("Urządzenie nie pozwoliło openExpressowi utworzyć garmin/apps/media, "
                     "garmin/apps/settings w\u00a0tej wersji oprogramowania: aplikacje, które tam "
                     "trafiają, czekają w\u00a0kolejce Garmin Connect.")
@@ -491,8 +479,7 @@ def test_the_satellite_data_row_says_off_updated_and_turned_off(clock, language)
 
     from openexpress import satellite
 
-    i18n.setup(language)
-    try:
+    with in_language(language):
         written = (clock.current - timedelta(days=1)).timestamp()
         said = {}
         for name, state in (
@@ -502,8 +489,6 @@ def test_the_satellite_data_row_says_off_updated_and_turned_off(clock, language)
             win, _section = _page(satellite=state)
             row = _satellite_row(win)
             said[name] = (row.get_title(), row.get_active(), row.get_subtitle())
-    finally:
-        i18n.setup("en")
     at = datetime.fromtimestamp(written).strftime("%H:%M")
     if language == "en":
         assert said == {
@@ -533,8 +518,7 @@ def test_the_satellite_data_row_of_a_watch_that_hides_gpe_and_gpes(clock, langua
     files = {"GPE.bin": {"time": 1794500000}, "GPES.bin": {"time": 1794500000}}
     written = (clock.current - timedelta(days=1)).timestamp()
     until = (clock.current + timedelta(minutes=40)).timestamp()
-    i18n.setup(language)
-    try:
+    with in_language(language):
         said = {}
         for name, state in (
                 ("off", satellite.State(kind=satellite.RXNETWORKS, files=files)),
@@ -550,8 +534,6 @@ def test_the_satellite_data_row_of_a_watch_that_hides_gpe_and_gpes(clock, langua
                                                files=files, why=satellite.GONE_TWICE))):
             win, _section = _page(satellite=state)
             said[name] = _satellite_row(win).get_subtitle()
-    finally:
-        i18n.setup("en")
     at = datetime.fromtimestamp(written).strftime("%H:%M")
     wait = datetime.fromtimestamp(until).strftime("%H:%M")
     if language == "en":

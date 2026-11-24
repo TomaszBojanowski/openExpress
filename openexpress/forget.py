@@ -10,7 +10,6 @@ settings or anything on the Garmin account."""
 
 from __future__ import annotations
 
-import json
 import shutil
 from dataclasses import dataclass
 from pathlib import Path
@@ -87,11 +86,7 @@ def _delete(unit_id: int, discard_pending: bool, backups: bool) -> str:
             shutil.rmtree(folder)
         history.forgotten(unit_id)
     shared = service.last_sync_path()
-    try:
-        of_it = json.loads(shared.read_text(encoding="utf-8")).get("unit_id") == unit_id
-    except (OSError, ValueError, AttributeError):
-        of_it = False
-    if of_it:
+    if (paths.read_json_object(shared) or {}).get("unit_id") == unit_id:
         shared.unlink(missing_ok=True)
     return (f" and what this installation kept of it (not uploaded: {pending}, "
             f"backups deleted: {deleted})")

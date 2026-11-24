@@ -7,7 +7,7 @@ import ast
 from pathlib import Path
 
 import pytest
-from test_forget_window import _turn_until
+from fakes import turn_until
 from test_tile_facts import EDGE, FENIX, _said, four  # noqa: F401 - four: a fixture
 from test_window_build import window  # noqa: F401 - a fixture
 
@@ -111,7 +111,7 @@ def test_the_real_window_from_its_own_start_stays_on_the_start_page(four, monkey
     monkeypatch.setattr(app.MainWindow, "_show_tiles", show_tiles)
     win = app.MainWindow(None)
     try:
-        assert _turn_until(lambda: drawn)
+        assert turn_until(lambda: drawn)
         assert win.navigation.get_visible_page() is win.start.page and win.session is None
         connected = [name for item, (name, _chips) in zip(win.start.tiles(), _said(win))
                      if item.has_css_class("connected")]

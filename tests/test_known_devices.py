@@ -7,6 +7,7 @@ import stat
 from pathlib import Path
 
 import pytest
+from fakes import pending_of
 
 FENIX, EDGE = 3000000001, 3000000002
 
@@ -278,15 +279,6 @@ def test_forget_with_apply_removes_the_entry_and_the_sync_state(store, utc, caps
     assert capsys.readouterr().out.strip() == "Forgot fēnix 8 (006-B4532-00)."
     assert set(known_devices.load()) == {3000000003}
     assert not paths.device_dir(FENIX).exists()
-
-
-def pending_of(unit_id, count):
-    from openexpress import paths
-
-    for n in range(count):
-        path = paths.device_dir(unit_id) / "sync" / "pending" / "FIT_TYPE_4" / f"ACT{n}.FIT"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(b"fit")
 
 
 def test_forget_names_the_files_not_uploaded_and_refuses_them_without_consent(

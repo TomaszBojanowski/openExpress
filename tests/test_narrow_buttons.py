@@ -5,11 +5,11 @@ the buttons of _button, "Clear All" in the preferences and "Show All" on the pag
 A button keeps its size while its task runs and after it, folded or not."""
 
 import pytest
+from fakes import iterate as _iterate
 from test_narrow_window import (  # noqa: F401 - the fixture
     DEVICE_PAGES,
     NARROWEST,
     _fill,
-    _iterate,
     narrow_window,
 )
 

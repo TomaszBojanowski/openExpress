@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import device_session
+from fakes import device_session, in_language
 
 from openexpress import diagnostics, freeing, history, status
 from openexpress.crashes import Crash
@@ -58,7 +58,6 @@ def facts(**changes) -> status.Facts:
     for name, value in changes.items():
         setattr(made, name, value)
     if "dumps_plan" not in changes:  # as freeing.plan makes it from the dumps
-        from openexpress import freeing
 
         made.dumps_plan = freeing.dump_plan(made.dumps)
     return made
@@ -93,7 +92,7 @@ def test_the_first_connection_is_when_the_device_was_first_seen():
 def test_the_first_connection_is_read_from_the_devices_remembered(monkeypatch):
     """The time of devices.json, not the log's first line; a test drive carries a real
     device's unit ID, so it has none."""
-    from openexpress import freeing, history, known_devices
+    from openexpress import known_devices
 
     monkeypatch.setattr(freeing, "plan", lambda storage, device, client, fresh=False: None)
     unit = 3_000_000_123
@@ -113,9 +112,7 @@ def test_the_first_connection_is_read_from_the_devices_remembered(monkeypatch):
 
 def write_log(unit: int, lines: list[dict]) -> None:
     """The device log of a made-up device, as the program writes it."""
-    import json
-
-    from openexpress import history, paths
+    from openexpress import paths
 
     paths.write_private(history.path(unit), "".join(json.dumps(item) + "\n" for item in lines))
 
@@ -314,14 +311,9 @@ def test_a_kind_of_0_b_is_left_out_and_free_always_stays(clock, free):
 
 @pytest.mark.needs_display
 def test_the_dates_of_the_crashes_and_updates_in_polish(clock):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         _win, section = page()
         newest = titled(section, "Awaria")
-    finally:
-        i18n.setup("en")
     assert newest.get_subtitle().startswith("19.10.2026 o\u00a012:00\u00a0· ")
 
 
@@ -449,8 +441,6 @@ def working(win, monkeypatch):
     """The page's window able to run a task on a made-up open device (counted again with
     made-up numbers after a removal: status.recount): its toasts in `win.toasts`, the pages it
     reads again in `win.reloads`."""
-    from openexpress import status
-
     monkeypatch.setattr(status, "recount", lambda device, storage, removed=None: status.Recount(
         {}, 1_000_000, 10_000_000, NOW, dumps=[]))
     win.toasts, win.reloads = [], []
@@ -551,15 +541,10 @@ def test_the_question_names_what_goes_and_what_is_not_copied(clock, in_the_windo
 
 @pytest.mark.needs_display
 def test_the_question_in_polish(clock, in_the_window):
-    from openexpress import i18n
-
     asked = questions(in_the_window)
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         _win, section = page(facts(dumps=GB_DUMPS["some"]))
         button_of(titled(section, "Starsze zrzuty pamięci")).emit("clicked")
-    finally:
-        i18n.setup("en")
     (q,) = asked
     assert q.heading == "Usunąć starsze zrzuty pamięci?"
     assert q.body == ("Z\u00a0urządzenia zostanie usuniętych 5 zrzutów pamięci (682,8\u00a0MB): "
@@ -573,8 +558,6 @@ def test_the_question_in_polish(clock, in_the_window):
 @pytest.mark.needs_display
 def test_copy_and_remove_runs_a_task_and_reads_the_page_again(clock, in_the_window,
                                                               monkeypatch):
-    from openexpress import freeing
-
     asked = questions(in_the_window)
     win, section = page()
     working(win, monkeypatch)
@@ -601,8 +584,6 @@ def test_copy_and_remove_runs_a_task_and_reads_the_page_again(clock, in_the_wind
 
 @pytest.mark.needs_display
 def test_what_the_device_did_not_remove_is_told(clock, in_the_window, monkeypatch):
-    from openexpress import freeing
-
     asked = questions(in_the_window)
     told = []
     in_the_window("inform", lambda parent, name, heading, body, **kw: told.append(
@@ -627,13 +608,6 @@ def drive_page(clock, in_the_window, tmp_path):
     three dumps (the newest stays) and a course, the line of its connection counted ten
     minutes before. `remove()` runs Copy and Remove for real on it, and the page is read again
     as the window reads it."""
-    import os
-
-    from conftest import DEVICE_XML
-
-    from openexpress import diagnostics, history
-    from openexpress.device.storage import LocalStorage
-    from openexpress.device.xmldevice import parse
     from openexpress.gui.app import MainWindow
     from openexpress.gui.status_page import read_page
 
@@ -766,7 +740,6 @@ def test_a_removal_that_fails_reads_the_page_again(clock, in_the_window, monkeyp
     what_it_did)."""
     from fakes import RunNow
 
-    from openexpress import freeing
     from openexpress.device.storage import DeviceError
 
     asked = questions(in_the_window)
@@ -786,8 +759,6 @@ def test_a_removal_that_fails_reads_the_page_again(clock, in_the_window, monkeyp
 
 @pytest.mark.needs_display
 def test_removing_an_update_file_offers_the_update_again(clock, in_the_window, monkeypatch):
-    from openexpress import freeing
-
     asked = questions(in_the_window)
     gps = made_up_update("GARMIN/RemoteSW/006-D0000-00.GCD")
     win, section = page(facts(not_installed=[gps]))
@@ -918,14 +889,9 @@ def test_a_device_without_diagnostic_data_has_the_empty_page(clock):
 def test_the_empty_page_says_where_the_other_diagnostic_files_are_counted(clock, language, said):
     """Its storage card counts files under Logs and Memory Dumps (a Venu's event logs): the
     sentence above it says they are other diagnostic files, not what it cannot read."""
-    from openexpress import i18n
-
-    i18n.setup(language)
-    try:
+    with in_language(language):
         _win, section = page(_empty())
         description = section.info.get_description()
-    finally:
-        i18n.setup("en")
     assert description == said
 
 
@@ -1072,13 +1038,12 @@ def test_the_reading_is_in_the_session_before_anyone_learns_it_is_done(monkeypat
     from fakes import window
     from gi.repository import GLib
 
-    from openexpress import diagnostics
     from openexpress.diagnostics import AtOpen, ErrorEntry
     from openexpress.gui import device_page
 
     crash_entry = ErrorEntry("RTL Trap", datetime(2026, 10, 20, 10, 0), "0x003")
 
-    def at_open(device, storage, now=None):
+    def at_open(device, storage):
         time.sleep(0.01)
         return AtOpen(entries=[crash_entry], dumps=[], hidden_logs=False)
 
@@ -1137,7 +1102,6 @@ def test_after_copy_crash_logs_the_row_and_the_page_count_the_boot_logs_crashes(
                                                                                 monkeypatch):
     from fakes import RunNow
 
-    from openexpress import diagnostics
     from openexpress.diagnostics import AtOpen, Copied
     from openexpress.gui import status_page
 
@@ -1195,7 +1159,6 @@ def test_after_another_write_the_device_is_counted_again(monkeypatch, in_the_win
     count."""
     from fakes import window
 
-    from openexpress import status
     from openexpress.gui import window_tasks
 
     counted = status.Recount({"maps": 4}, 5, 10, datetime(2026, 10, 30, 12, 0), dumps=[])
@@ -1214,8 +1177,7 @@ def test_after_another_write_the_device_is_counted_again(monkeypatch, in_the_win
 def test_a_removal_cut_short_is_told_with_what_it_did(monkeypatch):
     """What comes after the first removal (the device stopping, a count that fails) never loses
     what was done; before it, the failure goes on as it is."""
-    from openexpress import freeing, status
-    from openexpress.device.storage import DeviceError, DeviceNotResponding
+    from openexpress.device.storage import DeviceError
     from openexpress.gui import status_page
 
     s = device_session(device=object(), storage=object())
@@ -1251,8 +1213,6 @@ def test_a_removal_of_a_list_that_changed_says_why_and_reads_the_page(clock, in_
                                                                       monkeypatch):
     from fakes import RunNow
 
-    from openexpress import freeing
-
     asked = questions(in_the_window)
     win, section = page()
     working(win, monkeypatch)
@@ -1273,7 +1233,7 @@ def test_a_removal_of_a_list_that_changed_says_why_and_reads_the_page(clock, in_
 
 
 def _write_kept_log(unit, now, versions=("21.18",)):
-    from openexpress import history, paths
+    from openexpress import paths
 
     at = (now - timedelta(days=2)).strftime("%Y-%m-%d %H:%M:%S")
     lines = [{"v": 1, "time": (now - timedelta(days=len(versions) - n)).astimezone().isoformat(
@@ -1350,7 +1310,6 @@ def test_a_removal_that_ends_after_the_device_went_is_told_and_reads_nothing(clo
     """Unplugged, or another device opened, before the removal's result came: what was removed
     is still told (one message, with what the device refused), and no page is read again for
     the device that went."""
-    from openexpress import freeing
     from openexpress.gui import status_page
 
     told = []
@@ -1395,7 +1354,6 @@ def test_the_records_of_a_device_read_after_another_was_shown_are_left(clock):
 @pytest.mark.needs_display
 def test_after_a_removal_the_row_device_storage_tells_the_space_of_now(clock, in_the_window,
                                                                        monkeypatch):
-    from openexpress import freeing, status
     from openexpress.gui import status_page
 
     drawn, read_again = [], []
@@ -1465,10 +1423,6 @@ class _Watch:
 
     @staticmethod
     def lay_out(root):
-        import os
-
-        from conftest import DEVICE_XML
-
         dump = root / "GARMIN" / "Debug" / "dump"
         dump.mkdir(parents=True)
         (root / "GARMIN" / "GarminDevice.xml").write_text(DEVICE_XML)
@@ -1479,8 +1433,6 @@ class _Watch:
 
     @staticmethod
     def storage(root, address=5, base=None):
-        from openexpress.device.storage import LocalStorage
-
         class Watch(base or LocalStorage):
             mass_storage = False
             device_uri = "mtp://made-up/"
@@ -1504,9 +1456,6 @@ class _Watch:
 
     @staticmethod
     def session(st):
-        from openexpress import diagnostics, history
-        from openexpress.device.xmldevice import parse
-
         dev = parse(st.read("GARMIN/GarminDevice.xml"))
         found = diagnostics.AtOpen(entries=[], hidden_logs=False, dumps=[
             (p, e.size) for p, e in diagnostics.dump_files(st)])
@@ -1534,7 +1483,6 @@ def test_a_question_answered_after_the_device_came_back_removes_nothing(clock, i
                                                                         tmp_path):
     """The device restarted, or was plugged in again, while the question was open: the answer
     removes nothing, says why, and the page of the device as it is now is read."""
-    from openexpress import freeing
     from openexpress.gui import status_page
 
     asked = questions(in_the_window)
@@ -1556,7 +1504,6 @@ def test_a_question_answered_after_the_device_came_back_removes_nothing(clock, i
 def test_a_question_answered_after_the_device_was_unplugged_removes_nothing(clock, in_the_window,
                                                                            tmp_path):
     """Unplugged while the question was open: the answer removes nothing and says why."""
-    from openexpress import freeing
     from openexpress.gui import status_page
 
     asked = questions(in_the_window)
@@ -1582,8 +1529,6 @@ def test_a_count_begun_before_a_removal_never_undoes_its_count(clock, in_the_win
     removal's count."""
     import threading
 
-    from openexpress import freeing, history
-    from openexpress.device.storage import LocalStorage
     from openexpress.gui import status_page, window_tasks
 
     asked = questions(in_the_window)
@@ -1655,7 +1600,6 @@ def test_after_a_write_the_device_is_counted_once_and_tasks_wait_for_it(monkeypa
 
 @pytest.mark.needs_display
 def test_a_copy_that_failed_is_not_said_to_be_the_device_s_refusal(clock, in_the_window):
-    from openexpress import freeing
     from openexpress.gui import status_page
 
     told = []
@@ -1708,7 +1652,6 @@ def test_a_page_that_waited_is_read_when_chosen_not_while_another_is_shown(clock
 
     from fakes import page_window
 
-    from openexpress import diagnostics
     from openexpress.gui.app import MainWindow
     from openexpress.gui.device_page import status_changed
 
@@ -1738,7 +1681,6 @@ def test_the_page_chosen_during_another_task_shows_what_needs_no_device(clock, m
     from fakes import page_window
     from gi.repository import GLib
 
-    from openexpress import diagnostics, freeing
     from openexpress.gui.app import MainWindow
 
     planned = []
@@ -1808,8 +1750,6 @@ class StopsAfterARemoval(LocalStorage):
 def stopping_watch(tmp_path, files):
     """The watch with `files` (path: size, made at times one second apart), its connection
     written to its device log."""
-    from openexpress import history
-
     root = tmp_path / "device"
     (root / "GARMIN").mkdir(parents=True)
     (root / "GARMIN" / "GarminDevice.xml").write_text(
@@ -1855,7 +1795,6 @@ def test_dumps_removed_from_a_device_that_then_stops_are_taken_off_its_records(t
     """Not counted again after Copy and Remove (the device stopped): its device log is put right
     by what was removed, so that its page from the records does not tell the dumps that are
     gone."""
-    from openexpress import diagnostics, freeing, status
     from openexpress.gui import status_page
 
     st, dev = stopping_watch(tmp_path, {"GARMIN/Debug/dump/RAM_bak2.zip": 10_000,
@@ -1873,7 +1812,6 @@ def test_an_update_file_removed_from_a_device_that_then_stops_is_taken_off_its_u
         tmp_path, clock, in_the_window, monkeypatch):
     """Not counted again after the removal of an update file: its size goes off the updates of
     the device log, never off its logs and memory dumps."""
-    from openexpress import freeing, status
     from openexpress.gui import status_page
 
     st, dev = stopping_watch(tmp_path, {"GARMIN/Debug/dump/RAM.zip": 9_000,
@@ -1894,7 +1832,6 @@ def test_an_update_file_removed_from_a_device_that_then_stops_is_taken_off_its_u
 def test_a_removal_from_the_page_counts_the_device_once(clock, in_the_window, monkeypatch):
     """The removal counts the device again itself: the window does not count it a second time
     after the task (over MTP a count lists every folder of the device)."""
-    from openexpress import freeing, status
     from openexpress.gui import status_page
 
     counts = []
@@ -1927,7 +1864,6 @@ def test_after_a_write_that_cannot_be_counted_again_the_free_space_is_read_again
                                                                                 in_the_window):
     """A task that wrote to the device whose count fails: the free space alone is read again, so
     that the row Device Storage does not tell the space from before the write."""
-    from openexpress import status
     from openexpress.device.storage import DeviceError
     from openexpress.gui.tasks import writes_to_device
 
@@ -2105,7 +2041,6 @@ def test_a_removal_that_ended_and_was_counted_is_not_told_as_not_finished(clock,
     done."""
     from fakes import window
 
-    from openexpress import freeing
     from openexpress.gui import status_page
 
     told, toasts = [], []
@@ -2189,8 +2124,6 @@ def test_removing_an_update_file_has_the_updates_page_read_again(clock, in_the_w
                                                                 monkeypatch):
     """The Updates page offers the update again only when it is read anew: once the file is
     removed, it is marked to be read again."""
-    from openexpress import freeing
-
     asked = questions(in_the_window)
     gps = made_up_update("GARMIN/RemoteSW/006-D0000-00.GCD")
     win, section = page(facts(not_installed=[gps]))
@@ -2324,7 +2257,6 @@ def test_an_answer_while_another_task_runs_is_said_in_the_log(monkeypatch, in_th
     """An answer whose task cannot start while another runs is told (a toast) and said in the log."""
     from fakes import window, window_methods
 
-    from openexpress import freeing
     from openexpress.gui import status_page
 
     plan = freeing.dump_plan([("GARMIN/Debug/dump/RAM.zip", 9, 1_700_000_300.0),

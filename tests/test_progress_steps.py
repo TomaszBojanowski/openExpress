@@ -6,8 +6,8 @@ import io
 import sys
 
 import pytest
+from fakes import in_language
 
-from openexpress import i18n
 from openexpress.progress import Reporter, Step, Waiting
 
 NB = " "
@@ -42,13 +42,10 @@ def test_the_bar_of_a_step_with_bytes_follows_the_bytes(told):
 
 
 def test_a_step_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert Step("Wysyłanie: aktywności", 3, 8) == f"Wysyłanie: aktywności{NB}· 3 z{NB}8"
         step = Step("Pobieranie", 412 * 10**6, 15 * 10**8, in_bytes=True)
         assert step == f"Pobieranie{NB}· 412,0{NB}MB z{NB}1,5{NB}GB"
-    finally:
-        i18n.setup("en")
 
 
 class Clock:
@@ -194,7 +191,7 @@ def test_the_steps_of_bytes_and_nobody_listening():
     """byte_steps: a step in bytes of the file, of all the files (`before`, `total`), or with
     the count besides; None when nobody listens (no progress, or nothing), so that a copy
     over MTP goes its own way. say_to: what a task tells its steps to, always callable."""
-    from openexpress.progress import Step, byte_steps, nothing, say_to
+    from openexpress.progress import byte_steps, nothing, say_to
 
     seen = []
     byte_steps(seen.append, "Copying Map")(1000, 4000)

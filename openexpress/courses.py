@@ -113,11 +113,8 @@ def _other_state_file(unit_id: int) -> Path | None:
 
 
 def _read_copies(path: Path | None) -> list[dict]:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8")) if path is not None else None
-    except (OSError, ValueError):
-        return []
-    copies = data.get("copies") if isinstance(data, dict) else None
+    data = paths.read_json_object(path) if path is not None else None
+    copies = (data or {}).get("copies")
     return [c for c in copies if isinstance(c, dict)] if isinstance(copies, list) else []
 
 

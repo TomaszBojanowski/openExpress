@@ -109,13 +109,14 @@ class UniversalMap:
     # be read, and nothing is done with it.
     unseen: bool = False
     # The folder of the device's top level its files go to when ordinary MTP does not show it
-    # (mark_waiting): nothing is installed or removed there; its files are known only when
-    # that folder was read through openExpress's own session (hidden_folders).
+    # (mark_waiting): nothing is installed or removed there, except by the command line's
+    # trial; its files are known only when that folder was read through openExpress's own
+    # session (hidden_folders).
     hidden_folder: str | None = None
     # The folder its files go to when the device hides it inside a folder the listing shows
     # (mark_waiting with the device: the rule of the updates, updates.hidden_inside): maps are
     # not written there, the command line's trial included, so it is refused before anything.
-    folder_hidden: str | None = None
+    hidden_inside: str | None = None
     # The country Garmin does not offer the map in ("restriction", type "Country"; upper
     # case), and whether that is the account's country (apply_country): True, False (no
     # restriction, or another country), None (restricted, the account's country not known).
@@ -538,7 +539,7 @@ def can_install(m: UniversalMap, hidden_trial: bool = False) -> bool:
     with `hidden_trial` (the command line's trial), to a folder of the top level the device
     hides that openExpress's own session read; never to one it hides inside a seen one."""
     return (m.installable and bool(m.files) and m.restricted is not True
-            and m.folder_hidden is None
+            and m.hidden_inside is None
             and (m.hidden_folder is None or (hidden_trial and m.device_sizes is not None)))
 
 
@@ -546,8 +547,8 @@ def cannot_install_reason(m: UniversalMap) -> str:
     """The same reason as cannot_install_message, short, for the line under the map's name."""
     if m.hidden_folder is not None:
         return not_installed_into(m.hidden_folder)
-    if m.folder_hidden is not None:
-        return not_installed_hidden_inside(m.folder_hidden)
+    if m.hidden_inside is not None:
+        return not_installed_hidden_inside(m.hidden_inside)
     if m.restricted is True:
         return _("Cannot be installed: Garmin does not offer this map in your account's "
                  "country")
@@ -566,12 +567,12 @@ def cannot_install_message(m: UniversalMap, hidden_trial: bool = False) -> str:
         # .System
         return _("Map “{name}” cannot be installed: openExpress does not install maps into "
                  "the folder {folder} yet.").format(name=m.name, folder=m.hidden_folder)
-    if m.folder_hidden is not None:
+    if m.hidden_inside is not None:
         # TRANSLATORS: {folder}: a folder the device hides inside a folder the file manager
         # shows, e.g. GARMIN/RegionMaps
         return _("Map “{name}” cannot be installed: the device hides the folder {folder} from "
                  "the file manager, and openExpress does not install maps there yet.").format(
-            name=m.name, folder=m.folder_hidden)
+            name=m.name, folder=m.hidden_inside)
     if m.restricted is True:
         return _("Map “{name}” cannot be installed: Garmin does not offer it in your account's "
                  "country ({country}).").format(name=m.name,
@@ -658,9 +659,9 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap], device=None) -> Non
     so Garmin's server know. Read from the files on the device against the server's list,
     nothing remembered; none is marked when the files cannot be listed. With the `device`
     (its GarminDevice.xml): the maps whose files go to a folder it hides inside a seen one
-    (folder_hidden)."""
+    (hidden_inside)."""
     for m in maps:
-        m.folder_hidden = None
+        m.hidden_inside = None
         m.waiting = None
         m.unseen = False
         m.device_sizes = None
@@ -675,7 +676,7 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap], device=None) -> Non
         for m in maps:
             m.hidden_folder = _top_not_seen(m.all_paths, tops)
         if device is not None:
-            _mark_folder_hidden(storage, maps, device)
+            _mark_hidden_inside(storage, maps, device)
         for folder in {posixpath.dirname(p) for p in wanted}:
             if hidden_folders.top_not_seen(folder, tops) is not None:
                 # Read through openExpress's own session, or not known.
@@ -736,8 +737,8 @@ def mark_waiting(storage: Storage, maps: list[UniversalMap], device=None) -> Non
     log_states(storage, maps)
 
 
-def _mark_folder_hidden(storage: Storage, maps: list[UniversalMap], device) -> None:
-    """Sets `folder_hidden` on the maps a file of which goes to a folder the device hides
+def _mark_hidden_inside(storage: Storage, maps: list[UniversalMap], device) -> None:
+    """Sets `hidden_inside` on the maps a file of which goes to a folder the device hides
     inside a seen one, by the rule of the updates; only the maps' own folders are asked."""
     def folder(f: MapFile) -> str:
         return posixpath.dirname(f.device_path).strip("/").casefold()
@@ -745,12 +746,12 @@ def _mark_folder_hidden(storage: Storage, maps: list[UniversalMap], device) -> N
     inside = updates.hidden_inside(storage, device, among={folder(f) for m in maps
                                                            for f in m.files})
     for m in maps:
-        m.folder_hidden = next((inside[folder(f)] for f in m.files if folder(f) in inside), None)
-    refused = [m for m in maps if m.folder_hidden is not None]
+        m.hidden_inside = next((inside[folder(f)] for f in m.files if folder(f) in inside), None)
+    refused = [m for m in maps if m.hidden_inside is not None]
     if refused:
         log.info("maps: %d go to a folder the device hides inside a seen one (%s): not "
                  "installed there", len(refused),
-                 ", ".join(sorted({m.folder_hidden for m in refused}, key=str.casefold)))
+                 ", ".join(sorted({m.hidden_inside for m in refused}, key=str.casefold)))
 
 
 def _partly_written(m: UniversalMap, maps: list[UniversalMap], present: dict[str, int]) -> bool:

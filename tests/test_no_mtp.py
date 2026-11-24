@@ -11,6 +11,8 @@ import types
 from pathlib import Path
 
 import pytest
+from fakes import in_language
+from fakes import iterate as _iterate
 from test_detection import (  # noqa: F401 - the fixture
     NUMERIC,
     REPLUG_HINT_AFTER_PIN,
@@ -18,7 +20,6 @@ from test_detection import (  # noqa: F401 - the fixture
     plugged,
 )
 
-from openexpress import i18n
 from openexpress.device import gio_storage
 
 NO_MTP_TITLE = "No MTP Support in the System (gvfs-mtp)"
@@ -102,11 +103,8 @@ def test_no_mtp_in_polish(monkeypatch):
     from openexpress.gui.app import MainWindow
 
     gvfs_offers(monkeypatch, "file")
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         title, text, busy = MainWindow._usb_notice(gio_storage.PRESENT, 0)
-    finally:
-        i18n.setup("en")
     assert title == "Brak obsługi MTP w\u00a0systemie (gvfs-mtp)"
     assert text == ("openExpress odczytuje urządzenie przez MTP za pomocą gvfs, a\u00a0w\u00a0tym "
                     "systemie gvfs nie obsługuje MTP. Zainstaluj tę obsługę (Fedora: sudo dnf "
@@ -133,11 +131,8 @@ def test_the_page_not_ready_names_other_programs(normal_s, replug, kde_desktop):
 def test_other_programs_in_polish(kde_desktop):
     from openexpress.gui.app import MainWindow
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         text = MainWindow._usb_notice(gio_storage.PRESENT, 46, 5)[1]
-    finally:
-        i18n.setup("en")
     assert text.endswith("Urządzenie może zajmować usługa MTP w\u00a0KDE: trzyma je także po "
                          "zamknięciu Dolphina i\u00a0bierze z\u00a0powrotem po ponownym "
                          "podłączeniu kabla. Zamknij Dolphina i\u00a0uruchom kquitapp6 kiod6, "
@@ -198,8 +193,6 @@ def test_a_device_still_starting_after_45_s_gets_no_such_sentence(plugged, kde_d
 def test_the_readme_names_the_same_packages_and_words():
     """README, "System requirements": the same install commands as the window and the
     command line, and the words the window shows."""
-    from pathlib import Path
-
     readme = (Path(__file__).resolve().parent.parent / "README.md").read_text(encoding="utf-8")
     section = readme.split("### System requirements", 1)[1].split("\n## ", 1)[0]
     for command in ("sudo dnf install gvfs-mtp", "sudo pacman -S gvfs-mtp",
@@ -216,7 +209,7 @@ def test_the_readme_names_the_same_packages_and_words():
 
 # --- both notices fit the narrowest window (360 px) ------------------------------------------------
 
-from test_narrow_window import NARROWEST, _iterate, _min_width, _tiles, narrow_window  # noqa: E402, F401
+from test_narrow_window import NARROWEST, _min_width, _tiles, narrow_window  # noqa: E402, F401
 
 
 @pytest.mark.needs_display
@@ -433,11 +426,8 @@ def test_no_access_in_polish(monkeypatch, tmp_path):
 
     a_watch_on_usb(monkeypatch, tmp_path)
     node = a_node_this_user_may_not_open(monkeypatch, tmp_path)
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         text = MainWindow._usb_notice(gio_storage.PRESENT, 46, 5)[1]
-    finally:
-        i18n.setup("en")
     assert node.exists() and text == (
         "Urządzenie Garmin jest podłączone, ale nie udostępnia plików. Ten użytkownik nie ma "
         "dostępu do urządzenia podłączonego przez USB. Uruchom openExpress jako użytkownik zalogowany przy "

@@ -7,9 +7,9 @@ import json
 from pathlib import Path
 
 import pytest
-from fakes import UPLOAD_SETTINGS, SyncAccount
+from fakes import UPLOAD_SETTINGS, SyncAccount, in_language
 
-from openexpress import cli, i18n, service, sync
+from openexpress import cli, service, sync
 from openexpress.connect import Unauthorized
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
@@ -125,19 +125,16 @@ def test_the_words_of_the_line(ecg_device):
     assert service._describe_step({"kind": "ecg_not_uploaded", "count": 3}) == [(
         "3 ECG recordings were not uploaded: ECG recordings need a Garmin Health account",
         False)]
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         words = [service._describe_step({"kind": "ecg_not_uploaded", "count": n})[0][0]
                  for n in (1, 3, 5)]
-    finally:
-        i18n.setup("en")
     assert words == [
         "1 nagranie EKG nie zostało wysłane: nagrania EKG wymagają konta Garmin Health",
         "3 nagrania EKG nie zostały wysłane: nagrania EKG wymagają konta Garmin Health",
         "5 nagrań EKG nie zostało wysłanych: nagrania EKG wymagają konta Garmin Health"]
 
 
-def test_the_synthetic_pattern_of_0_7_5_is_what_a_sync_writes():
+def test_the_synthetic_ecg_pattern_is_what_a_sync_writes():
     """tests/data/last_sync/format-0.7.5-ecg-not-uploaded.json, a synthetic pattern (no real
     sync has written one yet), has the lines a sync writes for a device with one new
     monitoring file and one ECG recording."""

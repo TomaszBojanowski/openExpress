@@ -330,11 +330,7 @@ def _snapshots(where: Path) -> list[Path]:
 
 
 def _load(path: Path) -> dict:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    return paths.read_json_object(path) or {}
 
 
 def _last(where: Path, kind: str) -> dict:
@@ -929,23 +925,23 @@ def read_now(device: GarminDevice, storage: Storage) -> AtOpen:
                   dumps_known=dumps is not None)
 
 
-def copy_on(settings=None) -> bool:
+def copy_on() -> bool:
     from openexpress.settings import Settings, SetupError
 
     try:
-        return bool((settings or Settings.load()).diagnostics_copy)
+        return bool(Settings.load().diagnostics_copy)
     except SetupError:
         return False
 
 
-def at_open(device: GarminDevice, storage: Storage, now: datetime | None = None) -> AtOpen:
+def at_open(device: GarminDevice, storage: Storage) -> AtOpen:
     """At the opening of a device, once per connection: its error logs read (always), and its
     diagnostic files copied when the copy is on. Never a session of our own; a failure is
     a line in the log, never a failed opening."""
     key = _connection(device, storage)
     if key is not None and key in _done:
         return _done[key]
-    now = now or datetime.now()
+    now = datetime.now()
     copying = copy_on()
     try:
         seen = seen_now(device, storage, with_files=copying)

@@ -4,8 +4,9 @@ connected"), without "failed" and without naming MTP; the user is told the same 
 device on USB that does not come (starting, held, no gvfs-mtp) is still told as an error. All
 devices are made up."""
 import pytest
+from fakes import tasks_at_once
 from test_detection import plugged  # noqa: F401 - the fixture
-from test_task_failure_log import _at_once, _lines
+from test_task_failure_log import _lines
 
 from openexpress.device import gio_storage
 from openexpress.errors import OrdinaryStop
@@ -34,7 +35,7 @@ def test_the_window_started_without_a_device_logs_it_mildly(plugged, monkeypatch
     from openexpress.gui import app
     from openexpress.gui.detection import detect_devices
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     monkeypatch.setattr(gio_storage, "find_ums_devices", list)
     applog.setup("gui")
     told, failed = [], []

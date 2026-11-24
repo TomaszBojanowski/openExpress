@@ -49,9 +49,9 @@ def test_a_tile_and_a_row_without_a_picture_show_the_icon_smaller_and_dimmed():
     from openexpress.gui import start
 
     assert _placeholder(start.tile_image(start.tile_widget(_tile(), "")), TILE)
-    assert _placeholder(start.tile_image(start.row_widget(_tile(), "")), ROW)
+    assert _placeholder(start.tile_image(start.DeviceRow(_tile(), "")), ROW)
     assert _picture_shown(start.tile_image(start.tile_widget(_tile(), "", _picture())), TILE)
-    assert _picture_shown(start.tile_image(start.row_widget(_tile(), "", _picture())), ROW)
+    assert _picture_shown(start.tile_image(start.DeviceRow(_tile(), "", _picture())), ROW)
 
 
 def test_the_picture_that_comes_later_takes_the_whole_place():

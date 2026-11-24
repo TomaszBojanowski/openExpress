@@ -7,8 +7,9 @@ import time
 import types
 
 import pytest
-from fakes import descendants, device_session, page_window
-from test_update_chips import _tile
+from fakes import children as _children
+from fakes import descendants, device_session, in_language, page_window
+from fakes import edge_tile as _tile
 from test_updates_system import beta_answer
 
 from openexpress import updates
@@ -55,13 +56,6 @@ def _device_page():
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     win.show_overview()
     return win, section
-
-
-def _children(widget):
-    child = widget.get_first_child()
-    while child is not None:
-        yield child
-        child = child.get_next_sibling()
 
 
 def _visible(widget) -> bool:
@@ -180,10 +174,7 @@ def test_a_copied_update_is_ready_and_none_found_or_a_failed_check_shows_no_chip
 
 @pytest.mark.needs_display
 def test_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         win, section = _device_page()
         font, bundle = updates.pending(_offered())
         said = []
@@ -192,8 +183,6 @@ def test_in_polish():
             said.append(win.update_row.get_subtitle())
         (chip,) = _chips(section.page)
         words = chip.get_label(), win.software_label.get_label(), _tile_chip()[0]
-    finally:
-        i18n.setup("en")
     assert said == ["Dostępna wersja 23.40", "Dostępna aktualizacja: Test Font 23.40",
                     "Dostępne są 2 aktualizacje", "Dostępnych jest 5 aktualizacji"]
     assert words == ("Dostępna aktualizacja", "Wersja oprogramowania 23.39", "Dostępna aktualizacja")

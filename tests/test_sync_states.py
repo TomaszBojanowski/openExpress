@@ -6,10 +6,11 @@ account's list. All devices and files are made up."""
 import types
 
 import pytest
-from fakes import device_session, record_sync, window_methods
+from fakes import device_session, in_language, record_sync, window_methods
+from fakes import tile as _tile
 from fakes import window as stand_in
 
-from openexpress import i18n, service, sync
+from openexpress import service, sync
 
 NB = "\u00a0"
 UNIT = 1234567890  # the made-up device of conftest.DEVICE_XML
@@ -26,17 +27,6 @@ def _record(**fields):
     values = dict(uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
     values.update(fields)
     record_sync(UNIT, **values)
-
-
-def _tile(**fields):
-    from openexpress.devicelist import Tile
-
-    values = dict(description="fēnix 8", part_number="006-B4532-00", software_version="23.39",
-                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
-                  image_part_number="006-B4532-00", image_url=None, category=None,
-                  account_known=True)
-    values.update(fields)
-    return Tile(**values)
 
 
 def _chips(tile):
@@ -56,7 +46,7 @@ def test_synced_here_is_whether_the_device_has_its_state():
     assert sync.synced_here(UNIT) is True
 
 
-def _last_sync_row(to_sync=None, ownership_error=None):
+def _last_sync_row(to_sync=None):
     """The row "Last Sync" of the device page as the window fills it."""
     from gi.repository import Adw
 
@@ -64,8 +54,7 @@ def _last_sync_row(to_sync=None, ownership_error=None):
 
     win = stand_in(
         last_sync_row=Adw.ExpanderRow(title="Last Sync"), _last_sync_children=[],
-        session=device_session(device=types.SimpleNamespace(unit_id=UNIT),
-                               ownership_error=ownership_error, to_sync=to_sync))
+        session=device_session(device=types.SimpleNamespace(unit_id=UNIT), to_sync=to_sync))
     MainWindow._show_last_sync(win)
     return win
 
@@ -143,14 +132,11 @@ def test_the_page_of_a_remembered_device_says_the_same():
 
 
 def test_never_synced_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         ((chip, _style, tooltip),) = _chips(_tile(never_synced=True))
         from openexpress.gui.words import no_sync_record
 
         record = no_sync_record()
-    finally:
-        i18n.setup("en")
     assert (chip, tooltip) == ("Nie zsynchronizowano",
                                "Ta instalacja openExpressu nie synchronizowała tego urządzenia")
     assert record == ("Brak zapisu ostatniej synchronizacji; następna wyśle tylko nowe dane")
@@ -205,11 +191,8 @@ def test_the_count_says_what_is_to_upload_now(language):
     """Apart from the numbers of the last sync before it, which say what that sync found."""
     from openexpress.gui.words import to_upload_text
 
-    i18n.setup(language)
-    try:
+    with in_language(language):
         said = [to_upload_text(n) for n in (1, 2, 5)]
-    finally:
-        i18n.setup("en")
     assert said == COUNT_WORDS[language]
 
 
@@ -311,13 +294,10 @@ def test_a_drive_has_no_row_of_the_primary_training_device():
 
 @pytest.mark.needs_display
 def test_the_row_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         texts = _page_texts(logged_in=False)
         off = service.NotAccountDevice("x")
         off_texts = _page_texts(logged_in=True, ownership_error=off)
-    finally:
-        i18n.setup("en")
     title = "Podstawowe urządzenie treningowe"
     assert _primary(texts, title) == ["Zaloguj się, aby zobaczyć"]
     assert _primary(off_texts, title) == ["Niedostępne"]
@@ -332,11 +312,10 @@ FAILED = ("Your Garmin Connect account could not be read: the tiles show only wh
           "of it before")
 
 
-def _account_window(why=None):
-
+def _account_window():
     notes = []
     win = stand_in(
-        _account=None, _account_why=why, drawn=[], _start_entries=[("a tile", "its source")],
+        _account=None, _account_why=None, drawn=[], _start_entries=[("a tile", "its source")],
         start=types.SimpleNamespace(set_account_note=notes.append),
         _on_start_page=lambda: True, _on_remembered_page=lambda: False,
         in_background=lambda work, done, failed=None: done(work()))
@@ -419,11 +398,8 @@ def test_logging_out_says_it_on_the_start_page(monkeypatch, in_the_window):
 def test_the_notes_in_polish():
     from openexpress.gui.start_window import account_note
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = [account_note("logged-out"), account_note("failed")]
-    finally:
-        i18n.setup("en")
     assert said == [
         ("Nie zalogowano do Garmin Connect: kafle nie pokazują, co jest na koncie ani co jest "
          "do synchronizacji"),

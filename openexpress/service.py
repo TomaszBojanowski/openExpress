@@ -1,4 +1,4 @@
-"""High-level operations shared by the GUI and the background service."""
+"""High-level operations shared by the window, the command line and the background service."""
 
 from __future__ import annotations
 
@@ -733,9 +733,7 @@ class UploadGate:
             return False
         if consent_type not in self._consents:
             try:
-                self._consents[consent_type] = consent_granted(
-                    self.client.consent(consent_type), consent_type,
-                    lambda: self.client.profile_country(fresh=True))
+                self._consents[consent_type] = _consent_given(self.client, consent_type)
             except (Unauthorized, ClockSkew):
                 raise
             except Exception as e:  # noqa: BLE001 - anything unclear means "no"
@@ -750,15 +748,19 @@ def check_upload_allowed(client) -> UploadGate:
     return gate
 
 
+def _consent_given(client, consent_type: str) -> bool:
+    """Whether the account gives this consent. Decided on what the account says now: the
+    country asked anew, never as kept (answers)."""
+    return consent_granted(client.consent(consent_type), consent_type,
+                           lambda: client.profile_country(fresh=True))
+
+
 def _check_upload_allowed(client) -> UploadGate:
     """Ask Garmin Connect whether data may be uploaded. Never assumes "yes": a missing,
     empty or unreadable answer and a failed request all block uploads. An expired login
     or a wrong clock is raised as such."""
     try:
-        # Whether data may be uploaded is decided on what the account says now: the country
-        # asked anew, never as kept (answers).
-        if not consent_granted(client.consent(UPLOAD_CONSENT), UPLOAD_CONSENT,
-                               lambda: client.profile_country(fresh=True)):
+        if not _consent_given(client, UPLOAD_CONSENT):
             return UploadGate(NO_CONSENT)
         preference = client.device_sync_preference()
     except (Unauthorized, ClockSkew):
@@ -994,8 +996,9 @@ class SyncSummary:
     # The same errors as the log tells them: without the names of files, courses and
     # workouts (`errors` names them for the user). Not kept in last_sync.json.
     log_errors: list[str] = field(default_factory=list)
-    # What happened, in order: a text, or the numbers of a step as a dict, which is put into
-    # words only when it is shown (`describe_steps`): in the language of that moment.
+    # What happened, in order: the numbers of each step as a dict, put into words only when
+    # it is shown (`describe_steps`): in the language of that moment. A record kept by an
+    # earlier version may hold a text instead.
     lines: list = field(default_factory=list)
     # The uploads Garmin Connect took without confirming that it processed them (the command
     # line warns of them). Not kept in last_sync.json.
@@ -1448,9 +1451,10 @@ class SyncBusy(OrdinaryStop):
 
 @contextlib.contextmanager
 def sync_lock():
-    """Inter-process lock (the GUI and the background service never sync at the same time),
-    and that of the other install of this computer (paths.other_install_dir), held too while
-    it is there: the two never sync at the same time either. Its lock file is never made."""
+    """Inter-process lock (the window, the command line and the background service never
+    sync at the same time), and that of the other install of this computer
+    (paths.other_install_dir), held too while it is there: the two never sync at the same
+    time either. Its lock file is never made."""
     path = paths.data_dir() / "sync.lock"
     paths.make_dir(path.parent)
     with paths.locked(path, mode="w", wait=False, busy=lambda: SyncBusy(
@@ -1678,9 +1682,8 @@ def on_test_drive(s) -> bool:
     return bool(getattr(getattr(s, "storage", None), "test_drive", False))
 
 
-def plan_queue(s: DeviceSession, progress: Progress | None = None) -> QueuePlan:
+def plan_queue(s: DeviceSession, progress: Progress) -> QueuePlan:
     """Garmin Connect's queue for the device, and what becomes of each item of it."""
-    progress = say_to(progress)
     progress(Waiting(_("Checking for files from Garmin Connect…")))
     messages = s.client.device_messages(s.device.unit_id)
     return QueuePlan(messages, sync.plan_downloads(s.device, messages))

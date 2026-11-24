@@ -335,8 +335,6 @@ def value_axis(series: Series, count: int) -> Axis:
         first = next((math.floor(low / smaller) * smaller for smaller in reversed(PACE_STEPS)
                       if smaller < step and math.floor(low / smaller) > 0), low)
     last = math.ceil(high / step - 1e-9) * step
-    if last <= first:
-        last = first + step
     return Axis(_clean(first), _clean(last), step)
 
 

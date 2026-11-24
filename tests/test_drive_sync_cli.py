@@ -18,6 +18,7 @@ from fakes import (
     DriveAccount,
     SyncAccount,
     drive_session,
+    in_language,
     made_up_cpe,
     satellite_answer,
     satellite_server,
@@ -603,13 +604,10 @@ def test_the_activities_of_a_drive_are_counted(device_root):
 
 
 def test_the_refusals_are_said_in_polish_too():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = {reason: service.drive_sync_refusal_text(reason, "błąd")
                 for reason in (service.NO_UPLOAD_TYPES, service.CONNECT_DISABLED,
                                service.NO_UNIT_INFO)}
-    finally:
-        i18n.setup("en")
     assert all("dysk" in text and "USB" in text for text in said.values())
     assert said[service.NO_UNIT_INFO].endswith(": błąd")
     assert "Disabled" in said[service.CONNECT_DISABLED]

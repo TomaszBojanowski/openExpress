@@ -157,8 +157,8 @@ def file_text(name: str, size: int) -> str:
 # --- the widgets of the page ---------------------------------------------------------------------
 
 
-def _row(title: str, subtitle: str, origin: str | None = None,
-         remove: Gtk.Widget | None = None) -> Gtk.ListBoxRow:
+def _row(title: str, subtitle: str, remove: Gtk.Widget,
+         origin: str | None = None) -> Gtk.ListBoxRow:
     """A row of a course or of a waiting file: its name with the chip of where it came from
     beside it (on the next line when the window is too narrow), the caption under them, and its
     `remove` button at the end."""
@@ -179,8 +179,7 @@ def _row(title: str, subtitle: str, origin: str | None = None,
                               css_classes=["dim-label", "caption"]))
     line = Gtk.Box(spacing=6, margin_end=6)
     line.append(text)
-    if remove is not None:
-        line.append(remove)
+    line.append(remove)
     row = Gtk.ListBoxRow(activatable=False, child=line)
     row.update_property([Gtk.AccessibleProperty.LABEL],
                         [", ".join(p for p in (title, origin, subtitle) if p)])
@@ -405,8 +404,8 @@ class CoursesPage:
         elif not seen.courses:
             g.add(Adw.ActionRow(title=_("No Courses on the Device")))
         for course in seen.courses:
-            g.add(_row(course.title, course_caption(course), course.origin,
-                       self._remove_button(course)))
+            g.add(_row(course.title, course_caption(course), self._remove_button(course),
+                       course.origin))
         if seen.waiting or "waiting" in seen.unreadable:
             # TRANSLATORS: group of the Courses page: GPX files the device has not imported yet
             g = sec.group(pgettext("courses", "Waiting for the Device"))
@@ -421,8 +420,7 @@ class CoursesPage:
                     parts.append(waiting.filename)
                 if waiting.gpx is None:
                     parts.append(human_size(waiting.size))
-                g.add(_row(waiting.title, caption(*parts),
-                           remove=self._remove_button(waiting)))
+                g.add(_row(waiting.title, caption(*parts), self._remove_button(waiting)))
         _saved_locations(sec, seen)
         log.info("courses page: %d courses, %d files waiting", len(seen.courses),
                  len(seen.waiting))

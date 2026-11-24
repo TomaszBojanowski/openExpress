@@ -62,6 +62,7 @@ from openexpress.gui.window_tasks import (  # noqa: E402
     fold_buttons,
     inform,
     log_unexpected,
+    new_spinner,
     progress_reporter,
     stop_waiting,
 )
@@ -387,8 +388,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self.progress_bar = Gtk.ProgressBar(show_text=False, hexpand=True)
         self.progress_label = Gtk.Label(xalign=0, ellipsize=3, hexpand=True)
         # One indicator at a time: the spinner until the task tells its progress, then the bar.
-        self.busy_spinner = (Adw.Spinner() if hasattr(Adw, "Spinner")
-                             else Gtk.Spinner(spinning=True))
+        self.busy_spinner = new_spinner()
         box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, hexpand=True)
         box.append(self.progress_label)
         box.append(self.progress_bar)

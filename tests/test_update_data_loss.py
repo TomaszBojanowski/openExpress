@@ -7,6 +7,7 @@ import logging
 import types
 
 import pytest
+from fakes import in_language
 from fakes import window as stand_in
 from test_updates_system import WARNING_EN, _below, server_answer
 
@@ -245,16 +246,11 @@ def test_a_failed_unit_info_does_not_fail_the_check(device_root, caplog):
 
 @pytest.mark.needs_display
 def test_the_warning_in_polish(monkeypatch):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         found = _warnings(monkeypatch, PLAIN_FILE, unit_info_answer={"segmenttype": "Wellness"},
                           to_sync=types.SimpleNamespace(count=5))
         drive = _warnings(monkeypatch, PLAIN_FILE, unit_info_answer={"segmenttype": "Wellness"},
                           mass_storage=True, drive_refusal=("connect-disabled", ""))
-    finally:
-        i18n.setup("en")
     assert found == [(WINDOW_PL + " 5 aktywności na urządzeniu nie zostało jeszcze wysłanych.",
                        ["heading", "warning"])]
     assert drive == [(DRIVE_PL, ["heading", "warning"])]

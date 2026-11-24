@@ -32,7 +32,7 @@ GPU_VENDORS = {"0x10de": "NVIDIA", "0x1002": "AMD", "0x8086": "Intel", "0x1af4":
                "0x15ad": "VMware", "0x1234": "QEMU", "0x1414": "Microsoft"}
 DRM = Path("/sys/class/drm")
 # Signing in without the window: the address is opened in a web browser and pasted back.
-MANUAL_LOGIN_FLATPAK = "flatpak run io.github.tomaszbojanowski.OpenExpress login --manual"
+MANUAL_LOGIN_FLATPAK = f"flatpak run {paths.APP_ID} login --manual"
 MANUAL_LOGIN_SOURCE = "openexpress login --manual"
 
 

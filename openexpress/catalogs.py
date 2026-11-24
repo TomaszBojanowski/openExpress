@@ -236,9 +236,9 @@ def build(locale_dir: Path | None = None, po_dir: Path = PO) -> list[Path]:
     return built
 
 
-def compose_metainfo(out: Path = METAINFO, po_dir: Path = PO) -> Path:
+def compose_metainfo(out: Path = METAINFO) -> Path:
     """The metainfo with every language of LINGUAS, from its template (msgfmt's bulk mode)."""
-    _run([_tool("msgfmt"), "--xml", f"--template={METAINFO_TEMPLATE}", "-d", str(po_dir),
+    _run([_tool("msgfmt"), "--xml", f"--template={METAINFO_TEMPLATE}", "-d", str(PO),
           f"--output-file={out}"])
     return out
 

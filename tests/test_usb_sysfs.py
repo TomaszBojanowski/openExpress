@@ -22,14 +22,6 @@ NOT_AT_ITS_PLACE = ("device: the drive ejected by openExpress is not at its plac
                     "more (USB 091e:20ee)")
 
 
-@pytest.fixture
-def usb(tmp_path, monkeypatch):
-    folder = tmp_path / "usb"
-    folder.mkdir()
-    monkeypatch.setattr(gio_storage, "SYSFS_USB", folder)
-    return folder
-
-
 def _device(usb, port, **files):
     """A folder of /sys/bus/usb/devices with only `files` in it."""
     base = usb / port

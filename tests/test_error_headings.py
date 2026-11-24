@@ -4,23 +4,13 @@ a task shows as information (apps queued in Garmin Connect) is no error. Made-up
 words; nothing reaches a device or a server."""
 
 import ast
-import types
 from pathlib import Path
 
 import pytest
-from fakes import replace_in_window
+from fakes import tasks_at_once
 from fakes import window as stand_in
 
 GUI = Path(__file__).resolve().parent.parent / "openexpress" / "gui"
-
-
-def _at_once(monkeypatch):
-    """The window's thread and main loop, run at once."""
-    from gi.repository import GLib
-
-    replace_in_window(monkeypatch, "threading", types.SimpleNamespace(
-        Thread=lambda target, daemon: types.SimpleNamespace(start=target)))
-    monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
 
 
 @pytest.mark.parametrize("failed_title, heading", [
@@ -29,7 +19,7 @@ def test_a_task_that_failed_says_its_own_heading_or_a_general_one(monkeypatch, f
                                                                    heading):
     from openexpress.gui import app
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     told = []
     win = stand_in(busy=False, session=None, set_busy=lambda *a, **kw: None,
                    error=lambda title, text: told.append(title),
@@ -128,7 +118,7 @@ def _failed(monkeypatch, error):
     """The words of the error dialog of a task that raised `error`."""
     from openexpress.gui import app
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     told = []
     win = stand_in(busy=False, session=None, set_busy=lambda *a, **kw: None,
                    error=lambda title, text: told.append(text),

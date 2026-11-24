@@ -760,10 +760,13 @@ def test_the_new_log_lines_name_no_file_and_no_device(tmp_path, clock, small_lim
 
 @pytest.mark.parametrize("path", ["GARMIN/SID/MADEUP01.sid", "GARMIN/GPS/MADEUP.GCD",
                                   "GARMIN/MADEUP.GCD", "GARMIN/RemoteSW/.MADEUP.GCD",
-                                  "GARMIN/Maps/MADEUP.SID"],
-                         ids=["map support", "satellite data", "main folder", "hidden", ".sid"])
+                                  "GARMIN/Maps/MADEUP.SID", "GARMIN/GPS/MADEUP/MADEUP.GCD",
+                                  "GARMIN/SID/MADEUP/MADEUP.GCD"],
+                         ids=["map support", "satellite data", "main folder", "hidden", ".sid",
+                              "folder under satellite data", "folder under map support"])
 def test_an_update_file_outside_what_may_be_removed_is_neither_offered_nor_removed(
         tmp_path, monkeypatch, path):
+    """Garmin/GPS and Garmin/SID are never freed, nor any folder under them."""
     st, dev = make_device(tmp_path, dumps=[])
     where = st.root / path
     where.parent.mkdir(parents=True, exist_ok=True)
@@ -1196,22 +1199,6 @@ def test_an_update_file_stays_when_the_update_server_asked_anew_no_longer_offers
     monkeypatch.setattr(freeing, "updates_not_installed",
                         lambda client, storage, device, fresh=False: ([] if fresh else [u], None))
     with pytest.raises(freeing.ListChanged):
-        freeing.remove_update(st, u, client=None, device=dev)
-    assert where.exists()
-
-
-@pytest.mark.parametrize("path", ["GARMIN/GPS/MADEUP/MADEUP.GCD", "GARMIN/SID/MADEUP/MADEUP.GCD"],
-                         ids=["satellite data", "map support"])
-def test_a_file_in_a_folder_under_satellite_data_or_map_support_is_never_removed(
-        tmp_path, monkeypatch, path):
-    """Garmin/GPS and Garmin/SID are never freed, nor any folder under them."""
-    st, dev = make_device(tmp_path, dumps=[])
-    where = st.root / path
-    where.parent.mkdir(parents=True)
-    where.write_bytes(b"s" * 500)
-    u = offered(monkeypatch, st, update(path, size=500))
-    assert freeing.plan(st, dev, client=None).updates == []
-    with pytest.raises(ValueError):
         freeing.remove_update(st, u, client=None, device=dev)
     assert where.exists()
 

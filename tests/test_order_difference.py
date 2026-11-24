@@ -7,7 +7,7 @@ import types
 import uuid
 
 import pytest
-from fakes import descendants
+from fakes import descendants, in_language
 from fakes import window as stand_in
 from test_ciq_music import (  # noqa: F401 - fixtures
     STORE_ID,
@@ -17,7 +17,7 @@ from test_ciq_music import (  # noqa: F401 - fixtures
     out_bin,
 )
 
-from openexpress import ciq, i18n
+from openexpress import ciq
 
 NB = "\u00a0"
 WIDGETS = [(uuid.UUID(int=n + 1), 2, f"Widget {n}", False, "") for n in range(6)]
@@ -64,16 +64,13 @@ def test_apps_only_in_the_copy_or_only_on_the_device_are_said_apart():
 
 
 def test_the_measure_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         # One and two apps to the bottom; all six the other way round (five moved).
         orders = [WIDGETS[1:] + WIDGETS[:1], WIDGETS[2:] + WIDGETS[:2], WIDGETS[::-1]]
         said = [ciq.order_difference(_plan([STORE, *WIDGETS], [STORE, *order]))
                 for order in orders]
         extra = ciq.order_difference(_plan([STORE, *WIDGETS],
                                            [STORE, EXTRA, *WIDGETS[1:], WIDGETS[0]]))
-    finally:
-        i18n.setup("en")
     assert said == ["1 aplikacja przesunięta", "2 aplikacje przesunięte",
                     "5 aplikacji przesuniętych"]
     assert extra == f"1 aplikacja przesunięta{NB}· 1 nie ma na urządzeniu"

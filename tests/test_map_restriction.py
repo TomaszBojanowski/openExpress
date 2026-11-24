@@ -9,7 +9,7 @@ import logging
 import types
 
 import pytest
-from fakes import descendants, maps_window
+from fakes import descendants, in_language, maps_window
 from test_country_names import countries  # noqa: F401 - a fixture of these tests
 from test_updates_maps import maps_response
 
@@ -464,8 +464,6 @@ def test_cli_marks_the_map_when_the_country_cannot_be_read_and_says_why_in_the_l
 
 
 def window_session(device_root):
-    from openexpress.device.storage import LocalStorage
-
     return service.check_session(service.open_session(storage=LocalStorage(device_root)))
 
 
@@ -498,19 +496,14 @@ def test_the_window_never_asks_the_country_for_a_device_of_another_account_or_lo
 
 
 def test_the_words_in_polish():
-    from openexpress import i18n
-
     maps = mp.parse_maps(answer(restricted=("TopoActive Japan", "TopoActive East")))
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         mp.apply_country(maps, None)
         note = mp.restriction_note(by_name(maps)["TopoActive Japan"])
         mp.apply_country(maps, "KR")
         japan, east = by_name(maps)["TopoActive Japan"], by_name(maps)["TopoActive East"]
         words = (mp.cannot_install_reason(japan), mp.cannot_install_message(japan),
                  japan.status, east.status)
-    finally:
-        i18n.setup("en")
     assert note == "Garmin nie oferuje tej mapy w\u00a0tym kraju: Korea Południowa"
     assert words == (
         "Nie można zainstalować: Garmin nie oferuje tej mapy w\u00a0kraju konta",

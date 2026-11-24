@@ -7,20 +7,13 @@ import dataclasses
 import time
 
 import pytest
-from fakes import descendants, row_words, start_section
+from fakes import descendants, edge_tile, row_words, start_section
 
 NOW = time.time()
 
 
 def _tile(name, **fields):
-    from openexpress.devicelist import Tile
-
-    values = dict(description=name, part_number="006-B4440-00", software_version="33.13",
-                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
-                  image_part_number="006-B4440-00", image_url=None, category=None,
-                  update_found=None, account_known=True)
-    values.update(fields)
-    return Tile(**values)
+    return edge_tile(description=name, **fields)
 
 
 def _entries():

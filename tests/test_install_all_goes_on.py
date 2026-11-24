@@ -80,8 +80,8 @@ HIDDEN_WHY = ("the device keeps it in the folder Garmin/Prompts, hidden from the
 
 def test_a_folder_the_device_names_but_does_not_list_is_hidden(watch):
     _storage, by = _offered(watch)
-    assert by["006-D0002-00"].folder_hidden == "Garmin/Prompts"
-    assert by["006-B0000-00"].folder_hidden is None and by["006-D0003-00"].folder_hidden is None
+    assert by["006-D0002-00"].hidden_inside == "Garmin/Prompts"
+    assert by["006-B0000-00"].hidden_inside is None and by["006-D0003-00"].hidden_inside is None
     assert [u.part_number for u in updates.installable(list(by.values()))] == [
         "006-B0000-00", "006-D0003-00"]
 
@@ -89,7 +89,7 @@ def test_a_folder_the_device_names_but_does_not_list_is_hidden(watch):
 def test_a_folder_the_device_does_not_name_is_made_for_the_write(device_root, downloads):
     (device_root / "GARMIN" / "SID").mkdir()
     storage, by = _offered(device_root)  # no component in Garmin/Prompts: only not there yet
-    assert by["006-D0002-00"].folder_hidden is None
+    assert by["006-D0002-00"].hidden_inside is None
     report = updates.install([by["006-D0002-00"]], storage)
     assert [u.part_number for u in report.written] == ["006-D0002-00"]
     assert (device_root / "GARMIN" / "PROMPTS" / "prompt_bundle.hvm").read_bytes() == PROMPTS

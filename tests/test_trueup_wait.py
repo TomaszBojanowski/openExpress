@@ -8,7 +8,7 @@ import threading
 import types
 
 import pytest
-from fakes import Waits
+from fakes import Waits, in_language
 
 from openexpress import trueup
 from openexpress.device.storage import LocalStorage
@@ -249,17 +249,12 @@ def test_not_on_a_terminal_the_wait_is_one_plain_line(monkeypatch, capsys):
 
 
 def test_the_wait_in_polish(watch):
-    from openexpress import i18n
-
     dev, st = watch
     seen = []
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         trueup.run(dev, st, client(200), [CHECK], progress=seen.append, now=lambda: NOW,
                    stop=Waits())
         stopped = trueup.stopped_text()
-    finally:
-        i18n.setup("en")
     first = next(m for m in seen if isinstance(m, TimedWait))
     assert str(first) == ("Czekanie 3\u00a0min 20\u00a0s, aż Garmin Connect przygotuje TrueUp "
                           "(dzienne sumy ze wszystkich urządzeń)…")

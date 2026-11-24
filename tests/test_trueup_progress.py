@@ -1,9 +1,9 @@
 """TrueUp in the progress of a sync: its steps by the pattern of the others ("Downloading
 TrueUp", "Writing TrueUp to the device"), never a file. All files and answers are made up."""
-from fakes import Waits
+from fakes import Waits, in_language
 from test_trueup_wait import CHECK, NOW, client, watch  # noqa: F401 - the fixture
 
-from openexpress import i18n, trueup
+from openexpress import trueup
 from openexpress.progress import Step, TimedWait, Waiting
 
 
@@ -25,11 +25,8 @@ def test_the_steps_of_trueup_are_told_as_the_others(watch):
 
 
 def test_the_steps_of_trueup_in_polish(watch):
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         seen = _run(watch)
-    finally:
-        i18n.setup("en")
     assert [m for m in seen if isinstance(m, Step)] == [
         "Pobieranie TrueUp", "Zapisywanie TrueUp na urządzenie"]
 
@@ -50,11 +47,8 @@ def test_the_wait_is_short_in_the_window_and_whole_on_the_command_line(watch):
 
 
 def test_the_wait_in_polish(watch):
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         first = next(m for m in _run(watch, delay=299) if isinstance(m, TimedWait))
-    finally:
-        i18n.setup("en")
     assert first.short == f"TrueUp: 4{NB}min 59{NB}s…"
     assert first.about == (f"Czekanie 4{NB}min 59{NB}s, aż Garmin Connect przygotuje TrueUp "
                            "(dzienne sumy ze wszystkich urządzeń)…")

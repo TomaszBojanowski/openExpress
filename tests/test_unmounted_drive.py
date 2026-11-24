@@ -9,12 +9,11 @@ import threading
 import types
 
 import pytest
-from fakes import replace_in_window
+from fakes import RTL515_XML, in_language, replace_in_window
 from fakes import window as stand_in
 from gio_fake import answer_as_gio
 from test_detection import (  # noqa: F401 - the fixture
     DRIVE_SERIAL,
-    RTL515_XML,
     FakeDriveMount,
     FakeMonitor,
     FakeVolume,
@@ -829,14 +828,9 @@ def test_in_its_garmin_usb_mode_with_an_update_waiting_it_is_to_stay_unplugged(d
 
 
 def test_the_words_after_an_eject_with_an_update_waiting_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         ejected = gio_storage.ejected_text(update_waits=True)
         off = gio_storage.drive_off_text(update_waits=True)
-    finally:
-        i18n.setup("en")
     assert ejected == ("Urządzenie zostało wysunięte. Odłącz kabel i\u00a0zostaw urządzenie "
                        "odłączone, "
                        "aby mogło zainstalować aktualizację.")
@@ -845,13 +839,8 @@ def test_the_words_after_an_eject_with_an_update_waiting_in_polish():
 
 
 def test_the_words_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = gio_storage.drive_off_text()
-    finally:
-        i18n.setup("en")
     assert said == ("Po wysunięciu zegarek przeszedł w\u00a0tryb Garmin USB, z\u00a0którego "
                     "openExpress nie korzysta. Odłącz kabel i\u00a0podłącz go ponownie.")
 
@@ -1156,7 +1145,7 @@ def _drive_tiles():
                                       False)]
 
 
-def _entry_of_0_6_20(unit):
+def _entry_without_a_usb_product(unit):
     """devices.json as an older window wrote it: no USB product, no tile facts."""
     import json
 
@@ -1171,10 +1160,10 @@ def _entry_of_0_6_20(unit):
 
 
 @pytest.mark.parametrize("serial", [f"{WIFE:012x}", f"{WIFE:012X}"])
-def test_an_entry_of_0_6_20_is_known_by_the_usb_serial(drives, monkeypatch, serial):
+def test_an_entry_without_a_usb_product_is_known_by_the_usb_serial(drives, monkeypatch, serial):
     """The remembered Forerunner 55 and its drive not mounted are one tile, known by the USB
     serial, though its entry, written by an older window, has no USB product."""
-    _entry_of_0_6_20(WIFE)
+    _entry_without_a_usb_product(WIFE)
     _unmounted(drives, monkeypatch, serial=serial)
     assert _drive_tiles() == [("Forerunner 55", "11.03", True)]
 

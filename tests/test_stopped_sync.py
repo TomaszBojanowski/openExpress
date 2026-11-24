@@ -9,7 +9,7 @@ import threading
 import types
 
 import pytest
-from fakes import RunNow, SyncAccount
+from fakes import RunNow, SyncAccount, in_language
 from fakes import window as stand_in
 
 from openexpress import applog, cli, service, sync
@@ -159,12 +159,7 @@ def test_the_window_shows_the_record_of_a_stopped_sync(monkeypatch):
 
 def test_the_line_is_kept_in_the_language_of_the_sync(device_root, folders):
     """As every error of a sync: in the words of its moment, here a Polish session."""
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         _stopped_by(ApiError("Connect file queue: HTTP 503", 503), device_root, folders)
-    finally:
-        i18n.setup("en")
     assert service.load_last_sync(UNIT)["errors"] == [
         "Synchronizację przerwano przed końcem: Connect file queue: HTTP 503"]

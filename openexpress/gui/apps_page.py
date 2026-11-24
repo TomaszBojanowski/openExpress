@@ -149,7 +149,7 @@ class AppsPage:
                 # (lowercase, after " · ")
                 sub = caption(sub, _("update {version}").format(
                     version=upd[a.app_id].version_name))
-                if getattr(upd[a.app_id], "permissions_changed", False):
+                if upd[a.app_id].permissions_changed:
                     # TRANSLATORS: in the line of an app whose update asks for permissions
                     # the user has to allow first
                     sub = caption(sub, _("new permissions"))
@@ -596,7 +596,7 @@ class AppsPage:
         from openexpress import ciq
 
         s = self.session
-        direct = bool(getattr(app, "direct_removal", False))
+        direct = app.direct_removal
         if app.has_files is False and not direct:
             self.confirm_forget_app(app)
             return

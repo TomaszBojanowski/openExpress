@@ -7,13 +7,12 @@ Made-up files, products and names only."""
 import logging
 import time
 
-from fakes import FitData, FitDefinition, SyncClient, fit_file
+from fakes import FIT_EPOCH, FitData, FitDefinition, SyncClient, fit_file
 
 from openexpress import sync
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
 
-FIT_EPOCH_OFFSET = 631065600
 ENUM, UINT16, UINT32, UINT32Z = 0x00, 0x84, 0x86, 0x8C
 # file_id: type, manufacturer, product, serial number, time created
 FILE_ID = FitDefinition(0, 0, ((0, ENUM), (1, UINT16), (2, UINT16), (3, UINT32Z), (4, UINT32)))
@@ -48,7 +47,7 @@ def test_each_file_written_is_said_with_its_maker_and_when_it_was_made(device_ro
     with caplog.at_level(logging.INFO, logger="openexpress.sync"):
         report = sync.run_downloads(items(dev), st, Queue(), state=sync.SyncState(dev.unit_id),
                                     makers=MAKERS)
-    when = time.strftime("%Y-%m-%d %H:%M", time.localtime(MADE + FIT_EPOCH_OFFSET))
+    when = time.strftime("%Y-%m-%d %H:%M", time.localtime(MADE + FIT_EPOCH))
     said = [r.getMessage() for r in caplog.records if r.getMessage().startswith("download")]
     assert len(report.written) == 5
     assert said == [

@@ -7,9 +7,9 @@ import types
 import uuid
 
 import pytest
-from fakes import RunNow, device_session, software_update
+from fakes import RunNow, device_session, software_update, turn_until
 from fakes import window as stand_in
-from test_forget_window import _button_labelled, _turn_until
+from test_forget_window import _button_labelled
 
 from openexpress import ciq, service
 from openexpress.connect import OtherOwner
@@ -34,14 +34,14 @@ def click(monkeypatch):
 
     def answer(words, until=None):
         dialog = shown[-1]
-        assert _turn_until(dialog.get_mapped)
+        assert turn_until(dialog.get_mapped)
         if words == ESCAPE:
             dialog.close()
         else:
             button = _button_labelled(dialog, words)
             assert button is not None, f"no button {words!r}"
             button.emit("clicked")
-        assert _turn_until(until or (lambda: not dialog.get_mapped()))
+        assert turn_until(until or (lambda: not dialog.get_mapped()))
         return dialog
 
     answer.shown = shown
@@ -235,7 +235,8 @@ def test_making_the_device_the_primary_training_device(click, words, changed):
     calls = []
     win = _window(_primary_training_text=MainWindow._primary_training_text,
                   set_primary_training=lambda button=None: calls.append(button))
-    MainWindow.confirm_primary_training(win, types.SimpleNamespace(unit_id=None))
+    MainWindow.confirm_primary_training(
+        win, types.SimpleNamespace(unit_id=None, is_this_device=False, name=""))
     click(words, until=lambda: len(calls) == changed and not click.shown[-1].get_mapped())
 
 
@@ -286,9 +287,9 @@ def test_open_on_github_keeps_the_report_open_only_with_the_log(click, device_ro
     dialog = click.shown[-1]
     if attached:  # it stays to say where the log is, and Escape closes it then
         click("Open on GitHub", until=lambda: bool(opened))
-        assert _turn_until(lambda: False, 0.3) is False and dialog.get_mapped()
+        assert turn_until(lambda: False, 0.3) is False and dialog.get_mapped()
         dialog.close()
-        assert _turn_until(lambda: not dialog.get_mapped())
+        assert turn_until(lambda: not dialog.get_mapped())
     else:
         click("Open on GitHub")
         assert opened
@@ -421,7 +422,8 @@ def _primary_training(ctx):
 
     win = _escape_window(ctx, _primary_training_text=MainWindow._primary_training_text,
                          set_primary_training=_note(ctx, "set_primary_training"))
-    MainWindow.confirm_primary_training(win, types.SimpleNamespace(unit_id=None))
+    MainWindow.confirm_primary_training(
+        win, types.SimpleNamespace(unit_id=None, is_this_device=False, name=""))
 
 
 def _off_account_window(ctx):

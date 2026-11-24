@@ -5,6 +5,7 @@ server state popover, the last sync, the tiles of the start page)."""
 from datetime import datetime
 
 import pytest
+from fakes import in_language
 
 from openexpress import i18n
 
@@ -34,17 +35,11 @@ def test_relative_time_in_english(moment, english, _polish):
 
 @pytest.mark.parametrize("moment, _english, polish", CASES)
 def test_relative_time_in_polish(moment, _english, polish):
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert i18n.relative_time(moment, NOW) == polish
-    finally:
-        i18n.setup("en")
 
 
 def test_hours_in_polish_take_their_plural_forms():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert i18n.relative_time(datetime(2026, 10, 18, 18, 30), NOW) == "2 godz. temu"
         assert i18n.relative_time(datetime(2026, 10, 18, 15, 30), NOW) == "5 godz. temu"
-    finally:
-        i18n.setup("en")

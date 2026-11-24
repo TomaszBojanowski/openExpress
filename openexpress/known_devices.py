@@ -611,6 +611,11 @@ class RecordedState:
             else None
 
 
+def last_update_check(entry: KnownDevice) -> float | None:
+    """When the updates of this device were last checked, as far as its entry says."""
+    return entry.update_check.at if entry.update_check is not None else entry.update_found
+
+
 def recorded_state(entry: KnownDevice | None, software_version: str,
                    now: float | None = None) -> RecordedState | None:
     """The state of the updates the last check kept with this device, while it holds (less

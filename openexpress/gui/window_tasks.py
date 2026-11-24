@@ -3,7 +3,7 @@
 (run_task, set_busy, progress, fraction; a wait of known length with Stop Waiting), optional
 work in the background (in_background), toasts and error messages, the action buttons. The
 functions: the widgets of a page (still_in_window, wrapping_row, trash_button, show_working,
-row_subtitle), the free space of the device read again after a task that writes to it
+row_label), the free space of the device read again after a task that writes to it
 (read_space, render_space, refresh_space), the bar at the bottom in the column of the pages
 (bottom_bar, page_column), the name of a task in the log (task_name), the
 collection of reference cycles after it (collect_garbage), an error nobody expected, in
@@ -120,6 +120,11 @@ def descendants(widget):
         child = child.get_next_sibling()
 
 
+def new_spinner() -> Gtk.Widget:
+    """A turning spinner: libadwaita's where it has one (1.6), else GTK's."""
+    return Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
+
+
 def page_column(child) -> Adw.Clamp:
     """`child` in the column of a page (Adw.PreferencesPage) at every width of the window:
     the clamp of that page's own width (read from one, so that it follows libadwaita)."""
@@ -129,8 +134,7 @@ def page_column(child) -> Adw.Clamp:
     if page_clamp is not None:
         column.set_maximum_size(page_clamp.get_maximum_size())
         column.set_tightening_threshold(page_clamp.get_tightening_threshold())
-        if hasattr(page_clamp, "get_unit"):
-            column.set_unit(page_clamp.get_unit())
+        column.set_unit(page_clamp.get_unit())
     return column
 
 
@@ -226,8 +230,7 @@ def _holder(button: Gtk.Button):
     the text) for a button beside the text of a row or of a group's header; None otherwise."""
     row = button.get_ancestor(Adw.ActionRow)
     if row is not None:
-        title = next((w for w in _descendants(row)
-                      if isinstance(w, Gtk.Label) and w.has_css_class("title")), None)
+        title = row_label(row, "title")
         text = title.get_parent() if title is not None else None
         side = text.get_parent() if text is not None else None
         return (row, side, text) if side is not None else None
@@ -240,17 +243,6 @@ def _holder(button: Gtk.Button):
         side = side.get_parent()
     text = side.get_first_child() if side is not None else None
     return (group, side, text) if text is not None and text != suffix else None
-
-
-def _descendants(widget: Gtk.Widget):
-    todo = [widget]
-    while todo:
-        found = todo.pop()
-        yield found
-        child = found.get_first_child()
-        while child is not None:
-            todo.append(child)
-            child = child.get_next_sibling()
 
 
 def fold_label(button: Gtk.Button, broken: bool) -> None:
@@ -356,7 +348,7 @@ def _refold(button: Gtk.Button) -> None:
 
 def _refold_all(owner) -> None:
     """The text of a row or a group changed: its buttons of wraps_when_folded decided again."""
-    for widget in _descendants(owner):
+    for widget in descendants(owner):
         if isinstance(widget, Gtk.Button) and widget.has_css_class(FOLDING):
             _refold(widget)
 
@@ -416,7 +408,7 @@ def show_working(button: Gtk.Button):
                        max_width_chars=shown.get_max_width_chars() if shown else -1,
                        justify=shown.get_justify() if shown else Gtk.Justification.LEFT)
              if label is not None else Gtk.Image(icon_name=icon, opacity=0))
-    spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
+    spinner = new_spinner()
     spinner.set_halign(Gtk.Align.CENTER)
     spinner.set_valign(Gtk.Align.CENTER)
     overlay = Gtk.Overlay(child=ghost)
@@ -548,7 +540,7 @@ def read_space(storage, capacity: int | None = None) -> tuple[int | None, int | 
 
 def render_space(win) -> None:
     """The subtitle (and the bar) of "Device Storage" from the space the session holds, in
-    the words of every page (space_text): "Reading…" until it is read, "Unknown" when the
+    the words of every page (space_text): "Reading…" until it is read, "Not known" when the
     device does not say. Nothing is asked of the device."""
     row, bar = win.storage_row, win.storage_bar
     s = win.session

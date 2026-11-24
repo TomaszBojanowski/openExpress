@@ -10,7 +10,8 @@ from datetime import datetime, timedelta
 
 import pytest
 from conftest import NOON
-from test_update_chips import _tile
+from fakes import edge_tile as _tile
+from fakes import in_language
 from test_update_record import UNIT, _check, _component, _page, _remembered, _shown, _summary
 from test_updates_system import (
     BUNDLE,
@@ -115,11 +116,8 @@ def test_ready_wins_and_says_how_many_more_are_available():
 def test_ready_in_polish():
     from openexpress.gui.words import update_state_text
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = [update_state_text("ready", n) for n in (1, 2, 5)]
-    finally:
-        i18n.setup("en")
     ready = "Aktualizacja gotowa: odłącz urządzenie, aby ją zainstalować"
     assert said == [f"{ready}{NB}· jeszcze 1 dostępna", f"{ready}{NB}· jeszcze 2 dostępne",
                     f"{ready}{NB}· jeszcze 5 dostępnych"]
@@ -188,15 +186,12 @@ def test_the_words_of_a_check_in_polish():
 
     day = (NOON - timedelta(days=1)).timestamp()
     old = (NOON - timedelta(days=40)).timestamp()
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = [remembered_update_text(_entry_with(check=known_devices.UpdateCheck(day, "23.39")),
                                        NOON),
                 remembered_update_text(_entry_with(check=known_devices.UpdateCheck(old, "23.39")),
                                        NOON)]
         when = i18n.full_time(datetime.fromtimestamp(old))
-    finally:
-        i18n.setup("en")
     assert said == [f"Oprogramowanie jest aktualne{NB}· sprawdzono wczoraj, 12:00",
                     f"Nie sprawdzano od {when}"]
 
@@ -386,11 +381,8 @@ def test_the_tiles_say_unplug_only_for_a_connected_device_with_the_same_software
 
 
 def test_the_chips_of_ready_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = [_chips(_tile(update_ready=NOW)), _chips(_tile(update_ready=NOW, kind="ums"))]
-    finally:
-        i18n.setup("en")
     assert said == [[("Odłącz, aby zainstalować", "warning")],
                     [("Wysuń, aby zainstalować", "warning"), ("Dysk USB", "dimmed")]]
 

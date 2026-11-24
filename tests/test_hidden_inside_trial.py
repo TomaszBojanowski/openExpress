@@ -129,7 +129,7 @@ def _prompts(storage):
     device = service.read_device(storage, found_now=False)
     items = updates.offered(storage, lower_keys(server_answer()), device, forget_installed=False)
     (u,) = [u for u in items if u.part_number == "006-D0002-00"]
-    assert u.folder_hidden == "Garmin/Prompts"
+    assert u.hidden_inside == "Garmin/Prompts"
     return u
 
 

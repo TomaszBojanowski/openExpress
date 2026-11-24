@@ -78,11 +78,7 @@ def saved_ui_language() -> str:
     cannot be read). The one reader of it, for the start, the window and the command line."""
     from openexpress import paths
 
-    try:
-        data = json.loads(paths.settings_file().read_text())
-    except (OSError, ValueError):
-        return ""
-    value = data.get("ui_language") if isinstance(data, dict) else None
+    value = (paths.read_json_object(paths.settings_file()) or {}).get("ui_language")
     return value if isinstance(value, str) else ""
 
 
@@ -390,11 +386,9 @@ ISO_3166_1 = Path("/usr/share/iso-codes/json/iso_3166-1.json")
 
 @functools.cache
 def _countries() -> dict[str, str]:
-    try:
-        data = json.loads(ISO_3166_1.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    entries = data.get("3166-1") if isinstance(data, dict) else None
+    from openexpress import paths
+
+    entries = (paths.read_json_object(ISO_3166_1) or {}).get("3166-1")
     return {e["alpha_2"].upper(): e.get("common_name") or e["name"]
             for e in entries or [] if isinstance(e, dict)
             and isinstance(e.get("alpha_2"), str) and isinstance(e.get("name"), str)}

@@ -85,6 +85,12 @@ class DeviceNotVerified(OwnershipError):
     """An account request for a watch was attempted without the ownership check."""
 
 
+def _not_verified() -> DeviceNotVerified:
+    return DeviceNotVerified(
+        _("Internal error: this device was not checked against your Garmin account. "
+          "Nothing was transferred."))
+
+
 class RegistrationRefused(ApiError):
     """Garmin did not add the device to the account; nothing was changed."""
 
@@ -203,9 +209,7 @@ class GarminClient:
         Without `unit_id` (requests that do not name the watch) any verified watch is enough.
         """
         if self.verified_unit_id is None or unit_id not in (None, self.verified_unit_id):
-            raise DeviceNotVerified(
-                _("Internal error: this device was not checked against your Garmin account. "
-                  "Nothing was transferred."))
+            raise _not_verified()
 
     @staticmethod
     def _prepared_url(method: str, url: str) -> str:
@@ -325,8 +329,7 @@ class GarminClient:
         h = self._client_headers()
         h.update(headers or {})
         h["Authorization"] = self._sign(method, url)
-        data = kw.pop("data", None)
-        resp = self._request(method, url, what, headers=h, data=data, **kw)
+        resp = self._request(method, url, what, headers=h, **kw)
         return self._check(resp, what)
 
     # --- authentication -------------------------------------------------------------
@@ -832,9 +835,7 @@ class GarminClient:
         does with one Garmin keeps as retired. Changes the account. Any 2xx answer counts as
         accepted; the account's device list, fetched again, tells the result."""
         if unit_id not in self.registered_unit_ids:
-            raise DeviceNotVerified(
-                _("Internal error: this device was not checked against your Garmin account. "
-                  "Nothing was transferred."))
+            raise _not_verified()
         what = _("Making the device active")
         try:
             # The path names the device: the log has only the host.

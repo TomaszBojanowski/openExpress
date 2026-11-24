@@ -3,7 +3,6 @@ row on the device page), and the copy of its diagnostic files: off by default, m
 connection, never sent; the hidden crash logs and memory dumps only on request. All entries,
 files and devices are made up."""
 
-import hashlib
 import json
 import os
 import stat
@@ -13,7 +12,7 @@ from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import descendants, device_session
+from fakes import descendants, device_session, in_language, kept_copy
 from fakes import window as stand_in
 
 from openexpress import diagnostics, forget, paths, status
@@ -957,16 +956,12 @@ def test_nothing_is_sent(device, clock):
 def test_the_row_in_polish(clock):
     from gi.repository import Adw
 
-    from openexpress import i18n
     from openexpress.gui.device_page import status_row
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         win = _window(_found())
         status_row(win, Adw.PreferencesGroup())
         row = _row(win)
-    finally:
-        i18n.setup("en")
     assert row == ("Stan urządzenia", "1 awaria w\u00a0ostatnich 30 dniach")
 
 
@@ -1140,24 +1135,10 @@ def test_the_copy_turned_on_looks_for_the_files_it_needs(device, clock):
 # --- the crashes, merged from every source --------------------------------------------------
 
 
-def kept_copy(kind, files, when="2026-10-21 11.00.00"):
-    """A copy kept on this computer as the program keeps it: its note and each content once."""
-    where = diagnostics.folder(UNIT)
-    (where / "objects").mkdir(parents=True, exist_ok=True)
-    (where / "snapshots").mkdir(exist_ok=True)
-    listed = {}
-    for path, data in files.items():
-        sha = hashlib.sha256(data).hexdigest()
-        (where / "objects" / sha).write_bytes(data)
-        listed[path] = {"sha256": sha, "size": len(data), "mtime": None}
-    (where / "snapshots" / f"{when}.json").write_text(json.dumps(
-        {"kind": kind, "at": when, "software_version": "23.39", "files": listed, "listed": {}}))
-
-
-def boot_log(*stamps, errnum="0x1a2b") -> bytes:
+def boot_log(*stamps) -> bytes:
     """The boot log as a fēnix 8 writes it (the shape seen; every value made up): a crash, then
     the next start."""
-    return "".join(f"[{s} 1234]: RTL Trap detected, errnum: {errnum}\n"
+    return "".join(f"[{s} 1234]: RTL Trap detected, errnum: 0x1a2b\n"
                    f"[{s} 1300]: New boot cycle\n" for s in stamps).encode()
 
 

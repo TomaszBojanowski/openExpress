@@ -35,9 +35,9 @@ def device(iq_device):
     return st, dev
 
 
-def _entry(app_id, app_type, disabled=False):
+def _entry(app_id, app_type):
     return proto.enc_bytes(1, proto.enc_bytes(1, app_id.bytes) + proto.enc_varint(2, app_type)
-                           + proto.enc_varint(3, disabled) + proto.enc_varint(4, False))
+                           + proto.enc_varint(3, False) + proto.enc_varint(4, False))
 
 
 DAMAGED = {

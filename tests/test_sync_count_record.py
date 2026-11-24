@@ -33,10 +33,9 @@ def _synced():
     record_sync(UNIT, uploaded=1, downloaded=0, skipped_known=0, errors=[], lines=[])
 
 
-def _keep(count, at=None, state=None):
+def _keep(count, at=None):
     known_devices.set_sync_count(UNIT, known_devices.SyncCount(
-        count, time.time() if at is None else at,
-        service.sync_stamp(UNIT) if state is None else state))
+        count, time.time() if at is None else at, service.sync_stamp(UNIT)))
 
 
 # --- devices.json ---------------------------------------------------------------------------
@@ -255,13 +254,13 @@ def test_after_a_sync_the_record_is_what_is_counted_again(listed):
 
 def test_a_count_not_known_keeps_the_record():
     """The count failed (None): what was kept stays, the tile keeps showing it."""
-    from openexpress.gui.device_page import remember_sync_count
+    from openexpress.tile_facts import note_count
 
     _remember()
     _state()
     _keep(3)
-    remember_sync_count(None)
-    remember_sync_count(sync.ActivitiesToSync(UNIT))  # never synced: nothing to keep
+    note_count(None)
+    note_count(sync.ActivitiesToSync(UNIT))  # never synced: nothing to keep
     assert known_devices.load()[UNIT].sync_count.count == 3
 
 
@@ -293,7 +292,7 @@ def test_the_last_sync_of_the_device_page_says_the_count_from_the_record_too():
 # without waiting for that list.
 
 
-def _opened(win_of, monkeypatch, logged_in=True):
+def _opened(win_of, logged_in=True):
     """A window opened on the same files as the one before: the first frame drawn while the
     account's list is still asked (a login saved), then the list, then the count in the
     background. The chips of the first frame, and the window."""
@@ -319,7 +318,7 @@ def _opened(win_of, monkeypatch, logged_in=True):
     return first, win
 
 
-def _probed(device_root):
+def _probed():
     """The made-up device listed anew, as each opening of the window lists it."""
     from openexpress.device import gio_storage
 
@@ -333,10 +332,10 @@ def test_opened_again_the_tile_has_its_chip_before_the_account_s_list(listed, de
                                                                        monkeypatch):
     _remember()
     _synced()
-    first, win = _opened(lambda: _start_window([listed]), monkeypatch)
+    first, win = _opened(lambda: _start_window([listed]))
     assert first == []  # nothing known yet the first time
     assert _chips_on(win.start.tiles()[0]) == ["To sync"]
-    again, win = _opened(lambda: _start_window([_probed(device_root)]), monkeypatch)
+    again, win = _opened(lambda: _start_window([_probed()]))
     assert again == ["To sync"]  # from the record, in the first frame
     assert _chips_on(win.start.tiles()[0]) == ["To sync"]
 
@@ -347,9 +346,8 @@ def test_without_a_login_the_record_gives_no_chip_in_the_first_frame(listed, dev
     """Logged out since the record was made: nothing of the sync, as without a record."""
     _remember()
     _synced()
-    _opened(lambda: _start_window([listed]), monkeypatch)
-    first, win = _opened(lambda: _start_window([_probed(device_root)]), monkeypatch,
-                         logged_in=False)
+    _opened(lambda: _start_window([listed]))
+    first, win = _opened(lambda: _start_window([_probed()]), logged_in=False)
     assert first == [] and _chips_on(win.start.tiles()[0]) == []
 
 

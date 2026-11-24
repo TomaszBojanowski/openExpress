@@ -503,21 +503,11 @@ def test_the_open_inreach_gets_the_icon_of_a_handheld_too():
     assert open_device_kind(s, None) == "handheld"
 
 
-@pytest.fixture
-def kinds_told(monkeypatch):
-    """What Garmin said of the kinds of models, as this process has heard it: none yet."""
-    from openexpress import devicelist
-
-    monkeypatch.setattr(devicelist, "_kind_evidence", {})
-    monkeypatch.setattr(devicelist, "_kind_told", set())
-    monkeypatch.setattr(devicelist, "_map_type_told", set())
-
-
 def _no_kind_lines(caplog):
     return [r.getMessage() for r in caplog.records if "tells no kind" in r.getMessage()]
 
 
-def test_a_device_garmin_tells_no_kind_of_is_logged_with_what_garmin_said(kinds_told, caplog):
+def test_a_device_garmin_tells_no_kind_of_is_logged_with_what_garmin_said(caplog):
     """So that a report tells the signal Garmin gives for such a device (an inReach): the
     account's categories and unit-info's segment, with the part number only (no unit ID),
     once for each new piece; a device whose kind Garmin tells is not named."""
@@ -536,7 +526,7 @@ def test_a_device_garmin_tells_no_kind_of_is_logged_with_what_garmin_said(kinds_
     assert "3000000005" not in caplog.text
 
 
-def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, caplog):
+def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(caplog):
     """A device off the account: what unit-info says (here the window's note_segment, after
     an update or for a picture); a bike accessory is a kind Garmin tells."""
     import types
@@ -557,7 +547,7 @@ def test_unit_info_alone_is_logged_too_and_a_bike_accessory_not(kinds_told, capl
     assert "SECRET123" not in caplog.text and str(VENU) not in caplog.text
 
 
-def test_the_map_update_type_unit_info_tells_is_logged_once_per_model(kinds_told, caplog):
+def test_the_map_update_type_unit_info_tells_is_logged_once_per_model(caplog):
     """The log names the map update type unit-info gives a model (a nüvi 52LMT gets its software
     update but no map), so a report tells whether the universal map service serves it: the part
     number only, no unit ID; once per model and value; a value given as a number, or none, is

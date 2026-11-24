@@ -8,7 +8,8 @@ import types
 from datetime import datetime
 
 import pytest
-from fakes import record_sync
+from fakes import in_language, record_sync
+from fakes import tile as _tile
 from fakes import window as stand_in
 
 from openexpress import service, sync
@@ -18,17 +19,6 @@ from openexpress.device.xmldevice import parse
 NOW = 1_800_000_000.0
 DAY = 86400.0
 UNIT = 1234567890  # the made-up device of conftest.DEVICE_XML
-
-
-def _tile(**fields):
-    from openexpress.devicelist import Tile
-
-    values = dict(description="fēnix 8", part_number="006-B4532-00", software_version="23.39",
-                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
-                  image_part_number="006-B4532-00", image_url=None, category=None,
-                  account_known=True)
-    values.update(fields)
-    return Tile(**values)
 
 
 def _said(tile):
@@ -110,18 +100,13 @@ def test_synced_comes_last_and_gives_way_to_every_other_chip():
                                           (5, "5 nowych aktywności"), (22, "22 nowe aktywności"),
                                           (12, "12 nowych aktywności")])
 def test_the_chips_in_polish(count, words):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         ((chip, _style, tooltip),) = _said(_tile(to_sync=count, synced_at=NOW))
         assert chip == "Do synchronizacji"
         assert tooltip.startswith(words + " od ")
         assert _words(_tile(never_synced=True)) == [("Nie zsynchronizowano", "dimmed")]
         assert _words(_tile(primary=True)) == [("Podstawowe", "dimmed")]
         assert _words(_tile(to_sync=0, synced_at=NOW)) == [("Zsynchronizowane", "dimmed")]
-    finally:
-        i18n.setup("en")
 
 
 # --- the tiles ------------------------------------------------------------------------------

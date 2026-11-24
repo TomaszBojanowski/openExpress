@@ -6,25 +6,18 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from test_ciq_music import FACE, IQ_XML_TYPES, PRELOADED, STORE_ID, FakeClient, out_bin
+from test_ciq_music import (  # noqa: F401 - iq_device: a fixture
+    FACE,
+    PRELOADED,
+    STORE_ID,
+    FakeClient,
+    iq_device,
+)
 from test_updates_maps import maps_response, server, sw_response  # noqa: F401
 
 from openexpress import backup, ciq, maps, music, proto, updates
 from openexpress.device.storage import DeviceError, LocalStorage
 from openexpress.device.xmldevice import parse
-
-
-@pytest.fixture
-def iq_device(device_root):
-    xml_path = device_root / "GARMIN/GarminDevice.xml"
-    xml_path.write_text(xml_path.read_text().replace("</MassStorageMode>",
-                                                     IQ_XML_TYPES + "</MassStorageMode>"))
-    (device_root / "GARMIN/APPS/OUT.BIN").write_bytes(out_bin([
-        (STORE_ID, 1, "Connect IQ Store", False, "DADE7E4"),
-        (PRELOADED, 8, "Softball", True, ""),
-    ]))
-    st = LocalStorage(device_root)
-    return st, parse(st.read("GARMIN/GarminDevice.xml"))
 
 
 def iq_message(mid, app_id, name):
