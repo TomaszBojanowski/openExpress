@@ -770,7 +770,7 @@ def test_the_bar_with_stop_waiting_fits_the_narrowest_window(narrow_window, lang
     win.session.stop_waiting = threading.Event()
     win.set_busy(True, "Sync", device=True)
     win._show_progress(TimedWait("Waiting 3 min 20 s for Garmin Connect to prepare TrueUp (the "
-                                 "daily totals of all your devices)…", seconds=200, done=0.3))
+                                 "daily totals of all your devices)…", done=0.3))
     _iterate(0.1)
     assert win.stop_wait_button.get_visible()
     assert win.action_bar.measure(Gtk.Orientation.HORIZONTAL, -1)[0] <= NARROWEST

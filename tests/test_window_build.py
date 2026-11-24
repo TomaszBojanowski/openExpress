@@ -133,7 +133,7 @@ def test_the_bar_at_the_bottom(window):
     # TrueUp waits for Garmin Connect: the bar fills and the wait can be stopped.
     window.session = device_session(stop_waiting=threading.Event(), mass_storage=False,
                                            logged_in=False, ownership_error=None)
-    window.progress(TimedWait("Waiting 3 min 20 s for Garmin Connect…", seconds=200,
+    window.progress(TimedWait("Waiting 3 min 20 s for Garmin Connect…",
                               done=0.4))
     assert turn_until(window.stop_wait_button.get_visible)
     assert window.progress_bar.get_fraction() == 0.4
