@@ -5,12 +5,12 @@ key; the login, when the command needs it); the window goes on without it and sa
 where it matters. Opening a device hides what is private about it in the log and remembers a
 device found now, never a folder given by hand. All keys, logins and devices are made up.
 """
-
 import argparse
 import dataclasses
 import logging
 
 import pytest
+from fakes import found_now
 
 from openexpress import applog, cli, known_devices, service
 from openexpress.auth import store
@@ -141,11 +141,6 @@ def drive(device_root):
                       usb=GarminUsb("4f42", 1, 9, serial=SERIAL, volume_uuid=UUID))
 
 
-def found_now(monkeypatch, storage):
-    """The device the command line and the window find connected now."""
-    monkeypatch.setattr(service, "open_device_or_drive", lambda **kw: storage)
-
-
 def args(path=None, command="info"):
     return argparse.Namespace(path=path, device_uri=None, no_wait=True, cmd=command,
                               apply=False)
@@ -186,7 +181,6 @@ def test_the_command_line_and_the_window_remember_a_device_alike(monkeypatch, de
 
 def test_a_folder_given_by_hand_is_not_remembered(device_root):
     assert cli.main(["--path", str(device_root), "info"]) == 0
-    service.open_session(storage=LocalStorage(device_root))
     assert not known_devices.path().exists()
 
 
@@ -206,16 +200,12 @@ def test_the_command_line_hides_the_device_in_the_log(monkeypatch, device_root, 
     assert str(unit) not in text and f"{unit:x}" not in text.casefold()
 
 
-@pytest.mark.parametrize("given", ["storage", "mtp", "ums"])
+@pytest.mark.parametrize("given", ["mtp", "ums"])
 def test_the_window_hides_the_device_in_the_log(monkeypatch, device_root, log_file, given):
     unit = unit_id(device_root)
     applog.setup("cli")
-    if given == "storage":
-        service.open_session(storage=LocalStorage(device_root))
-    else:
-        found_now(monkeypatch,
-                  drive(device_root) if given == "ums" else LocalStorage(device_root))
-        service.open_session(allow_ums=True)
+    found_now(monkeypatch, drive(device_root) if given == "ums" else LocalStorage(device_root))
+    service.open_session(allow_ums=True)
     text = written(log_file, unit)
     hidden = "<serial> <serial> <volume>" if given == "ums" else (
         f"{SERIAL} {SERIAL.lower()} {UUID.lower()}")
@@ -232,15 +222,11 @@ def test_the_command_line_says_nothing_of_drive_keys_for_a_device_not_a_drive(
     assert not any(m.startswith("device: this drive") for m in caplog.messages)
 
 
-@pytest.mark.parametrize("given", ["storage", "mtp"])
 def test_the_window_says_nothing_of_drive_keys_for_a_device_not_a_drive(
-        monkeypatch, device_root, caplog, given):
+        monkeypatch, device_root, caplog):
+    found_now(monkeypatch, LocalStorage(device_root))
     with caplog.at_level(logging.INFO, logger="openexpress"):
-        if given == "storage":
-            service.open_session(storage=LocalStorage(device_root))
-        else:
-            found_now(monkeypatch, LocalStorage(device_root))
-            service.open_session(allow_ums=True)
+        service.open_session(allow_ums=True)
     assert not any(m.startswith("device: this drive") for m in caplog.messages)
 
 

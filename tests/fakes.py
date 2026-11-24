@@ -1833,3 +1833,10 @@ def show_remembered(win, known) -> None:
 def fill_remembered(win, known) -> None:
     """The view of a remembered device filled again, with its tile (_redraw_remembered)."""
     win._fill_remembered(known, remembered_tile(known))
+
+
+def found_now(monkeypatch, storage) -> None:
+    """The device the command line and the window find connected now: `storage`."""
+    from openexpress import service
+
+    monkeypatch.setattr(service, "open_device_or_drive", lambda **kw: storage)

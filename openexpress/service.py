@@ -245,19 +245,16 @@ def signed_in(client: GarminClient, settings: Settings,
     return auth, None
 
 
-def open_session(storage: Storage | None = None, allow_ums: bool = False,
-                 found=None) -> DeviceSession:
+def open_session(allow_ums: bool = False, found=None) -> DeviceSession:
     """A session on the connected device: MTP alone, unless `allow_ums` (the window) also
     lets a Garmin device in mass storage mode be opened. `found`: the device chosen from
     find_all_devices, of whatever kind."""
-    detected = storage is None  # a device found now, not a folder handed in (a copy, a test)
-    if storage is None and found is not None:
-        storage = _open_found(found)
+    storage = _open_found(found) if found is not None else None
     if storage is None:
         from openexpress.device.gio_storage import open_device_storage
 
         storage = open_device_or_drive() if allow_ums else open_device_storage()
-    device = read_device(storage, found_now=detected)
+    device = read_device(storage, found_now=True)
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
 
