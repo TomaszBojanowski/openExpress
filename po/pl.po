@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 08:18+0100\n"
+"POT-Creation-Date: 2026-11-24 08:40+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -11843,28 +11843,29 @@ msgstr ""
 "Nie zapisano: {name}. Obecnego pliku nie udało się najpierw skopiować "
 "w całości na ten komputer. Niczego na urządzeniu nie zmieniono."
 
-#. TRANSLATORS: a step of the trial on the command line: a small file written into a folder
-#. the device hides, read back and deleted, before anything there is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides: a small file
+#. written there, read back and deleted, before anything there is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Trying a small test file in {folder}…"
 msgstr "Próba z małym plikiem testowym w {folder}…"
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update, whose file now on
-#. the device is copied to this computer before it is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update, whose file now on the device is copied to this computer before it is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Copying the old {name} to this computer"
 msgstr "Kopiowanie poprzedniego pliku ({name}) na ten komputer"
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an update
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Removing the old {name} from the device"
 msgstr "Usuwanie poprzedniego pliku ({name}) z urządzenia"
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update whose new file was
-#. not written whole, so its old one is written back from the copy on this computer
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update whose new file was not written whole, so its old one is written back from the copy
+#. on this computer
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Putting the old {name} back on the device"

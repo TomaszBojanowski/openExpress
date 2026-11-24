@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 08:18+0100\n"
+"POT-Creation-Date: 2026-11-24 08:40+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10892,28 +10892,29 @@ msgid ""
 "computer first. Nothing on the device was changed."
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line: a small file written into a folder
-#. the device hides, read back and deleted, before anything there is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides: a small file
+#. written there, read back and deleted, before anything there is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Trying a small test file in {folder}…"
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update, whose file now on
-#. the device is copied to this computer before it is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update, whose file now on the device is copied to this computer before it is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Copying the old {name} to this computer"
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an update
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Removing the old {name} from the device"
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update whose new file was
-#. not written whole, so its old one is written back from the copy on this computer
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update whose new file was not written whole, so its old one is written back from the copy
+#. on this computer
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Putting the old {name} back on the device"
