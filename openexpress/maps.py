@@ -23,6 +23,7 @@ import time
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import NamedTuple
 
 from openexpress import answers, applog, awake, cache, download, hidden_folders, paths, updates
 from openexpress.connect import ApiError, unexpected_answer_text
@@ -996,10 +997,19 @@ def removal_list(maps: list[UniversalMap], target: UniversalMap, rewriting: bool
     return [p for p in target.files_to_remove if p.casefold() not in keep | new]
 
 
-def space_plan(storage: Storage, m: UniversalMap, removing: list[str]) -> tuple[int, int]:
-    """(needed, change): the space the install needs free while it writes, and how much less
-    space is free once it is done (negative: more), the old files removed and those written
-    over giving theirs back."""
+class SpacePlan(NamedTuple):
+    """An install's space on the device, and the old files it removes."""
+    needed: int  # free while it writes
+    change: int  # how much less is free once it is done (negative: more)
+    # Those of the old files Garmin lists that the device has: the only ones removed, and
+    # counted in the question and the log.
+    old: list[str]
+
+
+def space_plan(storage: Storage, m: UniversalMap, removing: list[str]) -> SpacePlan:
+    """The space the install needs free while it writes, how much less space is free once it
+    is done, the old files removed and those written over giving theirs back, and which of the
+    old files `removing` names the device has."""
     gone = {p.casefold() for p in removing}
     replacing = [f.device_path for f in m.files if f.device_path.casefold() not in gone]
     # Every folder of these files listed once (over MTP each listing is a round trip).
@@ -1010,11 +1020,7 @@ def space_plan(storage: Storage, m: UniversalMap, removing: list[str]) -> tuple[
     # A file being replaced frees its space before the new one is written over MTP only; on
     # a drive it stays until the new one is whole.
     needed = m.size - freed - (0 if storage.replaces_atomically else replaced)
-    return max(0, needed), change
-
-
-def space_needed(storage: Storage, m: UniversalMap, removing: list[str]) -> int:
-    return space_plan(storage, m, removing)[0]
+    return SpacePlan(max(0, needed), change, [p for p in removing if sizes[p] is not None])
 
 
 def write_order(m: UniversalMap) -> list[MapFile]:
@@ -1058,8 +1064,9 @@ def _install(
     if m.hidden_folder is not None:
         return _install_hidden(m, removing, storage, activate, session, progress, url_salt,
                                sleep)
-    need = space_needed(storage, m, removing)
-    storage.require_space(need, SPACE_MARGIN, error=MapError)
+    plan = space_plan(storage, m, removing)
+    storage.require_space(plan.needed, SPACE_MARGIN, error=MapError)
+    removing = plan.old  # Garmin's list may name old files the device does not have
 
     local = _download(m, session, progress, url_salt)
     unlocks = _activation(m, activate, say_to(progress))
@@ -1084,8 +1091,8 @@ def _write_all(m, all_maps, storage, removing, files, local, unlocks, progress, 
         # replaces ("Removing old map files · 2 of 5")
         say(Step(_("Removing old map files"), n, len(removing)))
         log.debug("map install: removing %s", p)
-        storage.delete(p)
-        report.removed.append(p)
+        if storage.delete(p):  # one gone since the space was read is not counted
+            report.removed.append(p)
     shared = protected_files(all_maps, m)
     copying, checking = copying_text(m.name), checking_text(m.name)
     copy_total = sum(f.size or 0 for f in files)

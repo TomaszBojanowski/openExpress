@@ -457,8 +457,8 @@ class MapsPage:
                 log.info("maps: the device or its list changed while the space was checked, "
                          "nothing asked")
                 return
-            (need, change), free = result
-            self._ask_install_map(m, need, change, free, removing)
+            plan, free = result
+            self._ask_install_map(m, plan.needed, plan.change, free, plan.old)
 
         def failed(_e):
             return self.session is not s  # gone meanwhile: the window says so already
@@ -470,7 +470,8 @@ class MapsPage:
     def _ask_install_map(self, m, need: int, change: int, free: int | None,
                          removing: list[str]) -> None:
         """The question before a map is installed, with the size of its files and the space
-        free once it is done, or what is missing (read in the background by confirm_map:
+        free once it is done, or what is missing, and how many old files it removes: `removing`,
+        those of Garmin's list the device has (read in the background by confirm_map:
         maps.space_plan)."""
         from openexpress import maps as mp
 

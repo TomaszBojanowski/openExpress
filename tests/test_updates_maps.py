@@ -719,6 +719,66 @@ def test_cli_lists_a_map_newer_on_the_device_without_garmins_version_or_size(
     assert words[2:] == NEWER.split()
 
 
+# --- the old files of an update: only those the device has ------------------------------------
+# East's answer names two old files to remove besides the shared DEM.img, E.img and E.gma; the
+# device has only E.img, or neither.
+
+
+def test_an_old_file_the_device_does_not_have_is_not_counted_as_removed(server, device_root, xdg):
+    (device_root / "GARMIN" / "E.img").write_bytes(b"old")
+    all_maps = maps.parse_maps(maps_response(server))
+    rep = maps.install(all_maps[1], all_maps, LocalStorage(device_root),
+                       lambda ident: {"unlocks": []})
+    removed = sorted(rep.removed)
+    assert removed == ["Garmin/E.img"]
+
+
+@pytest.mark.needs_display
+@pytest.mark.parametrize("there,said", [(("E.img",), ["Old files to remove: 1"]), ((), [])])
+def test_the_question_before_an_update_counts_only_the_old_files_the_device_has(
+        server, device_root, monkeypatch, there, said):
+    import types
+
+    from fakes import window_methods
+    from gi.repository import Adw
+
+    from openexpress.gui.app import MainWindow
+
+    for name in there:
+        (device_root / "GARMIN" / name).write_bytes(b"old")
+    all_maps = maps.parse_maps(maps_response(server))
+    asked = []
+    monkeypatch.setattr(Adw.AlertDialog, "present", lambda d, parent: asked.append(d))
+    client = types.SimpleNamespace(consumer=types.SimpleNamespace(url_salt="salt"))
+    win = stand_in(session=device_session(storage=LocalStorage(device_root), client=client),
+                   maps_cache=all_maps, run_task=RunNow())
+    window_methods(win, ["_ask_install_map"])
+    MainWindow.confirm_map(win, all_maps[1])
+    (question,) = asked
+    lines = question.get_body().splitlines()
+    old = [line for line in lines if line.startswith("Old files to remove")]
+    assert old == said
+
+
+def test_cli_install_plan_lists_only_the_old_files_the_device_has(server, device_root,
+                                                                  monkeypatch, capsys):
+    from openexpress import cli
+    from openexpress.device.xmldevice import parse
+
+    (device_root / "GARMIN" / "E.img").write_bytes(b"old")
+
+    def load(args, client, own=False):
+        st = LocalStorage(device_root)
+        all_maps, listed = maps.read_maps(maps_response(server))
+        return st, parse(st.read("GARMIN/GarminDevice.xml")), all_maps, listed
+
+    monkeypatch.setattr(cli, "_load_maps", load)
+    assert cli.main(["maps", "install", "TopoActive East"]) == 0
+    out = capsys.readouterr().out.splitlines()
+    removed = [line.strip() for line in out if line.startswith("  - ")]
+    assert removed == ["- Garmin/E.img"]
+
+
 # --- a map that cannot be removed -----------------------------------------------------------
 
 
@@ -1424,12 +1484,12 @@ def test_the_space_of_an_update_counts_the_old_files_that_go(server, device_root
     removing = maps.removal_list(all_maps, east, rewriting=True)
     storage = LocalStorage(device_root)
     storage.replaces_atomically = True  # a drive: a file written over stays until the new one is whole
-    needed, change = maps.space_plan(storage, east, removing)
+    needed, change, old = maps.space_plan(storage, east, removing)
     assert change == east.size - 500 - 1 - len(DEM)  # E.img and E.gma go, DEM.img is written over
     assert needed == east.size - 500 - 1  # the old DEM.img still there while it is written
+    assert old == removing  # both on the device
     storage.replaces_atomically = False  # MTP: a file written over is deleted first
-    assert maps.space_plan(storage, east, removing) == (change, change)
-    assert maps.space_needed(storage, east, removing) == change
+    assert maps.space_plan(storage, east, removing) == (change, change, removing)
 
 
 def test_a_map_written_but_not_taken_in_waits_for_unplugging(server, device_root, xdg):
@@ -1649,7 +1709,7 @@ def test_space_counts_a_file_once_whatever_its_spelling(device_root):
     put(device_root, **{"D1.img": b"x" * 3000})
     m = _a_map("Map", 1, ["GARMIN/d1.IMG"], ["Garmin/D1.img"])
     m.files[0].size = 7000
-    assert maps.space_needed(LocalStorage(device_root), m, ["Garmin/D1.img"]) == 4000
+    assert maps.space_plan(LocalStorage(device_root), m, ["Garmin/D1.img"]).needed == 4000
 
 
 # --- a failed copy keeps the old map file -------------------------------------------------------
@@ -1682,9 +1742,9 @@ def test_a_drive_needs_room_for_the_new_map_beside_the_old(server, device_root, 
     class OverMtp(LocalStorage):
         replaces_atomically = False
 
-    assert maps.space_needed(LocalStorage(device_root), east, []) == east.size
+    assert maps.space_plan(LocalStorage(device_root), east, []).needed == east.size
     replaced = len(b"old E2") + len(b"old")  # E2.img and the shared DEM.img
-    assert maps.space_needed(OverMtp(device_root), east, []) == east.size - replaced
+    assert maps.space_plan(OverMtp(device_root), east, []).needed == east.size - replaced
 
 
 # --- an invalid MD5 never turns off the check ---------------------------------------------------
@@ -1907,8 +1967,8 @@ def _files_map(paths, size=10_000):
 
 
 def _space_with_one_size_per_file(storage, m, removing):
-    """The space a map needs, worked out with one size() for each file: what space_needed
-    gives, listing each folder once."""
+    """The space a map needs, worked out with one size() for each file: what space_plan
+    gives as needed, listing each folder once."""
     freed = sum(storage.size(p) or 0 for p in removing)
     gone = {p.casefold() for p in removing}
     replaced = sum(storage.size(f.device_path) or 0 for f in m.files
@@ -1929,7 +1989,7 @@ def test_the_space_a_map_needs_lists_each_folder_once(device_root):
     removing = ["Garmin/Maps/Old0.img", "Garmin/Maps/Old1.img"]
     expected = _space_with_one_size_per_file(LocalStorage(device_root), m, removing)
     storage = _ListingOverMtp(device_root)
-    assert maps.space_needed(storage, m, removing) == expected
+    assert maps.space_plan(storage, m, removing).needed == expected
     assert sorted(storage.listed) == sorted(["", "Garmin", "Garmin/Maps"])
 
 
@@ -1953,8 +2013,8 @@ def test_the_space_a_map_needs_is_what_it_was(device_root, paths, removing):
     (device_root / "Garmin/Maps/Folder.img").mkdir(parents=True, exist_ok=True)
     m = _files_map(paths, size=100_000)
     expected = _space_with_one_size_per_file(_ListingOverMtp(device_root), m, removing)
-    assert maps.space_needed(_ListingOverMtp(device_root), m, removing) == expected
-    assert maps.space_needed(LocalStorage(device_root), m, removing) == m.size - sum(
+    assert maps.space_plan(_ListingOverMtp(device_root), m, removing).needed == expected
+    assert maps.space_plan(LocalStorage(device_root), m, removing).needed == m.size - sum(
         LocalStorage(device_root).size(p) or 0 for p in removing)
 
 

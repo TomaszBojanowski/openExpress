@@ -112,7 +112,7 @@ def test_the_space_for_a_map_is_checked_off_the_window_thread(map_window, device
     win, m, storage = map_window
     plain = LocalStorage(device_root)
     plain.replaces_atomically = False
-    _need, change = mp.space_plan(plain, m, [])
+    change = mp.space_plan(plain, m, []).change
     free = plain.free_space()
     app.MainWindow.confirm_map(win, m)
     assert storage.on_gtk == [] and storage.elsewhere  # asked, but not on GTK's thread

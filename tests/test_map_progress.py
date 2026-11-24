@@ -22,11 +22,12 @@ def _no_file_names(seen):
 def test_a_map_is_downloaded_and_copied_by_its_name(server, device_root, xdg):
     all_maps = maps.parse_maps(maps_response(server))
     east = all_maps[1]
+    for name in ("E.img", "E.gma"):  # the two old files the map replaces
+        (device_root / "GARMIN" / name).write_bytes(b"old")
     seen = []
     maps.install(east, all_maps, LocalStorage(device_root), _unlock, progress=seen.append)
     steps = [m for m in seen if isinstance(m, Step)]
     heads = list(dict.fromkeys(m.head for m in steps))
-    # The device of the fixture keeps two files the map replaces.
     assert heads == [f"Downloading {east.name}", "Removing old map files",
                      f"Copying {east.name} to the device"]
     down = [m for m in steps if m.head.startswith("Downloading")]

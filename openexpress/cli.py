@@ -2436,8 +2436,12 @@ def cmd_maps(args) -> int:
             raise mp.MapError(refused[0])
         if not refused and not mp.can_install(m, hidden_trial=trial):
             raise mp.MapError(mp.cannot_install_message(m))
-        need, free = (mp.hidden_space(st, m, removing) if hidden
-                      else (mp.space_needed(st, m, removing), st.free_space()))
+        if hidden:
+            need, free = mp.hidden_space(st, m, removing)
+        else:
+            plan = mp.space_plan(st, m, removing)
+            # Only the old files the device has are removed: only those are listed.
+            need, free, removing = plan.needed, st.free_space(), plan.old
         if m.installed:
             msg = ngettext("Updating map {name} {version}: {count} file, download {size}, "
                            "space on the device {needed} ({free} free)",
