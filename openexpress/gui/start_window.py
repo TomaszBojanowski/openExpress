@@ -22,11 +22,16 @@ from gi.repository import Gio, GLib, Gtk  # noqa: E402 - imports must follow gi.
 from openexpress import devicelist, known_devices, last_sync, service, sync, tile_facts  # noqa: E402
 from openexpress.device.gio_storage import NO_DEVICE_FILE, NOT_MOUNTED, DeviceSummary  # noqa: E402
 from openexpress.gui import start  # noqa: E402
-from openexpress.gui.connected import session_summary, unit_ids, uris  # noqa: E402
+from openexpress.gui.connected import (  # noqa: E402
+    open_address,
+    open_unit,
+    session_summary,
+    unit_ids,
+    uris,
+)
 from openexpress.gui.detection import _take_asked, decided, seen_open  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
     refresh_last_sync_subtitle,
-    remember_sync_count,
 )
 from openexpress.gui.gui_settings import load_gui_settings, update_gui_settings  # noqa: E402
 from openexpress.gui.navigation import Cause, Seen, ShowStart, Stay  # noqa: E402
@@ -214,7 +219,7 @@ def choice_subtitle(summary) -> str:
     it is connected: a drive says it in its chip (start.chips), MTP is the usual way. Never
     its address: an MTP address carries the serial number."""
     if summary.ok:
-        return _("Software {version}").format(version=summary.software_version)
+        return software_text(summary.software_version)
     if summary.reason == NOT_MOUNTED:
         return _("Not mounted; choose it to open it")
     if summary.reason == NO_DEVICE_FILE:
@@ -486,10 +491,10 @@ class StartWindow:
         s = self.session
         if s is None:
             return False
-        unit_id = getattr(s.device, "unit_id", None)
+        unit_id = open_unit(s)
         if unit_id and summary.unit_id is not None:
             return summary.unit_id == unit_id
-        uri = str(getattr(s.storage, "device_uri", "") or "").rstrip("/")
+        uri = open_address(s).rstrip("/")
         return bool(uri) and summary.found.uri.rstrip("/") == uri
 
     def _show_tiles(self, summaries: list, notice: bool) -> None:
@@ -550,7 +555,7 @@ class StartWindow:
             log.info("activities: the count of a device no longer listed or open is dropped")
             return
         holder.to_sync = result.again() if result is not None else None
-        remember_sync_count(holder.to_sync)  # for its tile from the first frame next time
+        tile_facts.note_count(holder.to_sync)  # for its tile from the first frame next time
         if holder is s:  # its tile may come from the list as well
             for c in self.connected.devices:
                 if self._is_open(c):

@@ -703,13 +703,12 @@ class DeviceDetection:
             cause = pending  # Refresh on the start page waited for the task: it stays there
         elif cause is None:
             cause = pending or Cause.REFRESH_IN_VIEW
-        # Why, and the device open now: where the user goes once it is done (navigation).
-        self._asked = (cause, open_address(self.session) or reopen)
+        # Why, and the device open now: where the user goes once it is done (navigation). That
+        # device is the one to open again when it is still there, among several (None: none).
+        current_uri = open_address(self.session) or reopen
+        self._asked = (cause, current_uri)
         log.info("device detection: %s", "again, a device is open" if self.session is not None
                  else "no device is open")
-        # The device to open again when it is still there, among several (None: none).
-        current = getattr(self.session, "storage", None)
-        current_uri = getattr(current, "device_uri", None) or reopen
 
         def done(result):
             if isinstance(result, DeviceChoices):

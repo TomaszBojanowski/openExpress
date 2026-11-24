@@ -195,7 +195,7 @@ def remembered_update_text(entry, now: datetime | None = None) -> str:
     if recorded is not None:
         return checked_text(update_state_text(recorded.state, recorded.count, recorded.only),
                             recorded.at, now)
-    last = entry.update_check.at if entry.update_check is not None else entry.update_found
+    last = known_devices.last_update_check(entry)
     return not_checked_since(last) if last is not None else connect
 
 
@@ -262,14 +262,24 @@ def with_activities_to_upload(text: str, record: dict | None, to_sync) -> str:
     return text
 
 
-def primary_wearable_text(wearable) -> str:
-    """The subtitle of "Primary Wearable" (devicelist.PrimaryWearable), in the words of
-    "Primary Training Device"."""
-    if not wearable.set:
+def primary_device_text(is_set: bool, is_this_device: bool, name: str | None) -> str:
+    """The subtitle of "Primary Training Device" and of "Primary Wearable"."""
+    if not is_set:
+        # TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
+        # has none set
         return _("Not set")
-    if wearable.is_this_device:
+    if is_this_device:
+        # TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
+        # device shown
         return _("This device")
-    return wearable.name or _("Another device")
+    # TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
+    # of the account, its name not known
+    return name or _("Another device")
+
+
+def primary_wearable_text(wearable) -> str:
+    """The subtitle of "Primary Wearable" (devicelist.PrimaryWearable)."""
+    return primary_device_text(wearable.set, wearable.is_this_device, wearable.name)
 
 
 def primary_wearable_tooltip() -> str:

@@ -235,7 +235,8 @@ def test_making_the_device_the_primary_training_device(click, words, changed):
     calls = []
     win = _window(_primary_training_text=MainWindow._primary_training_text,
                   set_primary_training=lambda button=None: calls.append(button))
-    MainWindow.confirm_primary_training(win, types.SimpleNamespace(unit_id=None))
+    MainWindow.confirm_primary_training(
+        win, types.SimpleNamespace(unit_id=None, is_this_device=False, name=""))
     click(words, until=lambda: len(calls) == changed and not click.shown[-1].get_mapped())
 
 
@@ -421,7 +422,8 @@ def _primary_training(ctx):
 
     win = _escape_window(ctx, _primary_training_text=MainWindow._primary_training_text,
                          set_primary_training=_note(ctx, "set_primary_training"))
-    MainWindow.confirm_primary_training(win, types.SimpleNamespace(unit_id=None))
+    MainWindow.confirm_primary_training(
+        win, types.SimpleNamespace(unit_id=None, is_this_device=False, name=""))
 
 
 def _off_account_window(ctx):

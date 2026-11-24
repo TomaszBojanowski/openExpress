@@ -330,11 +330,7 @@ def _snapshots(where: Path) -> list[Path]:
 
 
 def _load(path: Path) -> dict:
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    return data if isinstance(data, dict) else {}
+    return paths.read_json_object(path) or {}
 
 
 def _last(where: Path, kind: str) -> dict:

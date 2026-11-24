@@ -643,7 +643,7 @@ def _history_line(line: dict) -> str:
         # TRANSLATORS: in a line of the connection log (`diagnostics`); {crash} is in English, as
         # the device logs it ("RTL Trap at 2026-10-20 22:24:06, error 0x003, …")
         parts.append(_("last crash: {crash}").format(crash=found[0].words()))
-    via = _("USB drive") if line["via"] == "drive" else "MTP"
+    via = _connection_word(line["via"] == "drive")
     when = history.local_time(line).strftime("%Y-%m-%d %H:%M")
     return f"{when} {via}: " + ", ".join(parts)
 
@@ -664,6 +664,11 @@ def storage_id(st) -> str:
         return st.label
     name = getattr(st, "volume_name", None)
     return f"usb-drive:{name}" if name else "usb-drive"
+
+
+def _connection_word(drive: bool) -> str:
+    """How a device is connected, in a line of the command line."""
+    return _("USB drive") if drive else "MTP"
 
 
 def cmd_info(args) -> int:
@@ -1194,7 +1199,7 @@ def _print_status(s, entry, listed, client, now) -> None:
     from openexpress.gui import words
 
     drive = s.found.kind == "ums"
-    how = _("USB drive") if drive else "MTP"  # the window's pair of names
+    how = _connection_word(drive)
     if not s.ok:
         print(" · ".join((_("Garmin device"), how, _("its details were not read"))))
         return
@@ -1312,7 +1317,7 @@ def _status_updates(entry, software: str, now) -> str:
         if recorded is not None:
             return words.checked_text(
                 _update_words(recorded.state, recorded.count, recorded.only), recorded.at, now)
-        last = entry.update_check.at if entry.update_check is not None else entry.update_found
+        last = known_devices.last_update_check(entry)
         if last is not None:
             return words.not_checked_since(last)
     return _("not checked yet (openexpress status --online checks it)")
@@ -1405,7 +1410,7 @@ def cmd_devices(args) -> int:
             return 0
         print(_("Devices this installation has seen:"))
         for number, d in enumerate(devices, 1):
-            how = _("USB drive") if d.kind == "ums" else "MTP"  # the window's pair of names
+            how = _connection_word(d.kind == "ums")
             print(f"  {number}. " + " · ".join((
                 d.description, d.part_number,
                 _("Software {version}").format(version=d.software_version), how,

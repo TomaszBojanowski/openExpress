@@ -733,9 +733,7 @@ class UploadGate:
             return False
         if consent_type not in self._consents:
             try:
-                self._consents[consent_type] = consent_granted(
-                    self.client.consent(consent_type), consent_type,
-                    lambda: self.client.profile_country(fresh=True))
+                self._consents[consent_type] = _consent_given(self.client, consent_type)
             except (Unauthorized, ClockSkew):
                 raise
             except Exception as e:  # noqa: BLE001 - anything unclear means "no"
@@ -750,15 +748,19 @@ def check_upload_allowed(client) -> UploadGate:
     return gate
 
 
+def _consent_given(client, consent_type: str) -> bool:
+    """Whether the account gives this consent. Decided on what the account says now: the
+    country asked anew, never as kept (answers)."""
+    return consent_granted(client.consent(consent_type), consent_type,
+                           lambda: client.profile_country(fresh=True))
+
+
 def _check_upload_allowed(client) -> UploadGate:
     """Ask Garmin Connect whether data may be uploaded. Never assumes "yes": a missing,
     empty or unreadable answer and a failed request all block uploads. An expired login
     or a wrong clock is raised as such."""
     try:
-        # Whether data may be uploaded is decided on what the account says now: the country
-        # asked anew, never as kept (answers).
-        if not consent_granted(client.consent(UPLOAD_CONSENT), UPLOAD_CONSENT,
-                               lambda: client.profile_country(fresh=True)):
+        if not _consent_given(client, UPLOAD_CONSENT):
             return UploadGate(NO_CONSENT)
         preference = client.device_sync_preference()
     except (Unauthorized, ClockSkew):

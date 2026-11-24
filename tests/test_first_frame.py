@@ -19,7 +19,7 @@ def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, m
     from openexpress import netstatus
     from openexpress.gui import app
     from openexpress.gui.detection import DeviceChoices
-    from openexpress.gui.device_page import remember_update_found
+    from openexpress.tile_facts import note_update_check
 
     # An opening before, on a window of chosen methods (as in test_tile_facts): the account
     # came, the devices were counted, the fēnix's page found an update. What the tiles said
@@ -29,7 +29,7 @@ def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, m
     before._set_account(ACCOUNT)
     _run(before)
     fenix = next(s for s in before.connected.devices if s.unit_id == FENIX)
-    remember_update_found(fenix.device, [types.SimpleNamespace(
+    note_update_check(fenix.device, [types.SimpleNamespace(
         title="Map Region Grouping file", version="2.31", is_system=False)])
     before._render_start()
     assert dict(_said(before)) == LAST

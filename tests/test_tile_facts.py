@@ -512,7 +512,7 @@ def _said(win):
 
 @pytest.mark.needs_display
 def test_opened_again_the_first_frame_says_what_the_last_one_said(four):
-    from openexpress.gui.device_page import remember_update_found
+    from openexpress.tile_facts import note_update_check
 
     # The first opening: nothing kept yet.
     win = _window(four())
@@ -521,7 +521,7 @@ def test_opened_again_the_first_frame_says_what_the_last_one_said(four):
     win._set_account(ACCOUNT)  # the account's list comes
     _run(win)  # the counts of the devices of the account
     fenix = next(s for s in win.connected.devices if s.unit_id == FENIX)
-    remember_update_found(fenix.device, [types.SimpleNamespace(
+    note_update_check(fenix.device, [types.SimpleNamespace(
         title="Map Region Grouping file", version="2.31", is_system=False)])
     win._render_start()  # back from the fēnix's page, which checked its updates
     last = _said(win)

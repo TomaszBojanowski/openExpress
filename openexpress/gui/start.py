@@ -18,7 +18,7 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 from openexpress import devicelist, tile_facts  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
 from openexpress.gui import sports  # noqa: E402
-from openexpress.gui.window_tasks import chip, wrapping_line  # noqa: E402
+from openexpress.gui.window_tasks import chip, new_spinner, wrapping_line  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     last_seen_tooltip,
     never_synced,
@@ -533,8 +533,7 @@ class StartPage:
         self.notice_group = Adw.PreferencesGroup(visible=False)
         self.notice = Adw.ActionRow()
         self.notice_icon = Gtk.Image(icon_name=APP_ID, pixel_size=32)
-        self.notice_spinner = (Adw.Spinner() if hasattr(Adw, "Spinner")
-                               else Gtk.Spinner(spinning=True))
+        self.notice_spinner = new_spinner()
         self.notice.add_prefix(self.notice_icon)
         self.notice.add_prefix(self.notice_spinner)
         self.notice_group.add(self.notice)
@@ -899,7 +898,7 @@ def last_sync_details(said) -> Gtk.Box:
 
 def _opening_spinner(size: int):
     """The spinner of a tile or a row being opened (set_opening), hidden until then."""
-    spinner = Adw.Spinner() if hasattr(Adw, "Spinner") else Gtk.Spinner(spinning=True)
+    spinner = new_spinner()
     spinner.set_size_request(size, size)
     spinner.set_visible(False)
     return spinner

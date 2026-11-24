@@ -24,11 +24,11 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
-from gi.repository import Adw, Gdk, Gio, GLib, Graphene, Gtk  # noqa: E402
+from gi.repository import Adw, Gio, GLib, Graphene, Gtk  # noqa: E402
 
 from openexpress import applog, diagnostics, freeing, history, status  # noqa: E402
 from openexpress.device.storage import DeviceNotResponding  # noqa: E402
-from openexpress.gui import words  # noqa: E402
+from openexpress.gui import palette, words  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
     Section,
     read_diagnostics,
@@ -337,12 +337,6 @@ def _parts(facts: status.Facts) -> list[tuple[str, int]]:
     return parts
 
 
-def _colour(kind: str) -> Gdk.RGBA:
-    rgba = Gdk.RGBA()
-    rgba.parse(PALETTE[kind])
-    return rgba
-
-
 def _bar(facts: status.Facts) -> Gtk.DrawingArea:
     """The one drawing of its own of the page: the kinds of file side by side, then the free
     space as the track."""
@@ -364,7 +358,7 @@ def _bar(facts: status.Facts) -> Gtk.DrawingArea:
         for kind, size in parts:
             w = width * size / capacity
             if w >= 1:
-                rgba = _colour(kind)
+                rgba = palette.rgba(PALETTE[kind])
                 cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, 1)
                 cr.rectangle(x, 0, max(w - 2, 1.5), height)
                 cr.fill()
@@ -384,7 +378,7 @@ def _paint_dot(widget, cr, kind: str, x: float, y: float) -> None:
         cr.arc(x, y, 4.2, 0, 6.2832)
         cr.stroke()
         return
-    rgba = _colour(kind)
+    rgba = palette.rgba(PALETTE[kind])
     cr.set_source_rgba(rgba.red, rgba.green, rgba.blue, 1)
     cr.arc(x, y, 5, 0, 6.2832)
     cr.fill()
