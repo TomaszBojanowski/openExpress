@@ -231,7 +231,7 @@ def test_updates_page_with_several_updates(monkeypatch):
 
     states = []
     win = stand_in(
-        session=types.SimpleNamespace(device=types.SimpleNamespace(
+        session=device_session(device=types.SimpleNamespace(
             description="Test watch", software_version_str="23.39")),
         sections={"updates": Section()}, busy=False, _action_buttons=[],
         _set_update_state=lambda new, staged=(), not_installed=(): states.append(len(new)), confirm_update=lambda u: None,

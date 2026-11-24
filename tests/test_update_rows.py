@@ -5,7 +5,7 @@ Components" the rows with a button first."""
 import types
 
 import pytest
-from fakes import software_update, window_methods
+from fakes import device_session, software_update, window_methods
 from fakes import window as stand_in
 
 
@@ -34,7 +34,7 @@ def _page(items):
             return self.groups[-1]
 
     win = stand_in(
-        session=types.SimpleNamespace(device=types.SimpleNamespace(
+        session=device_session(device=types.SimpleNamespace(
             description="Made-up device", software_version_str="9.00")),
         sections={"updates": Section()}, busy=False, _action_buttons=[],
         _set_update_state=lambda new, staged=(), not_installed=(): None,

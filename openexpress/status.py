@@ -289,7 +289,7 @@ def read(session, ask_device: bool = True) -> Facts:
     # A test drive carries a real device's unit ID: when that device was first seen is not its.
     known = known_devices.load().get(unit) if unit and not test_drive else None
     t = told(session)
-    plan = (freeing.plan(storage, device, getattr(session, "client", None))
+    plan = (freeing.plan(storage, device, session.client)
             if storage is not None and ask_device else None)
     return Facts(
         free=t.free, capacity=t.capacity,

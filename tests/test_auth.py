@@ -7,6 +7,7 @@ import weakref
 from dataclasses import asdict
 
 import pytest
+from fakes import device_session
 from fakes import window as stand_in
 
 from openexpress import applog, paths, sync
@@ -99,7 +100,7 @@ def test_logout_in_the_window_removes_the_saved_login():
 
     saved_login()
     said, refreshed = [], []
-    win = stand_in(session=object(), toast=lambda text, on_preferences=False: said.append(text),
+    win = stand_in(session=device_session(), toast=lambda text, on_preferences=False: said.append(text),
                    refresh_device=lambda **_kw: refreshed.append(True))
     MainWindow.logout(win)
     assert not login_file().exists()

@@ -2,12 +2,11 @@
 losing the data they hold when their software is updated. openExpress then warns before
 every update of such a device, in the window and on the command line, and says to sync
 first; it does not hold the update back. All answers are made up."""
-
 import logging
 import types
 
 import pytest
-from fakes import in_language
+from fakes import device_session, in_language
 from fakes import window as stand_in
 from test_updates_system import WARNING_EN, _below, server_answer
 
@@ -127,7 +126,7 @@ def _warnings(monkeypatch, part, **session):
     items = updates.parse_updates(lower_keys(server_answer()))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    win = stand_in(session=types.SimpleNamespace(
+    win = stand_in(session=device_session(
         device=types.SimpleNamespace(software_version_str="23.39"), **session),
         updates_cache=items)
     MainWindow.confirm_update(win, next(u for u in items if u.part_number == part))
@@ -209,7 +208,7 @@ def test_the_question_never_asks_the_server(monkeypatch):
 
 def _session(device_root, unit_info):
     storage = LocalStorage(device_root)
-    return types.SimpleNamespace(
+    return device_session(
         storage=storage, device=parse(storage.read("GARMIN/GarminDevice.xml")),
         unit_info_answer=None, client=types.SimpleNamespace(
             software_updates=lambda raw, include_reinstalls=False: {}, unit_info=unit_info))

@@ -518,7 +518,7 @@ class UpdatesPage:
         All, one question and one copy (a drive is ejected once after all of them; each
         Install ejects it after its own)."""
         d = self.session.device
-        mass_storage = getattr(self.session, "mass_storage", False)
+        mass_storage = self.session.mass_storage
         installed = software_text(d.software_version_str)
         todo = detail = note = advice = None
         buttons = []

@@ -763,7 +763,7 @@ def _overview_window(answers, device_root=None, unit_info=UNIVERSAL, datatypes=(
                 done(result)
         (later.append(run) if win.hold else run())
 
-    session = types.SimpleNamespace(
+    session = device_session(
         client=types.SimpleNamespace(universal_maps=universal_maps,
                                      unit_info=lambda unit_id, part_number: unit_info),
         device=types.SimpleNamespace(raw=b"xml", unit_id=3000000002, part_number="006-B0000-00",
@@ -996,7 +996,7 @@ def _refresh_window(page, device_root, maps_answers=(), updates_answers=()):
         win.shown.append("updates")
         win._set_update_state(updates.pending(items), updates.staged(items))  # likewise
 
-    session = types.SimpleNamespace(
+    session = device_session(
         client=types.SimpleNamespace(
             universal_maps=lambda raw: server("maps", maps_answers),
             unit_info=lambda unit_id, part_number: (unit_infos.append(unit_id), UNIVERSAL)[1],
@@ -1800,7 +1800,7 @@ def test_the_window_refuses_before_it_asks_to_install(server, device_root, monke
     storage = LocalStorage(device_root)
     win = stand_in(
         maps_cache=[japan], error=lambda title, body: said.append((title, body)),
-        session=types.SimpleNamespace(storage=storage, client=types.SimpleNamespace(
+        session=device_session(storage=storage, client=types.SimpleNamespace(
             consumer=types.SimpleNamespace(url_salt="salt"))))
     app.MainWindow.confirm_map(win, japan)
     assert said == [("Map Not Installed", text)] and asked == []

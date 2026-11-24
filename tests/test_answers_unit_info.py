@@ -2,10 +2,9 @@
 opened again does not ask unit-info again (7 days, only the fields the program reads), Check
 Again of the maps asks anew; the country of the account is kept an hour for the maps, but
 whether data may be uploaded asks it anew. All devices, answers and accounts are made up."""
-import types
 from datetime import timedelta
 
-from fakes import RTL515_XML, UpdateServer
+from fakes import RTL515_XML, UpdateServer, device_session
 
 from openexpress import answers, service
 from openexpress.connect import GarminClient
@@ -18,7 +17,7 @@ ANSWER = {"unitid": 3000000003, "serialnumber": "SER0000001", "mapupdatetype": "
 
 
 def _session(server):
-    return types.SimpleNamespace(client=GarminClient(Settings(), None, None, server),
+    return device_session(client=GarminClient(Settings(), None, None, server),
                                  device=parse(RTL515_XML.encode()))
 
 
@@ -86,7 +85,7 @@ def test_the_maps_take_the_country_kept_for_an_hour(monkeypatch):
     client = make_client([{"unitid": 1234567890}], **{location: resp})
     service.require_account_device(client, 1234567890)
     for _opening in range(2):
-        s = types.SimpleNamespace(logged_in=True, ownership_error=None, client=client,
+        s = device_session(logged_in=True, ownership_error=None, client=client,
                                   account_country_asked=False, account_country_code=None)
         assert service.account_country(s) == "KR"
     assert client.http.paths().count(location) == 1

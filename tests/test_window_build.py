@@ -2,12 +2,10 @@
 its parts wire together: its actions, the main menu and the start page's menu, the sections of
 its side panel, the size saved when it closes, and the bar at the bottom (spinner, bar, fraction,
 a wait of known length with Stop Waiting, then nothing)."""
-
 import threading
-import types
 
 import pytest
-from fakes import descendants, turn_until
+from fakes import descendants, device_session, turn_until
 
 pytestmark = pytest.mark.needs_display
 
@@ -133,7 +131,7 @@ def test_the_bar_at_the_bottom(window):
     window.fraction(1, 4)
     assert turn_until(lambda: window.progress_bar.get_fraction() == 0.25)
     # TrueUp waits for Garmin Connect: the bar fills and the wait can be stopped.
-    window.session = types.SimpleNamespace(stop_waiting=threading.Event(), mass_storage=False,
+    window.session = device_session(stop_waiting=threading.Event(), mass_storage=False,
                                            logged_in=False, ownership_error=None)
     window.progress(TimedWait("Waiting 3 min 20 s for Garmin Connect…", seconds=200,
                               done=0.4))

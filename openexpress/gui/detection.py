@@ -543,7 +543,7 @@ class DeviceDetection:
             log.info("mount removed (%s): %s, showing no device (a task is running: %s)",
                      where, "the open device" if ours else "a Garmin device",
                      bool(self.busy))
-            if ours and getattr(s, "mass_storage", False):
+            if ours and s.mass_storage:
                 # Its place on USB, kept: a watch goes into its Garmin USB mode once it is
                 # ejected and comes back as 091e:0003.
                 note_drive_place(getattr(s.storage, "usb", None))

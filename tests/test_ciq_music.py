@@ -4,7 +4,7 @@ import logging
 import uuid
 
 import pytest
-from fakes import RunNow, in_language, step_words
+from fakes import RunNow, device_session, in_language, step_words
 from fakes import window as stand_in
 
 from openexpress import ciq, errors, music, proto
@@ -208,7 +208,7 @@ def test_music_page_on_a_device_without_media(device_root):
     from openexpress.gui.app import MainWindow
 
     st = LocalStorage(device_root)
-    session = types.SimpleNamespace(device=parse(st.read("GARMIN/GarminDevice.xml")), storage=st)
+    session = device_session(device=parse(st.read("GARMIN/GarminDevice.xml")), storage=st)
     shown, started = [], []
     # A page of information (Section.show_info), not an error.
     section = types.SimpleNamespace(show_info=lambda text, child=None: shown.append(text))
@@ -220,13 +220,12 @@ def test_music_page_on_a_device_without_media(device_root):
 
 
 def test_music_page_reads_the_device_when_it_has_media(iq_device):
-    import types
 
     from openexpress.gui.app import MainWindow
 
     st, dev = iq_device
     started = []
-    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st),
+    win = stand_in(session=device_session(device=dev, storage=st),
                    sections={}, _load=lambda *a: started.append(a[0]),
                    show_music=None)
     MainWindow.load_music(win)
@@ -353,7 +352,6 @@ def test_window_playlist_summary(iq_device, library):
 
 
 def test_window_add_playlist_without_usable_tracks_only_reports(iq_device, library):
-    import types
 
     from openexpress.gui.app import MainWindow
 
@@ -363,7 +361,7 @@ def test_window_add_playlist_without_usable_tracks_only_reports(iq_device, libra
 
     run_task = RunNow(on_call=lambda call: events.append(call.title))
 
-    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st),
+    win = stand_in(session=device_session(device=dev, storage=st),
                    run_task=run_task, _playlist_summary=MainWindow._playlist_summary,
                    error=lambda title, text, private=False: events.append((title, text, private)))
     MainWindow.add_playlist(win, library)
@@ -462,7 +460,7 @@ def test_sync_reports_an_unreadable_app_list_without_failing(iq_device, device_r
         def require_verified(self, unit_id=None):
             raise RuntimeError("no store request expected")
 
-    s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
+    s = device_session(storage=st, device=dev, client=Client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
     assert service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors, []) == []
@@ -716,7 +714,7 @@ def test_sync_mentions_apps_left_for_the_phone(no_usb_apps):
         def require_verified(self, unit_id=None):
             raise RuntimeError("names are cosmetic")
 
-    s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
+    s = device_session(storage=st, device=dev, client=Client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
     lines = step_words(
@@ -892,14 +890,13 @@ def test_the_preview_of_an_install_with_apps_waiting_and_a_list_that_does_not_ma
 
 
 def test_window_offers_only_forget_for_apps_without_files(iq_device):
-    import types
 
     from openexpress.gui.app import MainWindow
 
     st, dev = iq_device
     app = ciq.InstalledApp(FACE, 3, "FaceIt2", True, filename="GACF4619", has_files=False)
     asked = []
-    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st),
+    win = stand_in(session=device_session(device=dev, storage=st),
                    confirm_forget_app=asked.append)
     MainWindow.confirm_remove_app(win, app)
     assert asked == [app]  # the usual "delete from the device" dialog is not shown
@@ -1003,7 +1000,7 @@ def test_window_toggle_passes_the_type(twin_device):
     widget = ciq.read_installed(dev, st).find(WEATHER, 2)
     toasts = []
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=st), busy=False, toast=toasts.append,
+        session=device_session(device=dev, storage=st), busy=False, toast=toasts.append,
         run_task=RunNow())
     row = types.SimpleNamespace(get_active=lambda: False)  # the switch was turned off
     MainWindow.toggle_app(win, widget, row, 0)
@@ -1198,7 +1195,7 @@ def apps_page_ways(st, dev, monkeypatch):
 
     monkeypatch.setattr(ciq, "StoreApi", FakeStore)
     loaded = []
-    session = types.SimpleNamespace(device=dev, storage=st, logged_in=True, ownership_error=None,
+    session = device_session(device=dev, storage=st, logged_in=True, ownership_error=None,
                                     client=CountingClient(),
                                     settings=types.SimpleNamespace(locale="en_US"))
     win = stand_in(session=session, sections={"apps": None}, show_apps=None,
@@ -1476,7 +1473,6 @@ def test_cli_tells_each_app_before_the_usb_connection(hidden_apps, apps_cli, mon
 def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatch, broken):
     """The window's error says what was written, then each app that was not, then the USB
     connection; with the session whole and only the mount failed, that the app was written."""
-    import types
 
     from openexpress import service
     from openexpress.device.storage import RemountFailed
@@ -1493,7 +1489,7 @@ def test_window_tells_each_app_before_the_usb_connection(hidden_apps, monkeypatc
     client.device_messages = lambda unit_id: [FACE_MESSAGE]
     errors = []
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=st, client=client),
+        session=device_session(device=dev, storage=st, client=client),
         _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
         error=lambda title, text: errors.append((title, text)),
         load_section=lambda key, force=False: None,
@@ -1588,7 +1584,7 @@ def test_sync_does_not_use_ptp(hidden_apps, monkeypatch):
             raise RuntimeError("names are cosmetic")
 
     client = Client()
-    s = types.SimpleNamespace(storage=st, device=dev, client=client,
+    s = device_session(storage=st, device=dev, client=client,
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
     lines = step_words(
@@ -1969,7 +1965,6 @@ def test_cli_tells_the_removal_before_the_usb_connection(hidden_spot, apps_cli, 
 
 
 def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeypatch):
-    import types
 
     from openexpress.device.storage import RemountFailed
     from openexpress.gui import app as gui
@@ -1998,7 +1993,7 @@ def test_window_tells_the_removal_before_the_usb_connection(hidden_spot, monkeyp
     run_task = RunNow(error=lambda title, text: errors.append((title, text)))
 
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=st), toast=lambda text: None,
+        session=device_session(device=dev, storage=st), toast=lambda text: None,
         error=lambda title, text: errors.append((title, text)), run_task=run_task,
         load_section=lambda key, force=False: reads.append(key))
     MainWindow.confirm_remove_app(win, ciq.read_installed(dev, st).find(FACE))
@@ -2194,7 +2189,7 @@ def test_the_window_asks_to_remove_a_hidden_app_with_its_settings(hidden_spot, i
 
     in_the_window("Adw", types.SimpleNamespace(
         AlertDialog=AlertDialog, ResponseAppearance=types.SimpleNamespace(DESTRUCTIVE=1)))
-    win = stand_in(session=types.SimpleNamespace(device=dev, storage=st))
+    win = stand_in(session=device_session(device=dev, storage=st))
     gui_app.MainWindow.confirm_remove_app(win, app)
     assert asked == [
         ("The app and its settings will be deleted from the device over a direct USB "
@@ -2673,7 +2668,7 @@ def test_failed_copy_in_a_sync_is_an_error_and_writes_nothing(iq_device, no_copi
             raise RuntimeError("names are cosmetic")
 
     client = Client()
-    s = types.SimpleNamespace(storage=st, device=dev, client=client,
+    s = device_session(storage=st, device=dev, client=client,
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
     assert service._install_queued_apps(s, [FACE_MESSAGE], lambda m: None, errors, []) == []
@@ -2929,7 +2924,6 @@ def test_order_is_blocked_while_changes_wait_or_entries_are_unreadable(order_dev
 
 
 def test_window_restores_the_order_through_the_shared_function(order_device):
-    import types
 
     from openexpress.gui.app import MainWindow
 
@@ -2937,7 +2931,7 @@ def test_window_restores_the_order_through_the_shared_function(order_device):
     copy = ciq.load_app_list_copy(dev, "03.04.05")
     toasts, loads, tasks = [], [], []
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
+        session=device_session(device=dev, storage=st), toast=toasts.append,
         load_section=lambda key, force=False: loads.append((key, force)),
         run_task=RunNow(on_call=lambda call: tasks.append(call.title)))
     MainWindow.restore_order(win, copy)
@@ -2952,7 +2946,6 @@ def test_window_restores_the_order_through_the_shared_function(order_device):
 
 
 def test_window_says_so_when_the_order_is_already_the_same(order_device):
-    import types
 
     from openexpress.gui.app import MainWindow
 
@@ -2960,7 +2953,7 @@ def test_window_says_so_when_the_order_is_already_the_same(order_device):
     same = ciq.AppListCopy(path=None, name="GARMIN-APPS x", state=ciq.read_installed(dev, st))
     toasts = []
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=st), toast=toasts.append,
+        session=device_session(device=dev, storage=st), toast=toasts.append,
         load_section=lambda key, force=False: None,
         run_task=RunNow())
     MainWindow.restore_order(win, same)
@@ -3231,7 +3224,7 @@ def test_window_remembers_updates_until_the_device_is_unplugged(hidden_update, m
     client.device_messages = lambda unit_id: [FACE_MESSAGE]
     toasts, shown = [], []
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=st, client=client),
+        session=device_session(device=dev, storage=st, client=client),
         _updated_apps=set(), toast=toasts.append, progress=lambda text: None,
         error=lambda title, text: pytest.fail(text),
         load_section=lambda key, force=False: None, show_device=lambda: shown.append(1),
@@ -3456,7 +3449,7 @@ def test_flatpak_sync_says_why_the_app_stays_in_the_queue(flatpak_spot, backups)
         def require_verified(self, unit_id=None):
             raise RuntimeError("names are cosmetic")
 
-    s = types.SimpleNamespace(storage=st, device=dev, client=Client(),
+    s = device_session(storage=st, device=dev, client=Client(),
                               settings=types.SimpleNamespace(locale="en_US"))
     errors = []
     lines = step_words(
@@ -3639,7 +3632,6 @@ def test_an_app_that_is_only_queued_is_not_refused_for_slots(flatpak_spot, monke
 
 
 def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
-    import types
 
     from openexpress import service
     from openexpress.gui.app import MainWindow
@@ -3653,7 +3645,7 @@ def test_window_install_refuses_before_asking_garmin(iq_device, monkeypatch):
     client.device_messages = lambda unit_id: []
     errors = []
     win = stand_in(
-        session=types.SimpleNamespace(device=dev, storage=st, client=client),
+        session=device_session(device=dev, storage=st, client=client),
         _updated_apps=set(), toast=lambda text: pytest.fail(text), progress=lambda text: None,
         error=lambda title, text: errors.append((title, text)),
         load_section=lambda key, force=False: None,

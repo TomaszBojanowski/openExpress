@@ -4,7 +4,6 @@ Express 8 and later), or the container attached to the WiX bootstrapper, the MSI
 the streams of the DLLs (before). What is said, and logged, when a file is neither or one is
 missing. No installer or data of Garmin's is used: the files are made up, and 7z is stood
 in for; the test of the real installers reads them from testdata/ and is skipped without."""
-
 import io
 import json
 import re
@@ -14,7 +13,7 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from fakes import descendants, in_language, preferences_window
+from fakes import descendants, device_session, in_language, preferences_window
 from fakes import window as stand_in
 
 from openexpress import installer
@@ -292,7 +291,7 @@ def _banner_of_the_setup() -> dict:
     banner = types.SimpleNamespace(set_title=lambda text: said.update(title=text),
                                    set_button_label=lambda text: said.update(button=text),
                                    set_revealed=lambda on: said.update(revealed=on))
-    win = stand_in(banner=banner, session=types.SimpleNamespace(
+    win = stand_in(banner=banner, session=device_session(
         mass_storage=False, client=types.SimpleNamespace(consumer=None)))
     MainWindow._update_banner(win)
     return said

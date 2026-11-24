@@ -533,7 +533,7 @@ class StartWindow:
                 continue
             if s is not None and self._is_open(source):
                 if (service.not_synced(s)
-                        or getattr(s, "ownership_error", None) is not None):
+                        or s.ownership_error is not None):
                     continue
                 holder, device, storage = s, s.device, s.storage
             else:

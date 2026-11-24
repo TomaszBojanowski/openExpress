@@ -17,10 +17,19 @@ from datetime import UTC, datetime
 Call = namedtuple("Call", "title fn done failed device in_page button failed_title")
 
 
+class _Session(types.SimpleNamespace):
+    """A stand-in session whose `mass_storage` is read from its storage, as the real one's."""
+
+    @property
+    def mass_storage(self) -> bool:
+        return bool(getattr(self.storage, "mass_storage", False))
+
+
 def device_session(**fields):
     """A stand-in of service.DeviceSession: every field of the real one at its default (storage,
-    device, settings and client None) unless given; other names (such as the real one's
-    properties, mass_storage, logged_in) as given."""
+    device, settings and client None) unless given; `mass_storage`, as the real one's property,
+    read from its storage unless given; other names (such as the real one's other properties,
+    logged_in) as given."""
     import dataclasses
 
     from openexpress import service
@@ -33,7 +42,8 @@ def device_session(**fields):
             values[f.name] = f.default_factory()
         else:
             values[f.name] = None
-    return types.SimpleNamespace(**{**values, **fields})
+    made = types.SimpleNamespace if "mass_storage" in fields else _Session
+    return made(**{**values, **fields})
 
 
 class Waits:

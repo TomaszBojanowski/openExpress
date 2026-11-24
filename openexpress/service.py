@@ -136,14 +136,14 @@ def unit_info(session) -> dict:
     its own thread without asking) and in the kept answers (answers.LIFETIMES, only the
     fields the program reads), which make threads asking at once share one request. A
     failed request is not kept, so the next one asks again."""
-    answer = getattr(session, "unit_info_answer", None)
+    answer = session.unit_info_answer
     if answer is None:
         device = session.device
         answer = (session.client.unit_info(device.unit_id, device.part_number)
                   if device.unit_id else {})
         session.unit_info_answer = answer
         note_model_name(device, answer)  # the same name, whichever thread notes it
-        heard = getattr(session, "on_unit_info", None)
+        heard = session.on_unit_info
         if heard is not None:
             heard()  # the window: the gate of the sync may close (note_unit_info)
     return answer
@@ -384,7 +384,7 @@ def note_unit_info(s) -> bool:
     not asked about the device (check_session)."""
     if s.mass_storage or s.sync_refusal is not None:
         return False
-    s.sync_refusal = mtp_sync_refusal(s.device, getattr(s, "unit_info_answer", None))
+    s.sync_refusal = mtp_sync_refusal(s.device, s.unit_info_answer)
     if s.sync_refusal is None:
         return False
     log.info("sync: Garmin Connect does not take the device's data (%s): no sync in the window",
