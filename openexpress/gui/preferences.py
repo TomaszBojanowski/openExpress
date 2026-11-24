@@ -270,9 +270,9 @@ def resolve_account(win) -> None:
     opened (its ownership check read them, also when it is not on the account), else, if
     they are wanted, asked now."""
     s = win.session
-    listed = getattr(s, "account_devices", None) if s is not None else None
+    listed = s.account_devices if s is not None else None
     if listed is None and s is not None:
-        listed = getattr(getattr(s, "ownership_error", None), "devices", None)
+        listed = getattr(s.ownership_error, "devices", None)
     if listed is not None:
         win._account_wanted = False
         # Not asked again; kept as any list of the account is, with the kinds it tells.

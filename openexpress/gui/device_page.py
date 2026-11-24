@@ -296,7 +296,7 @@ def device_name(s) -> str:
     GarminDevice.xml names it in capitals only ("EPIX"), from the session's unit-info or as
     remembered (known_devices.shown_name); else that name."""
     d = s.device
-    answer = getattr(s, "unit_info_answer", None)
+    answer = s.unit_info_answer
     model = known_devices.garmin_name(
         answer.get("devicemodel") if isinstance(answer, dict) else None)
     if model is None and d.unit_id:
@@ -375,7 +375,7 @@ def offers_account_picture(s) -> bool:
     """Whether the page may offer Get Picture From Account: a device not on the account
     (the ownership check said so), the user logged in, not a drive."""
     return (s is not None and s.logged_in and isinstance(s.ownership_error, NotAccountDevice)
-            and not getattr(s, "mass_storage", False))
+            and not s.mass_storage)
 
 
 def account_picture_row(win, s):
@@ -647,7 +647,7 @@ def open_device_kind(s, account) -> str | None:
     unit_id = getattr(d, "unit_id", None) or None
     if unit_id is None:
         return None
-    kind = "ums" if getattr(s, "mass_storage", False) else "mtp"
+    kind = "ums" if s.mass_storage else "mtp"
     summary = DeviceSummary(FoundDevice("", "", True, kind=kind), getattr(d, "description", ""),
                             getattr(d, "part_number", ""), "", unit_id)
     tiles = devicelist.tiles([summary], known_devices.load(), account,
@@ -893,10 +893,10 @@ class DevicePage:
             self.banner.set_button_label(None)
             self._banner_kind = "stalled"
             self.banner.set_revealed(True)
-        elif s is not None and getattr(s, "drive_refusal", None) is not None:
+        elif s is not None and s.drive_refusal is not None:
             # A drive openExpress does not sync needs neither the setup nor the account.
             self.banner.set_revealed(False)
-        elif (s is not None and getattr(s, "sync_refusal", None) is not None
+        elif (s is not None and s.sync_refusal is not None
               and s.client.consumer is not None):
             # Not synced over MTP: no account to sign in to for it; the setup stays, which its
             # updates and maps need.
@@ -947,7 +947,7 @@ class DevicePage:
             if key == "watch" and self.session is not None and force:
                 self.refresh_device(cause=Cause.REFRESH_IN_VIEW)
             return
-        if getattr(self.session, "mass_storage", False) and key in NOT_FOR_MASS_STORAGE:
+        if self.session.mass_storage and key in NOT_FOR_MASS_STORAGE:
             show_not_for_mass_storage(sec)  # no request, nothing read
             return
         # Only the loader of the page asked for is looked up.
@@ -998,7 +998,7 @@ class DevicePage:
         sec = self.sections["watch"]
         sec.clear()
         d = s.device
-        if getattr(s, "on_unit_info", None) is None:
+        if s.on_unit_info is None:
             # Its answer, asked for the picture or the maps, may close the gate of the sync.
             s.on_unit_info = lambda: GLib.idle_add(sync_gate_answered, self, s)
 
@@ -1049,14 +1049,14 @@ class DevicePage:
         self.storage_row = section_row(self, _("Device Storage"), "status", self.storage_bar)
         g.add(self.storage_row)
         render_space(self)
-        if getattr(s, "space", None) is None:
+        if s.space is None:
             refresh_space(self, s)  # not read with the device: now, in the background
 
         # A Garmin device in mass storage mode has no maps; one that is not synced says why
         # in place of the sync.
-        mass_storage = getattr(s, "mass_storage", False)
-        refused = getattr(s, "drive_refusal", None)
-        gated = getattr(s, "sync_refusal", None)
+        mass_storage = s.mass_storage
+        refused = s.drive_refusal
+        gated = s.sync_refusal
         if refused is not None:
             sec.group(_("USB Drive"), service.drive_sync_refusal_text(*refused))
         elif gated is not None:
@@ -1122,7 +1122,7 @@ class DevicePage:
 
         # Not synced (a drive, or behind the gate over MTP): nothing of the account about the
         # device, only the account itself.
-        about_device = not mass_storage and getattr(s, "sync_refusal", None) is None
+        about_device = not mass_storage and s.sync_refusal is None
         if s.logged_in or about_device:
             g = sec.group(_("Garmin Connect Account"))
         if s.logged_in:
@@ -1243,7 +1243,7 @@ class DevicePage:
         # The account is asked only about a device over MTP that is on it; the picture of a
         # drive comes from unit-info, which also tells its kind.
         on_account = (s.logged_in and s.ownership_error is None
-                      and not getattr(s, "mass_storage", False))
+                      and not s.mass_storage)
         texture = pictures.known(self, part)
         if texture is None:
             texture = cached_texture(part)
@@ -1253,7 +1253,7 @@ class DevicePage:
         if texture is not None:
             self._set_device_texture(texture)
             if (not on_account and not picture_address_known(s.device)) or (
-                    getattr(s, "mass_storage", False) and kind_untold(s.device)):
+                    s.mass_storage and kind_untold(s.device)):
                 # Off the account its address comes only from unit-info, while it is
                 # connected: asked now for the address alone, so that the picture can come
                 # back once the cache is cleared (a Venu 2). The file stays.
@@ -1325,7 +1325,7 @@ class DevicePage:
         text = update_state_text(
             state, self.update_count if state in ("available", "ready") else 0,
             self.update_only if state == "available" else None,
-            mass_storage=getattr(self.session, "mass_storage", False),
+            mass_storage=self.session.mass_storage,
             waiting=self.update_waiting)
         checked_at = self.update_checked_at
         if checked_at is not None:
@@ -1628,7 +1628,7 @@ class DevicePage:
                 show_satellite(self)
             self._show_last_sync()
             self._count_activities_again()
-            if getattr(s, "mass_storage", False) and summary.wrote_to_device:
+            if s.mass_storage and summary.wrote_to_device:
                 self.ask_to_eject(s)
 
         def failed(e):

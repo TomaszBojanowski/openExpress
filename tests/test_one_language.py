@@ -2,7 +2,6 @@
 ("Software X"), the free space, the USB mode ("USB Drive", "MTP"), the reason a device cannot
 be used with the account (only in the banner), "Last seen" and a version known only from the
 account. All data here is made up."""
-
 import re
 import time
 import types
@@ -10,7 +9,7 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from fakes import device_session, in_language, window_methods
+from fakes import device_session, in_language, show_remembered, window_methods
 from fakes import window as stand_in
 from test_updates_system import (
     BUNDLE_ENTRY,
@@ -314,7 +313,7 @@ def test_the_page_of_a_remembered_device_tells_last_seen_against_now(clock):
     known = _remembered()
     known.last_seen = (clock.current - timedelta(days=3, minutes=1)).timestamp()
     win = _window()
-    win._show_remembered(known)
+    show_remembered(win, known)
     label = win.remembered.seen_label
     assert label.get_label() == "Last seen 3 days ago"
     # As on its tile.

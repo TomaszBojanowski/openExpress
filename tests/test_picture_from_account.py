@@ -10,6 +10,7 @@ import requests
 from fakes import (
     RunNow,
     Widget,
+    device_session,
     replace_in_window,
 )
 from fakes import window as stand_in
@@ -95,7 +96,7 @@ def _picture_window(client, logged_in=False, ownership_error=None, monkeypatch=N
                           if path.read_bytes().startswith(PNG[:8]) else None)
     device = types.SimpleNamespace(unit_id=SECRET_UNIT, part_number="006-B0000-00")
     win = stand_in(
-        session=types.SimpleNamespace(device=device, client=client, logged_in=logged_in,
+        session=device_session(device=device, client=client, logged_in=logged_in,
                                       ownership_error=ownership_error),
         device_image=Widget(), device_picture=Widget(), shown=[], jobs=[])
     win._set_device_texture = win.shown.append
@@ -411,7 +412,7 @@ def test_an_open_drive_garmin_tells_no_kind_of_gets_unit_info_asked_once_a_run(p
     info = dict(_unit_info(), segmenttype="Outdoor", connectsupport="Enabled")
     client = PictureClient(unit_info=info)
     win = _picture_window(client, logged_in=True, monkeypatch=monkeypatch)
-    win.session.mass_storage = True
+    win.session.storage = types.SimpleNamespace(mass_storage=True)  # a drive
     win.show()
     assert win.shown == [("texture", PNG)]  # at once, from the cache
     _finish(win)
@@ -428,7 +429,7 @@ def test_an_open_drive_garmin_tells_no_kind_of_gets_unit_info_asked_once_a_run(p
     monkeypatch.setattr(devicelist, "_kind_told", set())
     again = PictureClient(unit_info=info)
     win = _picture_window(again, monkeypatch=monkeypatch)
-    win.session.mass_storage = True
+    win.session.storage = types.SimpleNamespace(mass_storage=True)  # a drive
     win.show()
     assert win.jobs == [] and again.asked == []
 
@@ -636,7 +637,7 @@ def test_the_button_only_for_a_device_off_the_account_without_a_picture(pictures
     win = _picture_window(client, logged_in=case != "not logged in", monkeypatch=monkeypatch)
     if case != "on the account":
         _off_account(win)
-    win.session.mass_storage = case == "a drive"
+    win.session.storage = types.SimpleNamespace(mass_storage=case == "a drive")
     win.show()
     while win.jobs:
         _finish(win)

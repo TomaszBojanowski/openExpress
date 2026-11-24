@@ -2,12 +2,11 @@
 read them), the Backup row, a remembered device's last sync and account details; on the Maps
 and Apps pages, the map update type Garmin gives unsupported maps and the app folders the
 device refused. All devices, backups and accounts are made up."""
-
 import types
 from datetime import datetime
 
 import pytest
-from fakes import device_session, in_language, record_sync
+from fakes import device_session, in_language, record_sync, show_remembered
 from fakes import window as stand_in
 
 from openexpress import i18n, sync
@@ -381,7 +380,7 @@ def test_the_page_of_a_remembered_device_has_the_details_of_its_last_sync():
     record_sync(known.unit_id, uploaded=1, downloaded=0, skipped_known=0,
                 errors=["download: HTTP 404"], lines=[])
     win = _window()
-    win._show_remembered(known)
+    show_remembered(win, known)
     row = win.remembered.last_sync_row
     assert row.get_enable_expansion() and row.get_tooltip_text()
     details = [t for t in _labels(row) if t and "HTTP 404" in t]
@@ -394,11 +393,11 @@ def test_a_remembered_device_never_synced_has_no_details():
     from fakes import remembered_window as _window
 
     win = _window()
-    win._show_remembered(_remembered())
+    show_remembered(win, _remembered())
     row = win.remembered.last_sync_row
     assert row.get_subtitle() == "Never synced" and not row.get_enable_expansion()
     assert row.get_tooltip_text() == "Never synced by this installation of openExpress"
-    win._show_remembered(_remembered())  # drawn again: the details once, none here
+    show_remembered(win, _remembered())  # drawn again: the details once, none here
     assert not row.get_enable_expansion()
 
 
@@ -413,7 +412,7 @@ def test_the_details_are_drawn_once_however_often_the_page_is():
                 errors=["download: HTTP 404"], lines=[])
     win = _window()
     for _n in range(3):
-        win._show_remembered(known)
+        show_remembered(win, known)
     row = win.remembered.last_sync_row
     assert len([t for t in _labels(row) if t and "HTTP 404" in t]) == 1
 
@@ -432,16 +431,16 @@ def test_the_page_of_a_remembered_device_says_what_the_account_says():
                 "primaryactivitytrackerindicator": True}]
     win = _window()
     win._account = account
-    win._show_remembered(known)
+    show_remembered(win, known)
     page = win.remembered
     assert page.account_group.get_visible()
     assert [(r.get_title(), r.get_subtitle()) for r in page.account_rows] == [
         ("Primary Wearable", "Venu 2")]
     win._account = None
-    win._show_remembered(known)
+    show_remembered(win, known)
     assert not page.account_group.get_visible()
     win._account = [dict(account[0], primaryactivitytrackersettingcapable=False), account[1]]
-    win._show_remembered(known)
+    show_remembered(win, known)
     assert not page.account_group.get_visible()
 
 

@@ -533,7 +533,7 @@ class StartWindow:
                 continue
             if s is not None and self._is_open(source):
                 if (service.not_synced(s)
-                        or getattr(s, "ownership_error", None) is not None):
+                        or s.ownership_error is not None):
                     continue
                 holder, device, storage = s, s.device, s.storage
             else:
@@ -696,7 +696,7 @@ class StartWindow:
         self._remembered_from_account = True
         self.remembered.allow_forget(False)  # nothing of it is kept here
 
-    def _show_remembered(self, known, tile=None) -> None:
+    def _show_remembered(self, known, tile) -> None:
         """Shows, from the start page only, the read-only view of a device remembered, not
         connected: what this computer knew when it was last seen, and its last sync; its
         image as its `tile` has it (the account's picture and kind, for one on it). Nothing
@@ -706,7 +706,7 @@ class StartWindow:
         self._fill_remembered(known, tile)
         self.navigation.push(self.remembered.page)
 
-    def _fill_remembered(self, known, tile=None) -> None:
+    def _fill_remembered(self, known, tile) -> None:
         """The read-only view filled for a device remembered (_show_remembered, and drawn
         again by _redraw_remembered)."""
         self._remembered_entry = known
@@ -717,12 +717,8 @@ class StartWindow:
             seen_tooltip=last_seen_tooltip(known.last_seen),
             **remembered_texts(self, known))
         show_remembered_more(self, known.unit_id)
-        if tile is not None:
-            self._show_page_picture(tile.image_part_number, tile.image_url, tile.category,
-                                    tile.description, tile.image_source)
-        else:
-            self._show_page_picture(known.part_number, known.image_url, known.category,
-                                    known.description, devicelist.PICTURE_REMEMBERED)
+        self._show_page_picture(tile.image_part_number, tile.image_url, tile.category,
+                                tile.description, tile.image_source)
         self._remembered_unit = known.unit_id
         self._remembered_from_account = False
         self.remembered.allow_forget(True)

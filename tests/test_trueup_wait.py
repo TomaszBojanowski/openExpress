@@ -73,8 +73,7 @@ def test_trueup_waits_in_ten_steps_and_tells_each(watch):
                stop=stop)
     assert stop.waited == [20.0] * 10
     waits = [m for m in seen if isinstance(m, TimedWait)]
-    assert [(m.seconds, round(m.done, 2)) for m in waits] == [
-        (200.0, i / 10) for i in range(11)]
+    assert [round(m.done, 2) for m in waits] == [i / 10 for i in range(11)]
     assert str(waits[0]) == ("Waiting 3\u00a0min 20\u00a0s for Garmin Connect to prepare "
                              "TrueUp (the daily totals of all your devices)…")
 
@@ -221,7 +220,7 @@ def test_the_command_line_shows_the_wait_on_one_line(monkeypatch, capsys):
     show = cli._Status()
     text = "Waiting 3 min 20 s for Garmin Connect to prepare TrueUp…"
     for done in (0, 0.5, 1):
-        show(TimedWait(text, seconds=200, done=done))
+        show(TimedWait(text, done=done))
     show("TrueUp: writing daily totals to the device")
     assert err.text == (f"\r  {text}   0%\r  {text}  50%\r  {text} 100%\n")
     assert capsys.readouterr().out == "  TrueUp: writing daily totals to the device\n"
@@ -233,7 +232,7 @@ def test_a_stopped_wait_ends_its_line_before_the_next(monkeypatch, capsys):
     err = _Terminal(True)
     monkeypatch.setattr(cli.sys, "stderr", err)
     show = cli._Status()
-    show(TimedWait("Waiting", seconds=200, done=0.3))
+    show(TimedWait("Waiting", done=0.3))
     show("Stopped waiting for TrueUp; Garmin Connect sends it with the next sync.")
     assert err.text == "\r  Waiting  30%\n"
 
@@ -244,7 +243,7 @@ def test_not_on_a_terminal_the_wait_is_one_plain_line(monkeypatch, capsys):
     monkeypatch.setattr(cli.sys, "stderr", _Terminal(False))
     show = cli._Status()
     for done in (0, 0.5, 1):
-        show(TimedWait("Waiting", seconds=200, done=done))
+        show(TimedWait("Waiting", done=done))
     assert capsys.readouterr().out == "  Waiting\n"
 
 

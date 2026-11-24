@@ -2,7 +2,6 @@
 hold, by the banner and by a row of the Device page; a question naming the device and the
 account first; then service.add_device as an account task, and what came of it said. All IDs
 and names here are made up."""
-
 import types
 
 import pytest
@@ -13,6 +12,7 @@ from fakes import (
     RunNow,
     another_account,
     descendants,
+    device_session,
     make_client,
     page_window,
     response,
@@ -229,7 +229,7 @@ def test_the_row_of_the_page_offers_it(asked):
     from gi.repository import Adw, Gtk
 
     win, _section = page_window("watch")
-    win.session = types.SimpleNamespace(
+    win.session = device_session(
         logged_in=True, ownership_error=NotAccountDevice("x"),
         client=types.SimpleNamespace(auth=types.SimpleNamespace(display=ACCOUNT)),
         device=types.SimpleNamespace(description="Test watch", unit_id=None))

@@ -17,10 +17,19 @@ from datetime import UTC, datetime
 Call = namedtuple("Call", "title fn done failed device in_page button failed_title")
 
 
+class _Session(types.SimpleNamespace):
+    """A stand-in session whose `mass_storage` is read from its storage, as the real one's."""
+
+    @property
+    def mass_storage(self) -> bool:
+        return bool(getattr(self.storage, "mass_storage", False))
+
+
 def device_session(**fields):
     """A stand-in of service.DeviceSession: every field of the real one at its default (storage,
-    device, settings and client None) unless given; other names (such as the real one's
-    properties, mass_storage, logged_in) as given."""
+    device, settings and client None) unless given; `mass_storage`, as the real one's property,
+    read from its storage unless given; other names (such as the real one's other properties,
+    logged_in) as given."""
     import dataclasses
 
     from openexpress import service
@@ -33,7 +42,8 @@ def device_session(**fields):
             values[f.name] = f.default_factory()
         else:
             values[f.name] = None
-    return types.SimpleNamespace(**{**values, **fields})
+    made = types.SimpleNamespace if "mass_storage" in fields else _Session
+    return made(**{**values, **fields})
 
 
 class Waits:
@@ -1801,3 +1811,32 @@ def update_answer(*entries):
 # The bytes of each file the server offers below, by its name.
 OFFERED_BYTES = {"DA00100.sid": b"same file", "DA00200.sid": b"new bytes",
                  "DA00300.sid": b"missing", "GUPDATE.GCD": b"fw"}
+
+
+# --- the view of a remembered device, as the start page opens it -------------------------------
+
+
+def remembered_tile(known):
+    """The tile the start page draws for a remembered device not connected (devicelist.entries),
+    which its view takes its picture from."""
+    from openexpress import devicelist
+
+    [(tile, _source)] = devicelist.entries([], {known.unit_id: known}, None, logged_in=False)
+    return tile
+
+
+def show_remembered(win, known) -> None:
+    """A click on the tile of a remembered device: its view, with that tile."""
+    win._show_remembered(known, remembered_tile(known))
+
+
+def fill_remembered(win, known) -> None:
+    """The view of a remembered device filled again, with its tile (_redraw_remembered)."""
+    win._fill_remembered(known, remembered_tile(known))
+
+
+def found_now(monkeypatch, storage) -> None:
+    """The device the command line and the window find connected now: `storage`."""
+    from openexpress import service
+
+    monkeypatch.setattr(service, "open_device_or_drive", lambda **kw: storage)

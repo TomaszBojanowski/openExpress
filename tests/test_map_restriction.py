@@ -2,14 +2,13 @@
 Express takes the country from the computer's address, openExpress from the account's
 profile, asked only for a restricted map on a device of the account. Such a map is not
 installed or updated; with the country unknown, only marked. All data is made up."""
-
 import html
 import json
 import logging
 import types
 
 import pytest
-from fakes import descendants, in_language, maps_window
+from fakes import descendants, found_now, in_language, maps_window
 from test_country_names import countries  # noqa: F401 - a fixture of these tests
 from test_updates_maps import maps_response
 
@@ -463,35 +462,36 @@ def test_cli_marks_the_map_when_the_country_cannot_be_read_and_says_why_in_the_l
     assert f"maps: the account's country not read ({said})" in log_file.read_text()
 
 
-def window_session(device_root):
-    return service.check_session(service.open_session(storage=LocalStorage(device_root)))
+def window_session(monkeypatch, device_root):
+    found_now(monkeypatch, LocalStorage(device_root))
+    return service.check_session(service.open_session(allow_ums=True))
 
 
 def test_the_window_checks_the_owner_with_the_session_and_asks_the_country_once(
-        saved_login, device_root):
+        saved_login, device_root, monkeypatch):
     from fakes import DEVICES_PATH
 
-    s = window_session(device_root)
+    s = window_session(monkeypatch, device_root)
     assert service.account_country(s) == "KR" and service.account_country(s) == "KR"
     assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]
-    again = window_session(device_root)  # the device opened again: a new session
+    again = window_session(monkeypatch, device_root)  # the device opened again: a new session
     assert service.account_country(again) == "KR"
     # Its owner checked with the list kept (answers, 5 minutes), the country kept (an hour).
     assert account_asked(saved_login) == [DEVICES_PATH, LOCATION]
 
 
 def test_the_window_never_asks_the_country_for_a_device_of_another_account_or_logged_out(
-        saved_login, device_root):
+        saved_login, device_root, monkeypatch):
     from fakes import DEVICES_PATH, response
     from fakes import OTHER_UNIT as OTHER
 
     from openexpress.auth import store
 
     saved_login.routes[DEVICES_PATH] = response(body=[{"unitid": OTHER}])
-    assert service.account_country(window_session(device_root)) is None
+    assert service.account_country(window_session(monkeypatch, device_root)) is None
     assert account_asked(saved_login) == [DEVICES_PATH]
     store.delete()
-    assert service.account_country(window_session(device_root)) is None
+    assert service.account_country(window_session(monkeypatch, device_root)) is None
     assert account_asked(saved_login) == [DEVICES_PATH]
 
 

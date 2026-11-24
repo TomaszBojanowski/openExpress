@@ -55,7 +55,7 @@ def test_the_wait_in_polish(watch):
 
 
 def test_a_timed_wait_without_short_words_shows_the_message():
-    wait = TimedWait("Waiting", seconds=20)
+    wait = TimedWait("Waiting")
     assert wait.short == "Waiting" and wait.about == ""
 
 
@@ -67,5 +67,5 @@ def test_the_command_line_writes_the_whole_wait(monkeypatch):
     err = _Terminal(True)
     monkeypatch.setattr(cli.sys, "stderr", err)
     text = "Waiting 20 s for Garmin Connect to prepare TrueUp…"
-    cli._Status()(TimedWait(text, seconds=20, short="TrueUp: 20 s…", about=text))
+    cli._Status()(TimedWait(text, short="TrueUp: 20 s…", about=text))
     assert err.text == "\r  Waiting 20 s for Garmin Connect to prepare TrueUp…   0%"

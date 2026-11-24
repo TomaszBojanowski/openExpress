@@ -2,13 +2,19 @@
 a remembered device, a question that says what goes, files not uploaded yet given up only
 when ticked, backups deleted only when ticked; then back to the start page, where only its
 tile goes. All unit IDs here are made up."""
-
 import json
 import types
 
 import pytest
 from fakes import answer_dialog as answer
-from fakes import descendants, pending_of, start_section, turn_until
+from fakes import (
+    descendants,
+    fill_remembered,
+    pending_of,
+    show_remembered,
+    start_section,
+    turn_until,
+)
 from fakes import window as stand_in
 
 FENIX, EDGE = 3000000001, 3000000002
@@ -121,7 +127,7 @@ def test_the_view_of_a_remembered_device_offers_to_forget_it():
                  "_last_sync_text", "_show_page_picture"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
     assert not win.remembered.forget_group.get_visible()
-    win._show_remembered(remembered())
+    show_remembered(win, remembered())
     assert win.remembered.forget_group.get_visible()
     assert win.remembered.forget_button.get_label() == "Forget Device"
     assert win.remembered.forget_button.has_css_class("destructive-action")
@@ -345,7 +351,7 @@ def test_the_button_of_the_window_asks(monkeypatch, asked):
     monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: 0)
     win = MainWindow(None)
     try:
-        win._fill_remembered(known)
+        fill_remembered(win, known)
         assert win.remembered.forget_group.get_visible()
         win.remembered.forget_button.emit("clicked")
         assert [d.get_heading() for d in asked] == ["Forget fēnix 8?"]
@@ -389,7 +395,7 @@ def test_clicking_forget_in_the_window_forgets(monkeypatch):
     try:
         win.present()
         win.navigation.set_animate_transitions(False)
-        win._show_remembered(known)
+        show_remembered(win, known)
         assert win.navigation.get_visible_page() is win.remembered.page
         win.remembered.forget_button.emit("clicked")
         dialog = win._forget_dialog

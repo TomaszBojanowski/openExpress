@@ -3,9 +3,8 @@ Maps, Apps, Music), chosen on the device page or in the side panel, one click on
 leads to the start page ("Devices"). Folded (a narrow window) the page goes back to the side
 panel first, then to the start page; a page chosen stays in front when the window folds. The
 device is made up; no server is asked."""
-
 import pytest
-from fakes import descendants
+from fakes import descendants, found_now
 
 pytestmark = pytest.mark.needs_display
 
@@ -66,7 +65,8 @@ def device_window(monkeypatch, device_root):
         win.set_default_size(width, 740)
         win.present()
         _turn()
-        win.session = service.open_session(storage=LocalStorage(device_root))
+        found_now(monkeypatch, LocalStorage(device_root))
+        win.session = service.open_session(allow_ums=True)
         win.show_overview()
         win.navigation.push(win.device_view)
         _turn()
@@ -162,7 +162,6 @@ def test_the_tile_of_the_open_device_opens_its_device_page(device_window, key):
 @pytest.mark.parametrize("key", PAGES)
 def test_the_device_plugged_in_again_opens_on_its_device_page(device_window, device_root, key):
     from openexpress import service
-    from openexpress.device.storage import LocalStorage
 
     win = device_window()
     _row_of(win, key).emit("activated")
@@ -170,7 +169,7 @@ def test_the_device_plugged_in_again_opens_on_its_device_page(device_window, dev
     win.session = None  # unplugged: the window goes back to the start page
     win.navigation.pop_to_page(win.start.page)
     _turn()
-    win.session = service.open_session(storage=LocalStorage(device_root))  # plugged in again
+    win.session = service.open_session(allow_ums=True)  # plugged in again
     win.show_device()
     _turn()
     assert _on_device_page(win)

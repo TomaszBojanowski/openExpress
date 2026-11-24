@@ -215,20 +215,20 @@ def test_a_wait_of_known_length_fills_the_bar_and_can_be_stopped(window):
 
     text = "Waiting 3 min 20 s for Garmin Connect to prepare TrueUp…"
     window.session = types.SimpleNamespace(stop_waiting=threading.Event())
-    window.progress(TimedWait(text, seconds=200, done=0.4))
+    window.progress(TimedWait(text, done=0.4))
     assert window.progress_bar.fraction == 0.4 and window.timers == {}
     assert window.progress_label.text == text and window.stop_wait_button.visible
     stop_waiting(window)
     assert window.session.stop_waiting.is_set() and not window.stop_wait_button.visible
-    window.progress(TimedWait(text, seconds=200, done=0.5))  # the step that was under way
+    window.progress(TimedWait(text, done=0.5))  # the step that was under way
     assert not window.stop_wait_button.visible
     window.session.stop_waiting.clear()
-    window.progress(TimedWait(text, seconds=200, done=1.0))
+    window.progress(TimedWait(text, done=1.0))
     assert not window.stop_wait_button.visible  # over
-    window.progress(TimedWait(text, seconds=200, done=0.1))
+    window.progress(TimedWait(text, done=0.1))
     window.progress("TrueUp: writing daily totals to the device")  # another step
     assert not window.stop_wait_button.visible
-    window.progress(TimedWait(text, seconds=200, done=0.1))
+    window.progress(TimedWait(text, done=0.1))
     window.set_busy(False)
     assert not window.stop_wait_button.visible
 
@@ -242,13 +242,13 @@ def test_the_wait_of_trueup_says_it_short_and_why_in_the_tooltip(window):
 
     window.session = types.SimpleNamespace(stop_waiting=threading.Event())
     window.progress(TimedWait("Waiting 20 s for Garmin Connect to prepare TrueUp (the daily "
-                              "totals of all your devices)…", seconds=20, done=0.5,
+                              "totals of all your devices)…", done=0.5,
                               short="TrueUp: 20 s…", about="Why"))
     assert window.progress_label.text == "TrueUp: 20 s…"
     assert window.progress_label.tooltip == "Why" and window.stop_wait_button.visible
     window.progress("Writing TrueUp to the device")
     assert window.progress_label.tooltip is None
-    window.progress(TimedWait("Waiting", seconds=20, short="TrueUp: 20 s…", about="Why"))
+    window.progress(TimedWait("Waiting", short="TrueUp: 20 s…", about="Why"))
     window.set_busy(False)
     assert window.progress_label.tooltip is None
 

@@ -2,7 +2,6 @@
 for the device to install it (chip, row "Device Software", Updates page, tile), and the last check
 that answered, kept with the device, for the page of a remembered device ("· checked {when}",
 "Not checked since {when}"). All devices and updates are made up."""
-
 import json
 import time
 import types
@@ -11,7 +10,7 @@ from datetime import datetime, timedelta
 import pytest
 from conftest import NOON
 from fakes import edge_tile as _tile
-from fakes import in_language
+from fakes import in_language, show_remembered
 from test_update_record import UNIT, _check, _component, _page, _remembered, _shown, _summary
 from test_updates_system import (
     BUNDLE,
@@ -399,7 +398,7 @@ def test_the_page_of_a_remembered_device_shows_the_last_check(clock):
     known_devices.set_update_found(UNIT, True, now=found, summary=_summary(),
                                    software_version="23.39")
     win = _window()
-    win._show_remembered(known_devices.load()[UNIT])
+    show_remembered(win, known_devices.load()[UNIT])
     assert win.remembered.update_row.get_subtitle() == (
         f"Update available: Map Region Grouping file 2.31{NB}· checked 3 days ago")
     assert win.remembered.map_row.get_subtitle() == "Connect the device to check"
@@ -452,7 +451,7 @@ def test_the_page_of_a_remembered_device_is_told_against_now_once_a_minute(monke
     win = MainWindow(None)
     try:
         win.present()
-        win._show_remembered(known_devices.load()[UNIT])
+        show_remembered(win, known_devices.load()[UNIT])
         page = win.remembered
         assert win.navigation.get_visible_page() is page.page
         assert page.seen_label.get_label() == "Last seen 2 min ago"

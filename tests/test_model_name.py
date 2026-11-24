@@ -1,9 +1,9 @@
 """A device whose GarminDevice.xml names it in capitals only ("EPIX") is shown as Garmin names
 its model: the field devicemodel of unit-info without ™ and ®, with " — " and " | " as ", ".
 The name below is the one unit-info gave for an epix (Gen 2); every device here is made up."""
-
 import types
 
+from fakes import device_session
 from fakes import window as stand_in
 
 from openexpress import devicelist, known_devices, service
@@ -36,7 +36,7 @@ def _session(description: str):
     device = types.SimpleNamespace(unit_id=UNIT, part_number=PART, description=description)
     client = types.SimpleNamespace(unit_info=lambda unit_id, part: asked.append(part) or {
         "devicemodel": EPIX})
-    return types.SimpleNamespace(device=device, client=client, unit_info_answer=None), asked
+    return device_session(device=device, client=client), asked
 
 
 def test_unit_info_keeps_the_name_of_a_device_named_in_capitals():

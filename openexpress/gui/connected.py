@@ -33,7 +33,7 @@ def open_address(s) -> str | None:
     """The address of the open device (compared in memory only), or None."""
     if s is None:
         return None
-    return str(getattr(getattr(s, "storage", None), "device_uri", "") or "")
+    return str(getattr(s.storage, "device_uri", "") or "")
 
 
 def open_unit(s) -> int | None:
@@ -55,11 +55,11 @@ def close_as_unplugged(win) -> None:
 def session_summary(s) -> DeviceSummary:
     """The open device as an entry of the start page (never its address in a label)."""
     d = s.device
-    kind = "ums" if getattr(s, "mass_storage", False) else "mtp"
+    kind = "ums" if s.mass_storage else "mtp"
     found = FoundDevice(open_address(s), "", True, kind=kind)
     summary = DeviceSummary(found, d.description, d.part_number, d.software_version_str,
                             d.unit_id or None)
-    summary.to_sync = getattr(s, "to_sync", None)  # as the thread that opened it counted
+    summary.to_sync = s.to_sync  # as the thread that opened it counted
     return summary
 
 

@@ -3,11 +3,10 @@ the cache its page asks Garmin's update server (unit-info, not the account), dow
 picture and keeps its address with the device; once the pictures of the cache are cleared, the
 device's tile on the start page downloads it again from that address. The device, its answers
 and its picture are made up; no request leaves."""
-
 import logging
 import types
 
-from fakes import replace_in_window, window_methods
+from fakes import device_session, replace_in_window, window_methods
 from fakes import window as stand_in
 
 UNIT, PART = 3100000515, "006-B3592-03"
@@ -73,7 +72,7 @@ def test_a_drive_keeps_the_address_of_its_picture_and_its_tile_gets_it_again(mon
     http = Http()
     client = Client(http)
     device = types.SimpleNamespace(unit_id=UNIT, part_number=PART, description="Varia RTL515")
-    session = types.SimpleNamespace(device=device, client=client, logged_in=True,
+    session = device_session(device=device, client=client, logged_in=True,
                                     ownership_error=None, mass_storage=True,
                                     unit_info_answer=None)
     shown, jobs = [], []

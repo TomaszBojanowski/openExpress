@@ -1,12 +1,11 @@
 """The program's own log file: where it is, how it rotates, and that nothing personal is
 written to it. All identifiers here are made up."""
-
 import logging
 import os
 import stat
 
 import pytest
-from fakes import in_language
+from fakes import found_now, in_language
 
 from openexpress import applog, paths
 
@@ -515,7 +514,9 @@ def test_sync_is_logged_step_by_step_without_identifiers(log_file, device_root, 
     monkeypatch.setenv("OPENEXPRESS_LOG", "debug")
     applog.setup("watch")
     st = LocalStorage(device_root)
-    s = service.open_session(storage=st)  # hides the unit ID, like the window and the watcher
+    found_now(monkeypatch, st)
+    service.open_session(allow_ums=True)  # hides the unit ID, like the window and the watcher
+    opened = len(log_file.read_text())  # the lines of the opening come before the sync's
     s = service.DeviceSession(st, parse(st.read("GARMIN/GarminDevice.xml")), Settings(),
                               Account(messages=QUEUED))
     state = sync.SyncState(int(DEVICE_UNIT))
@@ -525,7 +526,7 @@ def test_sync_is_logged_step_by_step_without_identifiers(log_file, device_root, 
     assert summary.uploaded == 2 and summary.downloaded == 1
 
     text = log_file.read_text()
-    steps = [line.split(": ", 1)[1] for line in text.splitlines() if " INFO " in line]
+    steps = [line.split(": ", 1)[1] for line in text[opened:].splitlines() if " INFO " in line]
     assert steps[0] == "sync: start (first run: all, diagnostics: False)"
     assert "uploads allowed: True" in steps
     assert any(s.startswith("upload plan: 2 new (") for s in steps)

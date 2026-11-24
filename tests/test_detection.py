@@ -2,7 +2,6 @@
 
 All serial numbers and USB trees here are made up.
 """
-
 import hashlib
 import itertools
 import logging
@@ -17,6 +16,7 @@ from fakes import (
     OtherProcessSession,
     RunNow,
     UpdateServer,
+    device_session,
     in_language,
     record_sync,
     replace_in_window,
@@ -294,7 +294,7 @@ def test_window_notices_the_removal_of_the_open_device(no_sysfs):
     shown = []
 
     def window(label):
-        session = types.SimpleNamespace(storage=types.SimpleNamespace(label=label))
+        session = device_session(storage=types.SimpleNamespace(label=label))
         return stand_in(session=session, show_device=lambda: shown.append(1),
                         show_no_device=lambda: shown.append(1))
 
@@ -338,7 +338,7 @@ def unplug_window(monkeypatch, usb):
     replace_in_window(monkeypatch, "garmin_usb", lambda mount: True)
     monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: pytest.fail("no timer here"))
     pages = {"watch": Page(), "apps": Page()}
-    session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
+    session = device_session(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = stand_in(
         session=session, busy=False, sections=pages, built=[], _updated_apps=set(),
         connected=Connected(),
@@ -406,7 +406,7 @@ def test_window_logs_mount_events_without_the_serial_number(monkeypatch, caplog,
     in_the_window("garmin_usb", lambda m: m.uri in garmin)
     in_the_window("own_remount", lambda m: m.uri in remounted)
     monkeypatch.setattr(GLib, "timeout_add", lambda ms, fn: timers.append(ms))
-    session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
+    session = device_session(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = stand_in(session=session, busy=False, show_device=lambda: None,
                    show_no_device=lambda: None)
     stick = "file:///run/media/someone/STICK/"
@@ -443,7 +443,7 @@ def test_window_logs_what_it_decides_when_it_detects_a_device(caplog):
     from openexpress.gui.app import MainWindow
 
     def device(unit_id):
-        return types.SimpleNamespace(device=types.SimpleNamespace(unit_id=unit_id))
+        return device_session(device=types.SimpleNamespace(unit_id=unit_id))
 
     tasks, shown = [], []
     open_one = device(3000000001)
@@ -3660,7 +3660,7 @@ def test_window_and_watcher_ignore_our_own_remount(exclusive, monkeypatch):
 
     st, _fake, _events = exclusive
     shown, started = [], []
-    session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
+    session = device_session(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = stand_in(session=session, show_device=lambda: shown.append(1),
                    show_no_device=lambda: shown.append(1),
                    refresh_device=lambda: shown.append(2))
@@ -3690,7 +3690,7 @@ def test_an_unplug_right_after_our_own_session_is_an_unplug(exclusive, monkeypat
     shutil.rmtree(sysfs / "3-1")  # unplugged, as the user is told to after an install
     shown = []
     win = stand_in(
-        session=types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal")),
+        session=device_session(storage=types.SimpleNamespace(label=NUMERIC + "Internal")),
         busy=False, show_device=lambda: shown.append(1), _updated_apps={"waiting"},
         show_no_device=lambda: shown.append(1))
     with caplog.at_level(logging.INFO):
@@ -3734,7 +3734,7 @@ def test_the_window_and_the_watcher_ignore_a_session_of_another_process(exclusiv
     from openexpress.gui.app import MainWindow
 
     shown, started = [], []
-    session = types.SimpleNamespace(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
+    session = device_session(storage=types.SimpleNamespace(label=NUMERIC + "Internal"))
     win = stand_in(session=session, show_device=lambda: shown.append(1),
                    show_no_device=lambda: shown.append(1),
                    refresh_device=lambda: shown.append(2))
@@ -4493,7 +4493,7 @@ def test_sync_is_only_enabled_with_an_open_device():
     and the button is plain grey and says why."""
     from openexpress.connect import NotAccountDevice, OwnershipError
 
-    session = types.SimpleNamespace(logged_in=True, ownership_error=None)
+    session = device_session(logged_in=True, ownership_error=None)
     win = _sync_window()
 
     win.update()                             # "connect your device" and "the device is starting"
@@ -4552,7 +4552,7 @@ def test_sync_tooltip_uses_the_words_of_the_banner():
     client = types.SimpleNamespace(consumer=object())
     for logged_in, error in ((True, NotAccountDevice("x")), (True, OwnershipError("x")),
                              (False, None)):
-        s = types.SimpleNamespace(logged_in=logged_in, ownership_error=error, client=client)
+        s = device_session(logged_in=logged_in, ownership_error=error, client=client)
         win = _sync_window(session=s)
         win.update()
         assert banner_title(s) == [win.sync_button.tooltip]
@@ -4580,10 +4580,10 @@ def test_sync_tooltip_says_what_the_pages_say_while_no_device_is_open():
 
     # With a device open the words kept from before do not matter.
     win._usb_title = "Device Starting…"
-    win.session = types.SimpleNamespace(logged_in=True, ownership_error=None)
+    win.session = device_session(logged_in=True, ownership_error=None)
     win.update()
     assert _looks(win) == (True, True, None, "Sync")
-    win.session = types.SimpleNamespace(logged_in=False, ownership_error=None)
+    win.session = device_session(logged_in=False, ownership_error=None)
     win.update()
     assert _looks(win)[2] == "Not signed in to Garmin Connect"
 
@@ -6039,7 +6039,7 @@ def test_refresh_in_the_device_view_keeps_the_view(monkeypatch, in_the_window):
     monkeypatch.setattr(GLib, "timeout_add_seconds", lambda s, fn: 0)
 
     def session(n):
-        return types.SimpleNamespace(
+        return device_session(
             storage=types.SimpleNamespace(device_uri=NUMERIC, label=NUMERIC + "Internal"),
             device=types.SimpleNamespace(unit_id=1234567890, description=f"Test watch {n}"))
 
@@ -6435,7 +6435,7 @@ def test_the_relative_dates_are_drawn_again_only_while_shown_and_changed(monkeyp
         row.connect("notify::subtitle", lambda *_a: changes.append(1))
         # The device open, synced here before (its state.json).
         sync.SyncState(3000000004).save()
-        win.session = types.SimpleNamespace(device=types.SimpleNamespace(unit_id=3000000004),
+        win.session = device_session(device=types.SimpleNamespace(unit_id=3000000004),
                                             ownership_error=None, to_sync=None)
         win.last_sync_row, win._last_sync_data = row, {"time": seen, "uploaded": 1}
         (tick,) = minute_timers()

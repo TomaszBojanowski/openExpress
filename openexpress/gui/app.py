@@ -475,9 +475,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
             # The words the pages show now: no device, a device that is starting, or one
             # that is not ready.
             return self._usb_title or _("Connect Your Device")
-        if getattr(s, "drive_refusal", None) is not None:
+        if s.drive_refusal is not None:
             return _("USB Drive")  # a drive that is not synced; the device page says why
-        if getattr(s, "sync_refusal", None) is not None:
+        if s.sync_refusal is not None:
             return service.mtp_sync_refusal_text(s.sync_refusal)  # also on the device page
         if not s.logged_in:
             return _("Not signed in to Garmin Connect")

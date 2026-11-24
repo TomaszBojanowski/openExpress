@@ -106,7 +106,7 @@ class ReportDialog:
             # device here.
             body_text = report.build(s.device, s.storage, s.logged_in,
                                      space=s.space or (None, None),
-                                     found=getattr(s, "diagnostics", None))
+                                     found=s.diagnostics)
             text = about
         log.info("report dialog opened (device connected: %s)", s is not None)
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)

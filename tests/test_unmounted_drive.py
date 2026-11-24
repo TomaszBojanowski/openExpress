@@ -2,14 +2,13 @@
 through Gio.VolumeMonitor's volumes: its tile, mounted when chosen; what is not listed (no
 medium, ejected by openExpress, no gvfs); the USB states of a drive removed safely or ejected;
 what tells drives apart (USB serial, volume UUID). All devices are made up."""
-
 import logging
 import os
 import threading
 import types
 
 import pytest
-from fakes import RTL515_XML, in_language, replace_in_window
+from fakes import RTL515_XML, device_session, in_language, replace_in_window
 from fakes import window as stand_in
 from gio_fake import answer_as_gio
 from test_detection import (  # noqa: F401 - the fixture
@@ -524,7 +523,7 @@ def test_the_window_notes_the_place_of_the_open_drive_it_sees_unmounted(drives, 
     storage = types.SimpleNamespace(label=folder.as_uri() + "/", device_uri=folder.as_uri(),
                                     usb=gio_storage.GarminUsb(FR55, 1, 12))
     win = stand_in(
-        session=types.SimpleNamespace(storage=storage, mass_storage=True,
+        session=device_session(storage=storage, mass_storage=True,
                                       device=types.SimpleNamespace(unit_id=3000000055)),
         connected=None, show_no_device=lambda: shown.append(1))
     MainWindow._on_mount_removed(win, None, mount)
@@ -874,7 +873,7 @@ def _varia_session():
                                     label="file:///run/media/u/GARMIN/", usb=usb)
     device = types.SimpleNamespace(unit_id=VARIA, description="Varia RTL515",
                                    part_number="006-B3592-03", software_version_str="3.36")
-    return types.SimpleNamespace(storage=storage, device=device, mass_storage=True)
+    return device_session(storage=storage, device=device, mass_storage=True)
 
 
 def _start_window(monkeypatch, listed):

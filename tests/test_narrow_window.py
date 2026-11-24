@@ -3,7 +3,6 @@ device view and the start page fit, in English and in the longer Polish.
 
 The real window, on the tests' hidden display, holds stand-ins: an Edge 1050 with a beta
 update, long component names, maps, apps and music. Nothing asks a device or a server."""
-
 import os
 import re
 import time
@@ -19,6 +18,7 @@ from fakes import (
     Waits,
     descendants,
     device_session,
+    fill_remembered,
     gpx_file,
     gpx_route,
     gpx_track,
@@ -770,7 +770,7 @@ def test_the_bar_with_stop_waiting_fits_the_narrowest_window(narrow_window, lang
     win.session.stop_waiting = threading.Event()
     win.set_busy(True, "Sync", device=True)
     win._show_progress(TimedWait("Waiting 3 min 20 s for Garmin Connect to prepare TrueUp (the "
-                                 "daily totals of all your devices)…", seconds=200, done=0.3))
+                                 "daily totals of all your devices)…", done=0.3))
     _iterate(0.1)
     assert win.stop_wait_button.get_visible()
     assert win.action_bar.measure(Gtk.Orientation.HORIZONTAL, -1)[0] <= NARROWEST
@@ -1126,7 +1126,7 @@ def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window
 
     known = known_devices.remember(UNIT, "Edge 1050", "006-B4440-00", "33.13", "mtp", now=1.0)
     win = narrow_window(language)
-    win._fill_remembered(known)
+    fill_remembered(win, known)
     win.navigation.set_animate_transitions(False)
     win.navigation.push(win.remembered.page)
     _iterate(0.05)

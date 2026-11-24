@@ -1,11 +1,10 @@
 """Maps that are not from Garmin: the name in the header of an .img file, and their list."""
-
 import json
 import types
 
 import pytest
 import requests
-from fakes import RunNow, in_language, window_methods
+from fakes import RunNow, device_session, in_language, window_methods
 
 from openexpress import ownmaps
 from openexpress.cli import main
@@ -1079,7 +1078,7 @@ def window_device(map_folder, xdg):
     """The window's session on the made-up map folder."""
     win, section = own_maps_window()
     dev = numbered(device(), 4000000006)
-    win.session = types.SimpleNamespace(device=dev, storage=LocalStorage(map_folder))
+    win.session = device_session(device=dev, storage=LocalStorage(map_folder))
     win.maps_cache = [garmin_map("Garmin/Listed.img", remove=["Garmin/Old.img"])]
     return win, dev, map_folder
 
@@ -1271,7 +1270,7 @@ def test_maps_page_loads_garmins_maps_and_own_maps_in_one_task(map_folder, xdg):
 
     win, section = own_maps_window()
     asked, drawn = [], []
-    win.session = types.SimpleNamespace(
+    win.session = device_session(
         client=types.SimpleNamespace(universal_maps=lambda raw: asked.append(raw) or {"maps": []},
                                      unit_info=lambda unit_id, part_number: {
                                          "mapupdatetype": "Universal"}),
@@ -1306,7 +1305,7 @@ def test_maps_page_shows_own_maps_whatever_service_serves_garmins_maps(map_folde
 
     win, section = own_maps_window()
     asked, drawn = [], []
-    win.session = types.SimpleNamespace(
+    win.session = device_session(
         client=types.SimpleNamespace(universal_maps=lambda raw: asked.append(raw) or {"maps": []},
                                      unit_info=lambda unit_id, part_number: info),
         device=numbered(device(), 4000000007), storage=LocalStorage(map_folder))
@@ -1336,7 +1335,7 @@ def test_own_maps_show_under_the_message_that_map_updates_are_not_supported():
     from openexpress.gui.app import MainWindow
 
     win, section = own_maps_window()
-    win.session = types.SimpleNamespace(storage=types.SimpleNamespace(
+    win.session = device_session(storage=types.SimpleNamespace(
         free_space=lambda: 12_400_000_000, capacity=lambda: 31_100_000_000))
     win._set_map_state = lambda result, no_maps=False: None
     MainWindow.show_maps(win, None, view_of(("mine.img", 2000, "Mine")))
@@ -1414,7 +1413,7 @@ def page_with_garmins_and_own_maps(view, answer):
     from openexpress.gui.app import MainWindow
 
     win, section = own_maps_window()
-    win.session = types.SimpleNamespace(storage=types.SimpleNamespace(
+    win.session = device_session(storage=types.SimpleNamespace(
         free_space=lambda: 12_400_000_000, capacity=lambda: 31_100_000_000))
     win.confirm_map = win.confirm_remove = lambda m: None
     win._set_map_state = lambda result, no_maps=False: None

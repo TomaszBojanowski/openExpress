@@ -90,7 +90,7 @@ def _wait(seconds: float, progress, stop, result: TrueUpResult) -> bool:
     # the narrowest window whole ("TrueUp: 4 min 59 s…"; the whole sentence is its tooltip)
     short = _("TrueUp: {time}…").format(time=length)
     step = seconds / WAIT_STEPS
-    progress(TimedWait(text, seconds, 0.0, short=short, about=text))
+    progress(TimedWait(text, 0.0, short=short, about=text))
     for i in range(1, WAIT_STEPS + 1):
         try:
             if stop.wait(step):
@@ -99,7 +99,7 @@ def _wait(seconds: float, progress, stop, result: TrueUpResult) -> bool:
             log.info("TrueUp: Ctrl+C during the wait")
             return False
         result.waited_s += step
-        progress(TimedWait(text, seconds, i / WAIT_STEPS, short=short, about=text))
+        progress(TimedWait(text, i / WAIT_STEPS, short=short, about=text))
     return True
 
 

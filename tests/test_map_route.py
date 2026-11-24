@@ -10,6 +10,7 @@ from datetime import timedelta
 from pathlib import Path
 
 import pytest
+from fakes import device_session
 
 from openexpress import maps
 from openexpress.connect import ApiError, lower_keys
@@ -196,9 +197,8 @@ def test_cli_maps_with_path_asks_the_universal_service_without_unit_info(device_
 
 def _session(client):
     """A session as the window holds one: the client and the device it opened."""
-    import types
 
-    return types.SimpleNamespace(client=client, device=device(PPNM))
+    return device_session(client=client, device=device(PPNM))
 
 
 def test_unit_info_is_asked_once_a_session_and_again_when_forgotten():

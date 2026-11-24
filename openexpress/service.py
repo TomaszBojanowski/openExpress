@@ -136,14 +136,14 @@ def unit_info(session) -> dict:
     its own thread without asking) and in the kept answers (answers.LIFETIMES, only the
     fields the program reads), which make threads asking at once share one request. A
     failed request is not kept, so the next one asks again."""
-    answer = getattr(session, "unit_info_answer", None)
+    answer = session.unit_info_answer
     if answer is None:
         device = session.device
         answer = (session.client.unit_info(device.unit_id, device.part_number)
                   if device.unit_id else {})
         session.unit_info_answer = answer
         note_model_name(device, answer)  # the same name, whichever thread notes it
-        heard = getattr(session, "on_unit_info", None)
+        heard = session.on_unit_info
         if heard is not None:
             heard()  # the window: the gate of the sync may close (note_unit_info)
     return answer
@@ -245,19 +245,16 @@ def signed_in(client: GarminClient, settings: Settings,
     return auth, None
 
 
-def open_session(storage: Storage | None = None, allow_ums: bool = False,
-                 found=None) -> DeviceSession:
+def open_session(allow_ums: bool = False, found=None) -> DeviceSession:
     """A session on the connected device: MTP alone, unless `allow_ums` (the window) also
     lets a Garmin device in mass storage mode be opened. `found`: the device chosen from
     find_all_devices, of whatever kind."""
-    detected = storage is None  # a device found now, not a folder handed in (a copy, a test)
-    if storage is None and found is not None:
-        storage = _open_found(found)
+    storage = _open_found(found) if found is not None else None
     if storage is None:
         from openexpress.device.gio_storage import open_device_storage
 
         storage = open_device_or_drive() if allow_ums else open_device_storage()
-    device = read_device(storage, found_now=detected)
+    device = read_device(storage, found_now=True)
     settings = Settings.load()
     return DeviceSession(storage, device, settings, make_client(settings))
 
@@ -384,7 +381,7 @@ def note_unit_info(s) -> bool:
     not asked about the device (check_session)."""
     if s.mass_storage or s.sync_refusal is not None:
         return False
-    s.sync_refusal = mtp_sync_refusal(s.device, getattr(s, "unit_info_answer", None))
+    s.sync_refusal = mtp_sync_refusal(s.device, s.unit_info_answer)
     if s.sync_refusal is None:
         return False
     log.info("sync: Garmin Connect does not take the device's data (%s): no sync in the window",
