@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 08:40+0100\n"
+"POT-Creation-Date: 2026-11-24 09:04+0100\n"
 "PO-Revision-Date: 2026-11-24 19:08+0000\n"
 "Last-Translator: prajzner <prajzner@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/openexpress/"
@@ -4347,7 +4347,8 @@ msgstr "pouze tento typ dat, každý soubor zvlášť, např. {example} (aktivit
 #: openexpress/cli.py
 #, python-brace-format
 msgid "with --type, or -v before the command: only the last N files"
-msgstr "s parametrem --type nebo s -v před příkazem: pouze posledních N souborů"
+msgstr ""
+"s parametrem --type nebo s -v před příkazem: pouze posledních N souborů"
 
 #: openexpress/cli.py
 #, python-brace-format
