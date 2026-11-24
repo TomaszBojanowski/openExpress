@@ -14,12 +14,11 @@ there."""
 
 import os
 import threading
-import time
 import types
 from pathlib import Path
 
 import pytest
-from fakes import descendants, program_style, window_picture
+from fakes import descendants, iterate, program_style, wait, window_picture
 
 pytestmark = pytest.mark.needs_display
 
@@ -55,26 +54,6 @@ BACKGROUND = {True: {"en": "Background sync enabled", "pl": "Włączono synchron
               False: {"en": "Background sync disabled",
                       "pl": "Wyłączono synchronizację w\u00a0tle"}}
 LANGUAGE_ROW = {"en": "Interface Language", "pl": "Język interfejsu"}
-
-
-def iterate(seconds: float = 0.05) -> None:
-    from gi.repository import GLib
-
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        GLib.MainContext.default().iteration(False)
-
-
-def wait(until, what: str, seconds: float = 15) -> None:
-    from gi.repository import GLib
-
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        if until():
-            iterate(0.1)  # what follows it drawn too
-            return
-        GLib.MainContext.default().iteration(False)
-    raise AssertionError(f"not reached: {what}")
 
 
 @pytest.fixture(params=["en", "pl"])

@@ -1,5 +1,5 @@
 import pytest
-from fakes import device_session, window_methods
+from fakes import device_session, in_language, window_methods
 from fakes import window as stand_in
 
 from openexpress import report
@@ -245,17 +245,13 @@ def test_no_line_of_the_log_closes_its_fence():
 
 
 def test_the_words_about_pasting_the_log_in_polish():
-    from openexpress import i18n
     from openexpress.i18n import _
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         window = _("The log is in your clipboard. Paste it into the \u201cLog\u201d field of the "
                    "form or into a comment.")
         cli = _("The log is not in the address: paste it into the \u201cLog\u201d field of the "
                 "form or into a comment.")
-    finally:
-        i18n.setup("en")
     # Hard spaces after the one-letter words (tools/po-hard-spaces.py).
     assert window == ("Log jest w\u00a0schowku. Wklej go w\u00a0pole \u201eLog\u201d formularza albo "
                       "w\u00a0komentarz.")
@@ -266,14 +262,11 @@ def test_the_words_about_pasting_the_log_in_polish():
 def test_the_report_has_plain_spaces(device_root, log_file):
     """Text for GitHub: no hard space, also in a Polish session and in a line of the log
     written with one."""
-    from openexpress import applog, i18n
+    from openexpress import applog
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         st = LocalStorage(device_root)
         text = report.build(parse(st.read("GARMIN/GarminDevice.xml")), st, logged_in=True)
-    finally:
-        i18n.setup("en")
     _write_log(log_file, ["old: plik z\u00a0urządzenia, 2,5\u00a0MB"])
     tail = applog.tail(report.LOG_LINES)
     assert tail == ["old: plik z urządzenia, 2,5 MB"]
@@ -445,14 +438,9 @@ def test_copy_puts_the_report_and_the_log_in_the_clipboard(monkeypatch, device_r
 
 @pytest.mark.needs_display
 def test_the_sentence_about_the_log_in_polish(monkeypatch, device_root, log_file):
-    from openexpress import i18n
-
     _write_log(log_file, ["one"])
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         dialog, _text, _opened, _copied, _said = _report_dialog(monkeypatch, device_root)
-    finally:
-        i18n.setup("en")
     assert _note(dialog)[1] == ("Log jest w\u00a0schowku. Wklej go w\u00a0pole \u201eLog\u201d "
                                 "formularza albo w\u00a0komentarz.")
 
@@ -494,19 +482,14 @@ def test_open_on_github_without_a_device_fills_in_what_is_on_usb(monkeypatch, de
 
 @pytest.mark.needs_display
 def test_open_on_github_in_polish(monkeypatch, device_root, log_file):
-    from openexpress import i18n
-
     _write_log(log_file, ["one"])
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         dialog, _text, _opened, _copied, said = _report_dialog(monkeypatch, device_root)
         _attach_log(dialog)
         dialog.emit("response", "open")
         monkeypatch.setattr(report, "MAX_URL", 100)
         too_long, _t, _o, _c, said_too_long = _report_dialog(monkeypatch, device_root)
         too_long.emit("response", "open")
-    finally:
-        i18n.setup("en")
     assert dialog.get_response_label("open") == "Otwórz na GitHubie"
     assert dialog.get_body() == (
         "„Otwórz na GitHubie” zaczyna nowe zgłoszenie z\u00a0wypełnionym raportem; nic nie zostanie "

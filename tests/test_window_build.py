@@ -7,8 +7,7 @@ import threading
 import types
 
 import pytest
-from fakes import descendants
-from test_forget_window import _turn_until
+from fakes import descendants, turn_until
 
 pytestmark = pytest.mark.needs_display
 
@@ -128,17 +127,17 @@ def test_the_bar_at_the_bottom(window):
     assert window.busy_spinner.get_visible() and not window.progress_bar.get_visible()
     assert window.unplug_label.get_visible() and not window.stop_wait_button.get_visible()
     window.progress("Uploading activity")
-    assert _turn_until(window.progress_bar.get_visible)
+    assert turn_until(window.progress_bar.get_visible)
     assert not window.busy_spinner.get_visible()
     assert window.progress_label.get_text() == "Uploading activity"
     window.fraction(1, 4)
-    assert _turn_until(lambda: window.progress_bar.get_fraction() == 0.25)
+    assert turn_until(lambda: window.progress_bar.get_fraction() == 0.25)
     # TrueUp waits for Garmin Connect: the bar fills and the wait can be stopped.
     window.session = types.SimpleNamespace(stop_waiting=threading.Event(), mass_storage=False,
                                            logged_in=False, ownership_error=None)
     window.progress(TimedWait("Waiting 3 min 20 s for Garmin Connect…", seconds=200,
                               done=0.4))
-    assert _turn_until(window.stop_wait_button.get_visible)
+    assert turn_until(window.stop_wait_button.get_visible)
     assert window.progress_bar.get_fraction() == 0.4
     window.stop_wait_button.emit("clicked")
     assert window.session.stop_waiting.is_set() and not window.stop_wait_button.get_visible()
@@ -157,12 +156,12 @@ def test_a_toast_on_a_device_s_view_stays_above_the_bar(window):
     which has no such bar, a toast is the window's."""
     window.present()
     window.navigation.push(window.device_view)
-    assert _turn_until(lambda: window.navigation.get_visible_page() is window.device_view)
+    assert turn_until(lambda: window.navigation.get_visible_page() is window.device_view)
     window.set_busy(True, "Checking for updates…")
     window.toast("Removed 5 files")
-    assert _turn_until(lambda: _toast_widgets(window.page_toasts))
+    assert turn_until(lambda: _toast_widgets(window.page_toasts))
     for _ in range(40):  # the toast slides in
-        _turn_until(lambda: False, seconds=0.01)
+        turn_until(lambda: False, seconds=0.01)
     (toast,) = _toast_widgets(window.page_toasts)
     ok_toast, toast_box = toast.compute_bounds(window)
     ok_bar, bar_box = window.action_bar.compute_bounds(window)
@@ -170,9 +169,9 @@ def test_a_toast_on_a_device_s_view_stays_above_the_bar(window):
     assert toast_box.get_y() + toast_box.get_height() <= bar_box.get_y() + 1
     window.set_busy(False)
     window.navigation.pop_to_page(window.start.page)
-    assert _turn_until(lambda: window.navigation.get_visible_page() is window.start.page)
+    assert turn_until(lambda: window.navigation.get_visible_page() is window.start.page)
     window.toast("Signed out")
-    assert _turn_until(lambda: len(_toast_widgets(window.toasts)) > len(
+    assert turn_until(lambda: len(_toast_widgets(window.toasts)) > len(
         _toast_widgets(window.page_toasts)))
 
 

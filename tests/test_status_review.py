@@ -35,11 +35,13 @@ from fakes import (
     REGION_COMPONENT,
     descendants,
     gtk_complaints,
+    iterate,
     make_client,
     map_entry,
     offered_update,
     program_style,
     ptp_opened,
+    wait,
     window_picture,
     xml_with,
 )
@@ -183,26 +185,6 @@ def not_installed(storage, device) -> list:
     for u in found:
         u.listed_file = freeing.listed_file(storage, u)
     return found
-
-
-def iterate(seconds: float = 0.05) -> None:
-    from gi.repository import GLib
-
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        GLib.MainContext.default().iteration(False)
-
-
-def wait(until, what: str, seconds: float = 15) -> None:
-    from gi.repository import GLib
-
-    end = time.monotonic() + seconds
-    while time.monotonic() < end:
-        if until():
-            iterate(0.1)  # what follows it drawn too
-            return
-        GLib.MainContext.default().iteration(False)
-    raise AssertionError(f"not reached: {what}")
 
 
 @pytest.fixture

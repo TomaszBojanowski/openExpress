@@ -10,8 +10,9 @@ from datetime import date, timedelta
 
 import pytest
 from conftest import NOON
+from fakes import in_language
 
-from openexpress import answers, i18n
+from openexpress import answers
 from openexpress.answers import ANSWERS
 from openexpress.connect import ApiError
 
@@ -252,16 +253,13 @@ def test_no_solar_row_for_another_device(devices, clock):
 
 @pytest.mark.needs_display
 def test_in_polish(clock):
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         win, _section, _asked = _page()
         sensors = sensors_of(win)
         titles = win.sensors_list.get_title(), win.solar_row.get_title()
         solar = win.solar_row.get_subtitle()
         win, _section, _asked = _page(solar=[])
         winter = win.solar_row.get_subtitle()
-    finally:
-        i18n.setup("en")
     assert titles == ("Czujniki na koncie", "Ładowanie słoneczne")
     assert sensors[1] == f"3 czujniki{NB}· 1 ze słabą baterią"
     assert sensors[4][0][1] == f"Bateria słaba{NB}· ostatnio połączony 2 dni temu"
@@ -274,12 +272,9 @@ def test_in_polish(clock):
 def test_a_sensor_of_last_week_with_its_date_in_the_language(clock):
     old = [{"devicename": "Made-up Cadence", "batterylevel": 70,
             "lastconnected": utc_text(NOON - timedelta(days=9))}]
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         win, _section, _asked = _page(sensors=old)
         polish = sensors_of(win)[4][0][1]
-    finally:
-        i18n.setup("en")
     win, _section, _asked = _page(sensors=old)
     assert polish == f"Bateria 70%{NB}· ostatnio połączony 12.10.2026 o{NB}12:00"
     assert sensors_of(win)[4][0][1] == f"Battery 70%{NB}· last connected 2026-10-12 12:00"

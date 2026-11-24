@@ -9,19 +9,13 @@ from datetime import UTC, datetime
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import FitData, FitDefinition, SyncAccount, fit_file
+from fakes import FIT_EPOCH, FitData, FitDefinition, SyncAccount, fit_file, fit_time
 
 from openexpress import cli, service
 from openexpress.device.storage import LocalStorage
 
-FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
 ENUM, UINT16, UINT32, STRING = 0x00, 0x84, 0x86, 0x07
 RUNNING, CYCLING = 1, 2
-
-
-def fit_time(*when) -> int:
-    """A moment of local time as a time of the FIT protocol."""
-    return int(datetime(*when).timestamp()) - FIT_EPOCH
 
 
 def local_fit_time(*when) -> int:

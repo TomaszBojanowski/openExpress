@@ -7,7 +7,7 @@ names and which one is chosen, and the keyboard reaches them. All devices are ma
 import types
 
 import pytest
-from fakes import record_sync, start_section
+from fakes import in_language, record_sync, start_section
 from test_sync_chips import UNIT, _chips_on, _start_window, listed  # noqa: F401 - a fixture
 
 from openexpress import sync
@@ -159,18 +159,14 @@ def _view_buttons(win):
     return [w for w in _walk(popover) if isinstance(w, Gtk.ToggleButton)]
 
 
-def _main_menu(language="en"):
+def _main_menu():
     from gi.repository import Adw
 
-    words = {"en": ("Preferences", "Keyboard Shortcuts", "Report a Device or Problem…",
-                    "About openExpress"),
-             "pl": ("Preferencje", "Skróty klawiszowe", "Zgłoś urządzenie lub problem…",
-                    "O programie openExpress")}[language]
-    first = [(words[0], "app.preferences", None)]
+    first = [("Preferences", "app.preferences", None)]
     if hasattr(Adw, "ShortcutsDialog"):
-        first.append((words[1], "app.shortcuts", None))
-    return [(None, first), (None, [(words[2], "app.report", None)]),
-            (None, [(words[3], "app.about", None)])]
+        first.append(("Keyboard Shortcuts", "app.shortcuts", None))
+    return [(None, first), (None, [("Report a Device or Problem…", "app.report", None)]),
+            (None, [("About openExpress", "app.about", None)])]
 
 
 @pytest.mark.needs_display
@@ -225,7 +221,6 @@ def test_the_buttons_tell_screen_readers_their_names(language, monkeypatch):
     description), a toggle button (pressed: the one chosen); the row: a group named View."""
     from gi.repository import Gtk
 
-    from openexpress import i18n
     from openexpress.gui.start_window import StartView
     from openexpress.paths import APP_ID
 
@@ -237,11 +232,8 @@ def test_the_buttons_tell_screen_readers_their_names(language, monkeypatch):
         return original(self, props, values)
 
     monkeypatch.setattr(Gtk.Widget, "update_property", update_property, raising=False)
-    i18n.setup(language)
-    try:
+    with in_language(language):
         row = StartView.buttons()
-    finally:
-        i18n.setup("en")
     buttons = [w for w in _walk(row) if isinstance(w, Gtk.ToggleButton)]
     names = {"en": ["Automatic", "Grid", "List"], "pl": ["Automatycznie", "Siatka", "Lista"]}
     auto = {"en": "Automatic: tiles, or a list when a section has more than 6 devices",

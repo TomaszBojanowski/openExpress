@@ -1,8 +1,9 @@
 """The progress of a backup: which file of how many ("Copying to the backup · 120 of 1530"),
 never the name of a file on the device. All devices and files are made up."""
 from conftest import make_fit
+from fakes import in_language
 
-from openexpress import backup, i18n
+from openexpress import backup
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
 from openexpress.progress import Step
@@ -33,11 +34,8 @@ def test_the_backup_counts_its_files(device_root, tmp_path):
 def test_backup_progress_in_polish(device_root, tmp_path):
     st, dev = _device(device_root)
     seen = []
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         backup.run_backup(dev, st, tmp_path / "bk", keep=1, progress=seen.append)
-    finally:
-        i18n.setup("en")
     assert seen[0] == f"Kopiowanie do kopii zapasowej{NB}· 1 z{NB}{len(seen)}"
 
 

@@ -5,22 +5,15 @@ made-up files only (fakes.fit_activity)."""
 
 import os
 import re
-from datetime import UTC, datetime
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import drive_session, fit_activity
+from fakes import drive_session, fit_activity, fit_time
 
 from openexpress import cli, service
 
-FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
 UNIT = 1234567890  # the unit ID of DEVICE_XML
 RUNNING, CYCLING, TRAINING = 1, 2, 10
-
-
-def fit_time(*when) -> int:
-    """A moment of local time as a time of the FIT protocol."""
-    return int(datetime(*when).timestamp()) - FIT_EPOCH
 
 
 @pytest.fixture

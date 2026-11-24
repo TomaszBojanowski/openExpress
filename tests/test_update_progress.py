@@ -1,9 +1,10 @@
 """The progress of software updates: each update by its name and how far, in bytes
 ("Downloading System · 1.2 MB of 3.4 MB", "Copying System to the device · …"); never the
 name of a file on the device or on the server. All updates and devices are made up."""
+from fakes import in_language
 from test_updates_maps import server, sw_response  # noqa: F401 - the fixture
 
-from openexpress import i18n, updates
+from openexpress import updates
 from openexpress.device.storage import LocalStorage
 from openexpress.progress import Step
 
@@ -55,11 +56,8 @@ def test_an_update_of_unknown_size_says_its_size_once_it_is_there(server, device
 
 
 def test_update_progress_in_polish(server, device_root, xdg):
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         _items, seen = _install(server, device_root)
-    finally:
-        i18n.setup("en")
     heads = list(dict.fromkeys(m.head for m in seen))
     assert heads == ["Pobieranie System", "Pobieranie Aux",
                      "Kopiowanie Aux na urządzenie", "Kopiowanie System na urządzenie"]

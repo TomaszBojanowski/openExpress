@@ -6,7 +6,7 @@ the four made-up ones of test_tile_facts."""
 import types
 
 import pytest
-from test_forget_window import _turn_until
+from fakes import turn_until
 from test_tile_facts import ACCOUNT, FENIX, _run, _said, _window, four  # noqa: F401 - four: a fixture
 
 LAST = {"fēnix 8": ["Update available", "Primary"], "Edge 1050": ["Synced"],
@@ -51,7 +51,7 @@ def test_the_first_frame_of_the_window_says_what_was_kept_of_the_devices(four, m
     monkeypatch.setattr(app.MainWindow, "_show_tiles", drawn)
     win = app.MainWindow(None)
     try:
-        assert _turn_until(lambda: frames)
+        assert turn_until(lambda: frames)
         first, account = frames[0]
         assert detected == [None]  # the window's own detection, once, nothing open
         assert account is None  # before the account's list

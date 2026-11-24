@@ -5,6 +5,7 @@ language; the code itself when the list or the name is not there. The list here 
 import json
 
 import pytest
+from fakes import in_language
 
 from openexpress import i18n
 
@@ -37,12 +38,9 @@ def countries(tmp_path, monkeypatch):
 def test_a_country_is_named_in_the_language_of_the_program(countries):
     assert i18n.country_name("KR") == "South Korea"  # the common name before the official one
     assert i18n.country_name("pl") == "Poland"
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert i18n.country_name("KR") == "Korea Południowa"
         assert i18n.country_name("PL") == "Polska"
-    finally:
-        i18n.setup("en")
 
 
 def test_without_a_name_the_code_is_shown(countries, tmp_path, monkeypatch):

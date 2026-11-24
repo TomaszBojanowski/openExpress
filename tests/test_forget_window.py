@@ -7,7 +7,8 @@ import json
 import types
 
 import pytest
-from fakes import descendants, start_section
+from fakes import answer_dialog as answer
+from fakes import descendants, pending_of, start_section, turn_until
 from fakes import window as stand_in
 
 FENIX, EDGE = 3000000001, 3000000002
@@ -24,15 +25,6 @@ def remembered(unit_id=FENIX, description="fēnix 8", part="006-B4532-00"):
     from openexpress import known_devices
 
     return known_devices.remember(unit_id, description, part, "23.39", "mtp", now=1.0)
-
-
-def pending_of(unit_id, count):
-    from openexpress import paths
-
-    for n in range(count):
-        path = paths.device_dir(unit_id) / "sync" / "pending" / "FIT_TYPE_4" / f"ACT{n}.FIT"
-        path.parent.mkdir(parents=True, exist_ok=True)
-        path.write_bytes(b"fit")
 
 
 def last_sync_of(unit_id):
@@ -108,12 +100,6 @@ def checks(dialog):
         found = {w.get_label(): w for w in (extra, *descendants(extra))
                  if isinstance(w, Gtk.CheckButton)}
     return found
-
-
-def answer(dialog, response):
-    """An answer as a click gives it in libadwaita 1.9: "closed" first, then "response"."""
-    dialog.emit("closed")
-    dialog.emit("response", response)
 
 
 # --- the button ----------------------------------------------------------------------------
@@ -383,17 +369,6 @@ def _button_labelled(widget, label):
     return None
 
 
-def _turn_until(done, seconds=5.0):
-    import time
-
-    from gi.repository import GLib
-
-    deadline = time.monotonic() + seconds
-    while not done() and time.monotonic() < deadline:
-        GLib.MainContext.default().iteration(False)
-    return done()
-
-
 @pytest.mark.needs_display
 def test_clicking_forget_in_the_window_forgets(monkeypatch):
     """The question shown in the window and its button Forget clicked, as libadwaita does it:
@@ -418,11 +393,11 @@ def test_clicking_forget_in_the_window_forgets(monkeypatch):
         assert win.navigation.get_visible_page() is win.remembered.page
         win.remembered.forget_button.emit("clicked")
         dialog = win._forget_dialog
-        assert _turn_until(lambda: dialog.get_mapped())
+        assert turn_until(lambda: dialog.get_mapped())
         _button_labelled(dialog, "Forget").emit("clicked")
-        assert _turn_until(lambda: known_devices.load() == {})
+        assert turn_until(lambda: known_devices.load() == {})
         assert not paths.device_dir(EDGE).exists()
-        assert _turn_until(lambda: win.navigation.get_visible_page() is win.start.page)
+        assert turn_until(lambda: win.navigation.get_visible_page() is win.start.page)
         assert win._forget_dialog is None
     finally:
         netstatus.STATUS.remove_listener(win._net_listener)

@@ -8,6 +8,7 @@ import types
 import uuid
 
 import pytest
+from fakes import in_language
 from fakes import window as stand_in
 from test_ciq_music import (  # noqa: F401
     PRELOADED,
@@ -301,16 +302,11 @@ def test_without_any_copy_an_error_says_there_are_none_yet(iq_device, device_roo
 
 @pytest.mark.needs_display
 def test_the_sentence_in_polish(iq_device, device_root, backups, monkeypatch):
-    from openexpress import i18n
-
     st, dev = iq_device
     _list(device_root, out_bin(APPS))
     _copy_folder(backups, dev, "11.00.00", out_bin(APPS))
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         (dialog,), _errors = _dialog_of(monkeypatch, st, dev)
-    finally:
-        i18n.setup("en")
     assert dialog.kw["body"] == "Żadna kopia nie różni się od obecnej kolejności."
     assert dialog.responses == [("ok", "Zamknij")]
 

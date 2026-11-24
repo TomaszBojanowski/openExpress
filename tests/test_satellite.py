@@ -14,7 +14,7 @@ from pathlib import Path
 
 import pytest
 import requests
-from fakes import made_up_cpe, satellite_answer, satellite_server
+from fakes import in_language, made_up_cpe, satellite_answer, satellite_server
 from ptp_fake import STORAGE, FakeDevice
 
 from openexpress import cli, satellite
@@ -288,7 +288,7 @@ def test_cpe_bin_gone_while_on_is_written_again_by_the_next_sync(tmp_path, clock
     assert on_device(storage) == made_up_cpe(2)
 
 
-def test_the_record_of_the_test_build_is_read_as_it_was(tmp_path, clock):
+def test_a_record_without_a_kind_is_of_the_sony_kind(tmp_path, clock):
     from openexpress import paths
 
     record = {"on": True, "written_at": 1794500000.0, "written_sha": "ab" * 32,
@@ -918,8 +918,6 @@ def _real_files() -> dict[str, list[bytes]]:
 
 
 def test_garmins_real_files_are_known_and_told_apart(clock):
-    from datetime import datetime
-
     real = _real_files()
     assert real["sony"] and all(satellite.known_format(data) for data in real["sony"])
     for spec, other in ((GPE, GPES), (GPES, GPE)):
@@ -1059,15 +1057,11 @@ def test_ours_still_the_newest_keeps_its_age(tmp_path, clock, monkeypatch):
 
 
 def test_taken_in_once_unplugged_in_polish(tmp_path, clock, monkeypatch):
-    from openexpress import i18n
     from openexpress.gui import words
 
     _storage, _device, _server, _served = written_once(tmp_path, clock, monkeypatch)
     state = satellite.load(UNIT)
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = words.satellite_subtitle(state, clock.current, waits=True)
-    finally:
-        i18n.setup("en")
     assert said.startswith(f"Eksperymentalne{NB}· zaktualizowane ")
     assert said.endswith(f"{NB}· urządzenie przyjmie je po odłączeniu")

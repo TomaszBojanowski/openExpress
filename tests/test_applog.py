@@ -6,6 +6,7 @@ import os
 import stat
 
 import pytest
+from fakes import in_language
 
 from openexpress import applog, paths
 
@@ -72,14 +73,11 @@ def test_a_line_of_the_log_has_plain_spaces(log_file, capsys):
     from openexpress import i18n, updates
     from openexpress.i18n import human_size
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         text, size = i18n._(updates.BETA_OFFERED), human_size(2_500_000)
         assert "w\u00a0wersji" in text and size == "2,5\u00a0MB"  # as the window has them
         applog.setup("cli", verbose=True)
         logging.getLogger("openexpress.test").warning("%s (%s)", text, size)
-    finally:
-        i18n.setup("en")
     line = lines(log_file)[-1]
     assert line.endswith("w wersji beta. (2,5 MB)") and "\u00a0" not in line
     err = capsys.readouterr().err

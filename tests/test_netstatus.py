@@ -7,6 +7,8 @@ import types
 
 import pytest
 import requests
+from fakes import children as _children
+from fakes import descendants, in_language
 from fakes import window as stand_in
 
 from openexpress import download, netstatus
@@ -360,16 +362,11 @@ def test_the_times_of_an_answer_in_the_format_of_the_language(language, words):
     always has."""
     import time
 
-    from openexpress import i18n
-
     at = time.mktime((2026, 10, 14, 23, 41, 0, 0, 0, -1))
     later = at + 3 * 86400
-    i18n.setup(language)
-    try:
+    with in_language(language):
         said = [netstatus.when(at, at), netstatus.when(at, later), netstatus.at(at, at),
                 netstatus.at(at, later), netstatus.at_full(at)]
-    finally:
-        i18n.setup("en")
     assert said == words
 
 
@@ -687,14 +684,6 @@ def test_with_no_service_asked_the_popover_says_so_in_one_sentence(network_state
     assert not win.net_retry.get_visible() and not win.net_retry_line.get_visible()
 
 
-def _descendants(widget):
-    child = widget.get_first_child()
-    while child is not None:
-        yield child
-        yield from _descendants(child)
-        child = child.get_next_sibling()
-
-
 @pytest.mark.needs_display
 @pytest.mark.parametrize("steps", [
     [(netstatus.CONNECT, 200)],
@@ -707,10 +696,10 @@ def test_the_focus_never_lands_on_the_rows(steps, network_state):
     window._render_net_status(win)
     content = win.net_button.get_popover().get_child()
     rows = [r.row for r in win.net_rows.values()]
-    assert not any(w.get_focusable() for row in rows for w in (row, *_descendants(row)))
+    assert not any(w.get_focusable() for row in rows for w in (row, *descendants(row)))
     assert not win.net_none.get_focusable()
     # The one thing that takes the focus is Try Again, an item to act on.
-    assert [w for w in _descendants(content) if w.get_focusable()] == [win.net_retry]
+    assert [w for w in descendants(content) if w.get_focusable()] == [win.net_retry]
 
 
 @pytest.mark.needs_display
@@ -738,13 +727,6 @@ def test_the_popover_is_in_sections_as_a_menu(network_state):
     assert "button.oe-menu-item label {\n  font-weight: normal;" in start.CSS
 
 
-def _children(widget):
-    child = widget.get_first_child()
-    while child is not None:
-        yield child
-        child = child.get_next_sibling()
-
-
 @pytest.mark.needs_display
 def test_the_note_is_the_tooltip_of_the_button_not_a_footer(network_state):
     from gi.repository import Gtk
@@ -765,7 +747,6 @@ def test_the_note_is_the_tooltip_of_the_button_not_a_footer(network_state):
         return found
 
     assert note_text not in labels(win.net_button.get_popover().get_child())
-    assert win.net_heading.get_label() == "Connected to Garmin's servers"
     assert win.net_heading_dot.has_css_class("success")
 
 

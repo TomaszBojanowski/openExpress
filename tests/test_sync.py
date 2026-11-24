@@ -1,5 +1,6 @@
 import pytest
 from fakes import SyncClient, Waits
+from fakes import sync_setup as _setup
 
 from openexpress import sync
 from openexpress.device.storage import LocalStorage
@@ -20,13 +21,6 @@ UPLOAD_CONFIG = {
              "requiredconsenttypes": [{"name": "Analytics"}]}]},
     ],
 }
-
-
-def _setup(device_root, tmp_path):
-    st = LocalStorage(device_root)
-    dev = parse(st.read("GARMIN/GarminDevice.xml"))
-    state = sync.SyncState(dev.unit_id, base=tmp_path / "state")
-    return st, dev, state
 
 
 def test_plan_skips_consent_locations_and_non_matching(device_root, tmp_path):
@@ -156,7 +150,7 @@ def test_the_copy_of_a_failed_upload_is_private(device_root, tmp_path):
 
 def test_the_copy_goes_when_connect_already_has_the_activity(device_root, tmp_path):
     """Found in Connect before the upload (by the time of the activity): nothing is left to
-    upload, so the copy is not kept (it was kept for ever: the plan skips what is done)."""
+    upload, so the copy is not kept: the plan skips what is done."""
     st, dev, state = _failed_once(device_root, tmp_path)
     plan = sync.plan_uploads(dev, st, UPLOAD_CONFIG, state, only_types={"FIT_TYPE_4"})
     rep = sync.run_uploads(plan, dev, st, SyncClient(matches={"1100000000"}), state)
@@ -224,8 +218,6 @@ def test_a_file_written_but_interrupted_before_its_acknowledgement_is_not_writte
     """Ctrl+C while Garmin Connect is told a course was written: the course is remembered as
     written and not acknowledged, so the next sync acknowledges it without a second file on
     the device (as when the acknowledgement fails)."""
-    import pytest
-
     st, dev, state = _setup(device_root, tmp_path)
     items = sync.plan_downloads(dev, [
         {"messageid": 7, "messagetype": "file", "devicexmldatatype": "FIT_TYPE_6",

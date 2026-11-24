@@ -6,20 +6,11 @@ one line at INFO. All addresses are made up."""
 import types
 
 import pytest
-from fakes import device_session, replace_in_window
+from fakes import device_session, tasks_at_once
 from fakes import window as stand_in
 
 ADDRESS = "mtp://Garmin_Edge_1050_0a1b2c3d4e5f/"
 EMAIL = "name@example.com"
-
-
-def _at_once(monkeypatch):
-    """The window's thread and main loop, run at once."""
-    from gi.repository import GLib
-
-    replace_in_window(monkeypatch, "threading", types.SimpleNamespace(
-        Thread=lambda target, daemon: types.SimpleNamespace(start=target)))
-    monkeypatch.setattr(GLib, "idle_add", lambda fn, *args: fn(*args))
 
 
 def _failing_work():
@@ -52,7 +43,7 @@ def _run(work):
 
 
 def test_a_failed_task_writes_its_traceback_to_the_log_filtered(monkeypatch, log_file):
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     told = _run(_failing_work)
     (line,) = _lines(log_file, "task failed: RuntimeError")
     assert " WARNING " in line
@@ -95,7 +86,7 @@ def test_a_backup_not_written_names_no_folder_of_the_unit_id(monkeypatch, device
     from openexpress import backup
     from openexpress.gui import app
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     monkeypatch.setattr(backup, "run_backup", _not_written)
     told = []
     app.MainWindow.backup(_the_window(device_root, told))
@@ -108,7 +99,7 @@ def test_memory_dumps_not_copied_name_no_folder_of_the_unit_id(monkeypatch, devi
     from openexpress import diagnostics
     from openexpress.gui import status_page
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     monkeypatch.setattr(diagnostics, "copy_dumps", _not_written)
     monkeypatch.setattr(diagnostics, "copy_crash_logs", _not_written)
     told = []
@@ -125,7 +116,7 @@ def test_work_in_the_background_that_fails_writes_its_traceback_at_info(monkeypa
     from openexpress import applog
     from openexpress.gui import app
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     applog.setup("gui")
     failed = []
     app.MainWindow.in_background(_failing_work, lambda result: None, failed.append)
@@ -141,7 +132,7 @@ def test_work_in_the_background_that_fails_writes_its_traceback_at_info(monkeypa
 def test_a_task_failed_with_a_message_for_the_user_is_one_line(monkeypatch, log_file):
     """The device not ready yet: what the user is told, in one line at INFO, filtered; no
     traceback (nothing went wrong in the program)."""
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     told = _run(_work_not_ready)
     (line,) = _lines(log_file, "task failed: NotThereYet: ")
     assert " INFO " in line and line.endswith("is not ready yet")
@@ -155,7 +146,7 @@ def test_work_in_the_background_with_a_message_for_the_user_is_one_line(monkeypa
     from openexpress import applog
     from openexpress.gui import app
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     applog.setup("gui")
     app.MainWindow.in_background(_work_not_ready, lambda result: None, lambda error: None)
     applog.close()
@@ -245,7 +236,7 @@ def test_an_ordinary_stop_of_a_task_is_one_line_of_info(monkeypatch, log_file, i
     def work():
         raise made
 
-    _at_once(monkeypatch)
+    tasks_at_once(monkeypatch)
     told = _run(work)
     applog.setup("gui")
     app.MainWindow.in_background(work, lambda result: None, lambda error: None)
@@ -258,8 +249,6 @@ def test_an_ordinary_stop_of_a_task_is_one_line_of_info(monkeypatch, log_file, i
 
 
 def test_an_ordinary_stop_on_the_command_line_is_no_error_in_the_log(log_file, capsys):
-    import types
-
     from openexpress import applog, cli, service
 
     def busy(_args):

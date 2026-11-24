@@ -8,6 +8,7 @@ import logging
 import types
 
 import pytest
+from fakes import in_language
 from fakes import window as stand_in
 from test_ownmaps import img_header
 from test_updates_maps import maps_response
@@ -225,13 +226,8 @@ def test_the_page_keeps_the_plan_of_its_maps(device, monkeypatch):
 
 
 def test_the_words_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         lines = mp.cleanup_lines([mp.CleanupFile("GARMIN/OLD1.GMA", 3)])
-    finally:
-        i18n.setup("en")
     assert lines == ["Stare pliki, które Garmin zaleca usunąć:", "GARMIN/OLD1.GMA",
                      "openExpress na razie ich nie usuwa."]
 

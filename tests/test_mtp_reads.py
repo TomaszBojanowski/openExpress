@@ -9,10 +9,9 @@ import re
 import time
 
 import pytest
-from fakes import STALLED
+from fakes import STALLED, in_language
 from gio_fake import MTIME, GioOf, GioOp, GvfsDevice, MtpFiles, Volume, in_a_worker, settle
 
-from openexpress import i18n
 from openexpress.device import storage
 
 gio_storage = pytest.importorskip("openexpress.device.gio_storage")
@@ -324,12 +323,9 @@ def test_its_words_say_what_to_do_once():
 
 
 def test_its_words_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         error = storage.DeviceNotResponding.during("Nie można odczytać GARMIN/x.fit")
         said, replug = str(error), storage.replug_text(error)
-    finally:
-        i18n.setup("en")
     assert said == ("Nie można odczytać GARMIN/x.fit: urządzenie przestało odpowiadać. Odłącz "
                     "je i\u00a0podłącz ponownie.")
     assert replug == said

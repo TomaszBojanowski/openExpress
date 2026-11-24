@@ -1,7 +1,8 @@
 """In Polish a folder on the device is a "folder", as the rest of the program calls it, never a
 "katalog"; folders on this computer keep their own words."""
 
-from openexpress import i18n
+from fakes import in_language
+
 from openexpress.i18n import _
 
 # The texts that name a folder on the device (its own words, never translated here).
@@ -28,11 +29,8 @@ DEVICE_FOLDERS = [
 
 
 def test_a_folder_on_the_device_is_a_folder_in_polish():
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         polish = [_(text) for text in DEVICE_FOLDERS]
-    finally:
-        i18n.setup("en")
     assert all(p != text for p, text in zip(polish, DEVICE_FOLDERS, strict=True))  # translated
     assert [p for p in polish if "katalog" in p.casefold()] == []
     assert all("folder" in p.casefold() for p in polish)

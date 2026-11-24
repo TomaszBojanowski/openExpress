@@ -7,6 +7,7 @@ import pytest
 import requests
 from fakes import (
     device_session,
+    in_language,
     no_answer,
     page_window,
     replace_in_window,
@@ -967,16 +968,11 @@ def test_readable_names_of_types_and_severities(offered):
     etyp.name, etyp.datatype = "", "CONFIG"
     assert etyp.title == "Configuration"
 
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         pl = upd.parse_updates(answer)
         pl[1].severity = "Optional"
         assert (pl[0].title, pl[0].severity_text, pl[1].severity_text, pl[3].severity_text) == (
             "Plik dodatkowy mapy", "Zalecana", "Opcjonalna", "Krytyczna")
-    finally:
-        i18n.setup("en")
 
 
 def test_cli_updates_counts_only_real_updates(offered, capsys):
@@ -1609,16 +1605,12 @@ def test_part_number_that_is_not_offered_is_still_an_error(offered, capsys):
 
 
 def test_skipped_files_message_in_polish():
-    from openexpress import i18n
     from openexpress.i18n import ngettext
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = [ngettext("Skipped {count} file that is already on the device.",
                          "Skipped {count} files that are already on the device.",
                          n).format(count=n) for n in (1, 3, 5)]
-    finally:
-        i18n.setup("en")
     assert said == ["Pominięto 1 plik, który już jest na urządzeniu.",
                     "Pominięto 3 pliki, które już są na urządzeniu.",
                     "Pominięto 5 plików, które już są na urządzeniu."]
@@ -1703,30 +1695,22 @@ def test_window_says_what_to_do_next_without_naming_a_command():
 def test_the_window_s_steps_wrap_by_themselves(lang):
     """The window wraps its words itself: each step one line, no sentence broken in two, no
     indent, and no empty line at the end of the message."""
-    from openexpress import i18n
     from openexpress.gui.app import MainWindow
     from openexpress.updates import InstallReport
 
-    i18n.setup(lang)
-    try:
+    with in_language(lang):
         text = MainWindow._update_done_text(InstallReport(written=[software_update()]))
-    finally:
-        i18n.setup("en")
     lines = text.split("\n")
     assert len(lines) == 6  # copied, the heading of the steps, the four steps
     assert all(line == line.strip() and line.endswith((".", ":")) for line in lines)
     assert [line[:3] for line in lines[2:]] == ["1. ", "2. ", "3. ", "4. "]
 
 def test_next_steps_in_polish():
-    from openexpress import i18n
     from openexpress.i18n import _
     from openexpress.updates import FINISH_STEPS, FINISH_STEPS_WINDOW
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         cli_text, window_text = _(FINISH_STEPS), _(FINISH_STEPS_WINDOW)
-    finally:
-        i18n.setup("en")
     for text in (cli_text, window_text):
         assert "wybierz instalację teraz" in text and "Może też uruchomić się ponownie" in text
         assert "2. Jeśli urządzenie nie włączy się samo, włącz je.\n" in text

@@ -7,9 +7,9 @@ import types
 import uuid
 
 import pytest
-from fakes import RunNow, device_session, software_update
+from fakes import RunNow, device_session, software_update, turn_until
 from fakes import window as stand_in
-from test_forget_window import _button_labelled, _turn_until
+from test_forget_window import _button_labelled
 
 from openexpress import ciq, service
 from openexpress.connect import OtherOwner
@@ -34,14 +34,14 @@ def click(monkeypatch):
 
     def answer(words, until=None):
         dialog = shown[-1]
-        assert _turn_until(dialog.get_mapped)
+        assert turn_until(dialog.get_mapped)
         if words == ESCAPE:
             dialog.close()
         else:
             button = _button_labelled(dialog, words)
             assert button is not None, f"no button {words!r}"
             button.emit("clicked")
-        assert _turn_until(until or (lambda: not dialog.get_mapped()))
+        assert turn_until(until or (lambda: not dialog.get_mapped()))
         return dialog
 
     answer.shown = shown
@@ -287,9 +287,9 @@ def test_open_on_github_keeps_the_report_open_only_with_the_log(click, device_ro
     dialog = click.shown[-1]
     if attached:  # it stays to say where the log is, and Escape closes it then
         click("Open on GitHub", until=lambda: bool(opened))
-        assert _turn_until(lambda: False, 0.3) is False and dialog.get_mapped()
+        assert turn_until(lambda: False, 0.3) is False and dialog.get_mapped()
         dialog.close()
-        assert _turn_until(lambda: not dialog.get_mapped())
+        assert turn_until(lambda: not dialog.get_mapped())
     else:
         click("Open on GitHub")
         assert opened

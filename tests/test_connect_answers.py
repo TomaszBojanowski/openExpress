@@ -3,7 +3,7 @@ an empty body), an object (keys in lower case), and anything else, which is an e
 the request. All answers here are made up."""
 
 import pytest
-from fakes import DEVICE_UNIT, make_client, response
+from fakes import DEVICE_UNIT, in_language, make_client, response
 
 from openexpress.connect import PRIMARY_TRAINING_PATH, ApiError
 
@@ -115,15 +115,12 @@ def test_the_apps_page_says_a_server_error_in_its_language(language, words):
     command line says them too)."""
     import types
 
-    from openexpress import ciq, i18n
+    from openexpress import ciq
 
     client = client_answering("express/appstore/rest/apps/downloads", response(526, b""))
     device = types.SimpleNamespace(unit_id=DEVICE_UNIT, part_number="006-B0000-00")
-    i18n.setup(language)
-    try:
+    with in_language(language):
         said, code, _body = error_of(lambda: ciq.StoreApi(client).account_apps(device, "en-US"))
-    finally:
-        i18n.setup("en")
     assert said == words and code == 526
 
 

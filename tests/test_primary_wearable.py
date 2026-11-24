@@ -7,9 +7,8 @@ up."""
 import types
 
 import pytest
-from fakes import descendants, device_session
-
-from openexpress import i18n
+from fakes import descendants, device_session, in_language
+from fakes import tile as _tile
 
 FENIX, EDGE, VENU = 3000000001, 3000000002, 3000000004
 
@@ -64,17 +63,6 @@ def test_its_words_are_those_of_the_primary_training_device():
 
 
 # --- the chip -----------------------------------------------------------------------------------
-
-
-def _tile(**fields):
-    from openexpress.devicelist import Tile
-
-    values = dict(description="fēnix 8", part_number="006-B4532-00", software_version="23.39",
-                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
-                  image_part_number="006-B4532-00", image_url=None, category=None,
-                  account_known=True)
-    values.update(fields)
-    return Tile(**values)
 
 
 def test_the_chip_primary_says_what_it_is_in_its_tooltip():
@@ -184,15 +172,12 @@ def test_the_row_asks_nothing_of_the_account():
 def test_in_polish():
     from openexpress.gui import start
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         _win, _section, texts = _page()
         rows = [(t, s) for t, s in texts if t == "Podstawowe urządzenie noszone na ciele"]
         ((_words, _style, tooltip),) = start.chips(_tile(primary=True))
         _win, _section, other = _page(account=_account(None))
         unset = [s for t, s in other if t == "Podstawowe urządzenie noszone na ciele"]
-    finally:
-        i18n.setup("en")
     assert rows == [("Podstawowe urządzenie noszone na ciele", "To urządzenie")]
     assert unset == ["Nie ustawiono"]
     # Hard spaces after the one-letter words (tools/po-hard-spaces.py).

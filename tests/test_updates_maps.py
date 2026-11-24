@@ -8,6 +8,7 @@ import threading
 import pytest
 import requests
 from fakes import RunNow, device_session, in_language, maps_window
+from fakes import children as _children
 from fakes import window as stand_in
 
 from openexpress import applog, download, maps, updates
@@ -606,13 +607,6 @@ def test_maps_command_does_not_say_no_maps_when_the_check_fails(
                 else f"Error: Map check: server error (HTTP {status})" if status >= 500
                 else "Server error: Map check")
         assert said in captured.err and "Traceback" not in captured.err
-
-
-def _children(widget):
-    child = widget.get_first_child()
-    while child is not None:
-        yield child
-        child = child.get_next_sibling()
 
 
 @pytest.mark.needs_display
@@ -1970,14 +1964,11 @@ def test_maps_update_skips_an_incomplete_map(server, device_root, xdg, monkeypat
 
 
 def test_the_words_of_an_incomplete_map_in_polish(server):
-    from openexpress import cli, i18n
+    from openexpress import cli
 
     east = _with_state(server, "East", 2)["East"]
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         words = east.status, cli._incomplete_maps_text(1), cli._incomplete_maps_text(5)
-    finally:
-        i18n.setup("en")
     assert words == (
         "niekompletna na urządzeniu",
         ("1 mapa jest niekompletna na urządzeniu; zainstaluj ją ponownie poleceniem "
@@ -2070,14 +2061,11 @@ def test_up_to_date_in_polish_fits_the_software_and_a_map(server):
     """One text says it after "Device software:" in openexpress status and as the state of a
     map: in Polish the same words fit both (a feminine adjective alone would not fit the
     software, a neuter noun)."""
-    from openexpress import cli, i18n
+    from openexpress import cli
 
     west = _with_state(server, "West", 1, reinstall=True)["West"]  # installed, no newer
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         words = cli._update_words("current"), west.status
-    finally:
-        i18n.setup("en")
     assert words == ("aktualna wersja", "aktualna wersja")
 
 

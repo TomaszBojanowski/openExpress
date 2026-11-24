@@ -10,6 +10,7 @@ import threading
 import types
 from collections import namedtuple
 from dataclasses import dataclass
+from datetime import UTC, datetime
 
 Call = namedtuple("Call", "title fn done failed device in_page button failed_title")
 
@@ -520,6 +521,146 @@ def descendants(widget):
     return walk(widget)
 
 
+def turn_until(done, seconds=5.0):
+    """Turns the main loop until `done()` is true or `seconds` have passed: what `done()` says
+    at the end."""
+    import time
+
+    from gi.repository import GLib
+
+    deadline = time.monotonic() + seconds
+    while not done() and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+    return done()
+
+
+def iterate(seconds: float = 0.05) -> None:
+    """Turns the main loop for `seconds`."""
+    import time
+
+    from gi.repository import GLib
+
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        GLib.MainContext.default().iteration(False)
+
+
+def wait(until, what: str, seconds: float = 15) -> None:
+    """Turns the main loop until `until()` is true, then a moment more so that what follows it
+    is drawn too; fails naming `what` after `seconds`."""
+    import time
+
+    from gi.repository import GLib
+
+    end = time.monotonic() + seconds
+    while time.monotonic() < end:
+        if until():
+            iterate(0.1)  # what follows it drawn too
+            return
+        GLib.MainContext.default().iteration(False)
+    raise AssertionError(f"not reached: {what}")
+
+
+def children(widget):
+    """The widgets right under `widget`, in order."""
+    child = widget.get_first_child()
+    while child is not None:
+        yield child
+        child = child.get_next_sibling()
+
+
+def labels_of(widget):
+    """Every Gtk.Label in `widget`, itself included, at any depth."""
+    from gi.repository import Gtk
+
+    found = [widget] if isinstance(widget, Gtk.Label) else []
+    child = widget.get_first_child()
+    while child is not None:
+        found += labels_of(child)
+        child = child.get_next_sibling()
+    return found
+
+
+def answer_dialog(dialog, response):
+    """An answer as a click gives it in libadwaita 1.9: "closed" first, then "response"."""
+    dialog.emit("closed")
+    dialog.emit("response", response)
+
+
+def tile(**fields):
+    """A tile of the start page: a connected fēnix 8 on the account, unless told otherwise."""
+    from openexpress.devicelist import Tile
+
+    values = dict(description="fēnix 8", part_number="006-B4532-00", software_version="23.39",
+                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
+                  image_part_number="006-B4532-00", image_url=None, category=None,
+                  account_known=True)
+    values.update(fields)
+    return Tile(**values)
+
+
+def edge_tile(**fields):
+    """A tile of the start page: a connected Edge 1050 on the account, unless told otherwise."""
+    from openexpress.devicelist import Tile
+
+    values = dict(description="Edge 1050", part_number="006-B4440-00", software_version="33.13",
+                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
+                  image_part_number="006-B4440-00", image_url=None, category=None,
+                  update_found=None, account_known=True)
+    values.update(fields)
+    return Tile(**values)
+
+
+def sync_setup(device_root, tmp_path):
+    """The storage of the folder `device_root`, its device and a sync state of its own."""
+    from openexpress import sync
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+
+    st = LocalStorage(device_root)
+    dev = parse(st.read("GARMIN/GarminDevice.xml"))
+    state = sync.SyncState(dev.unit_id, base=tmp_path / "state")
+    return st, dev, state
+
+
+def pending_of(unit_id, count):
+    """`count` files of the device waiting to be uploaded."""
+    from openexpress import paths
+
+    for n in range(count):
+        path = paths.device_dir(unit_id) / "sync" / "pending" / "FIT_TYPE_4" / f"ACT{n}.FIT"
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"fit")
+
+
+def kept_copy(kind, files, when="2026-10-21 11.00.00"):
+    """A copy of diagnostic files of the test device as the program keeps it: its note and each
+    content once (diagnostics: objects, snapshots)."""
+    import hashlib
+    import json
+
+    from openexpress import diagnostics
+
+    where = diagnostics.folder(DEVICE_UNIT)
+    (where / "objects").mkdir(parents=True, exist_ok=True)
+    (where / "snapshots").mkdir(exist_ok=True)
+    listed = {}
+    for path, data in files.items():
+        sha = hashlib.sha256(data).hexdigest()
+        (where / "objects" / sha).write_bytes(data)
+        listed[path] = {"sha256": sha, "size": len(data), "mtime": None}
+    (where / "snapshots" / f"{when}.json").write_text(json.dumps(
+        {"kind": kind, "at": when, "software_version": "23.39", "files": listed, "listed": {}}))
+
+
+def last_sync_details(record, language="en"):
+    """The lines of the details of a sync record, as the window words them in `language`."""
+    from openexpress import last_sync
+
+    with in_language(language):
+        return [text for text, _warning in last_sync.describe(record).steps]
+
+
 @contextlib.contextmanager
 def gtk_complaints(domains=("Adwaita", "Gtk")):
     """What Adwaita and GTK (or `domains`) say as CRITICAL or WARNING inside the block, as
@@ -1013,17 +1154,25 @@ def make_client(devices=None, auth=True, **routes):
                         RecordingSession(devices, **routes))
 
 
-def no_answer(error, unit_id=1234567890):
+def no_answer(error):
     """What the client raises when a request of its gets no answer (`error`, a requests
     error): its own error, made by its own code (the upload settings, asked of a session that
     raises `error`)."""
     from openexpress.connect import ApiError
 
     try:
-        make_client(UnitUploadSettings=error).upload_settings(unit_id)
+        make_client(UnitUploadSettings=error).upload_settings(DEVICE_UNIT)
     except ApiError as raised:
         return raised
     raise AssertionError("the client raised nothing")
+
+
+FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
+
+
+def fit_time(*when) -> int:
+    """A moment of local time as a time of the FIT protocol."""
+    return int(datetime(*when).timestamp()) - FIT_EPOCH
 
 
 # Made-up FIT files. The base types of the FIT protocol, by the byte of a field definition:
@@ -1183,7 +1332,7 @@ def course_fit(name: str | None = "Morning Loop", *, made: int, product=20119,
     """A made-up course file: file_id (type 6, made at `made`, a Unix time; the product 20119
     is that of a course a device made of a file), its course, one lap and `points` records, the
     lap before them as the devices write it (or after)."""
-    at = made - 631065600  # the FIT protocol's time
+    at = made - FIT_EPOCH  # the FIT protocol's time
     head = (FitDefinition(0, 0, ((0, 0x00), (1, 0x84), (2, 0x84), (4, 0x86))),
             FitData(0, (6, manufacturer, product, at)),
             FitDefinition(1, 31, ((5, 0x07, 48), (4, 0x00))), FitData(1, (name, 0)))

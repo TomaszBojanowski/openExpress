@@ -12,7 +12,9 @@ from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML, make_fit
+from fakes import labels_of as _labels
 from fakes import record_sync
+from fakes import tile as _tile
 from fakes import window as stand_in
 
 from openexpress import known_devices, service, sync, tile_facts
@@ -22,17 +24,6 @@ DAY = 86400.0
 NOW = 1_800_000_000.0
 FENIX, EDGE, VARIA, VENU = 3000000101, 3000000102, 3000000103, 3000000104
 PACKAGE = Path(tile_facts.__file__).parent
-
-
-def _tile(**fields):
-    from openexpress.devicelist import Tile
-
-    values = dict(description="fēnix 8", part_number="006-B4532-00", software_version="23.39",
-                  kind="mtp", connected=True, on_account=True, primary=False, last_seen=None,
-                  image_part_number="006-B4532-00", image_url=None, category=None,
-                  account_known=True)
-    values.update(fields)
-    return Tile(**values)
 
 
 def _login(name="made-up"):
@@ -401,10 +392,10 @@ def test_a_device_that_cannot_be_remembered_gets_no_sync_fact(caplog, monkeypatc
 # --- two openings on the same files ------------------------------------------------------
 
 
-def _summary(unit, name, software, uri=None, kind="mtp"):
+def _summary(unit, name, software):
     from openexpress.device.gio_storage import DeviceSummary, FoundDevice
 
-    return DeviceSummary(FoundDevice(uri or f"mtp://{unit}/", "x", True, kind=kind), name,
+    return DeviceSummary(FoundDevice(f"mtp://{unit}/", "x", True, kind="mtp"), name,
                          "006-B0000-00", software, unit)
 
 
@@ -487,17 +478,6 @@ def _run(win):
     while win.later:
         work, done = win.later.pop(0)
         done(work())
-
-
-def _labels(widget):
-    from gi.repository import Gtk
-
-    found = [widget] if isinstance(widget, Gtk.Label) else []
-    child = widget.get_first_child()
-    while child is not None:
-        found += _labels(child)
-        child = child.get_next_sibling()
-    return found
 
 
 def _said(win):

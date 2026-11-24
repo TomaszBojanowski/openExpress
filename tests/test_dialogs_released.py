@@ -6,7 +6,7 @@ import gc
 import types
 
 import pytest
-from fakes import RunNow, descendants, preferences_window, window_methods
+from fakes import RunNow, descendants, preferences_window, turn_until, window_methods
 from fakes import window as stand_in
 
 
@@ -180,17 +180,6 @@ def test_the_choice_of_a_copy_of_the_app_list_is_released_once_closed(monkeypatc
     assert gone == [True]
 
 
-def _turn_until(done, seconds=5.0) -> bool:
-    import time
-
-    from gi.repository import GLib
-
-    deadline = time.monotonic() + seconds
-    while not done() and time.monotonic() < deadline:
-        GLib.MainContext.default().iteration(False)
-    return done()
-
-
 @pytest.mark.needs_display
 def test_next_clicked_goes_on_with_the_copy_chosen(monkeypatch):
     """The question shown in a window, a copy chosen and its button Next clicked as a user
@@ -208,14 +197,14 @@ def test_next_clicked_goes_on_with_the_copy_chosen(monkeypatch):
     try:
         win.choose_order()
         dialog = shown.pop()
-        assert _turn_until(dialog.get_mapped)
+        assert turn_until(dialog.get_mapped)
         box = next(w for w in descendants(dialog.get_extra_child())
                    if isinstance(w, Gtk.ListBox))
         box.select_row(box.get_row_at_index(0))
         (button,) = [w for w in descendants(dialog)
                      if isinstance(w, Gtk.Button) and w.get_label() == "Next"]
         button.emit("clicked")
-        assert _turn_until(lambda: chosen == [choice], 2)
+        assert turn_until(lambda: chosen == [choice], 2)
         assert win._order_dialog is None
     finally:
         host.destroy()

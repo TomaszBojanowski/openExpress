@@ -7,6 +7,7 @@ import logging
 
 import pytest
 from fakes import SyncClient
+from fakes import sync_setup as _setup
 from test_fixes_net import DATA, md5hex, server  # noqa: F401 - the fixture
 from test_sync import UPLOAD_CONFIG
 from test_upload_consent import Account
@@ -19,12 +20,6 @@ from openexpress.device.xmldevice import parse
 COURSE = "Evening loop past the Kowalskis' house"
 ACTIVITY = "2026-10-01-10-00-00.fit"  # a file of the device_root fixture
 SIGNATURE = "1761000000_" + "a1b2c3d4e5f60718293a4b5c6d7e8f90"
-
-
-def _setup(device_root, tmp_path):
-    st = LocalStorage(device_root)
-    dev = parse(st.read("GARMIN/GarminDevice.xml"))
-    return st, dev, sync.SyncState(dev.unit_id, base=tmp_path / "state")
 
 
 def _course(dev, mid=7):

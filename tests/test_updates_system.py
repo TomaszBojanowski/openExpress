@@ -11,7 +11,8 @@ from datetime import datetime
 from pathlib import Path
 
 import pytest
-from fakes import RunNow, Section, other_bytes_drive, window_methods
+from fakes import RunNow, Section, in_language, other_bytes_drive, window_methods
+from fakes import children as _children
 from fakes import window as stand_in
 
 from openexpress import download, updates
@@ -671,15 +672,11 @@ def test_cli_says_the_device_did_not_install_it(device_root, monkeypatch, capsys
 
 
 def test_the_words_of_the_row_in_polish():
-    from openexpress import i18n
     from openexpress.gui import words
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert words.update_state_text("not-installed") == (
             "Aktualizacja skopiowana, urządzenie jej nie zainstalowało")
-    finally:
-        i18n.setup("en")
 
 
 def test_a_check_that_keeps_nothing_forgets_nothing(device_root):
@@ -883,13 +880,8 @@ def test_the_window_does_not_warn_before_a_plain_file(monkeypatch):
 
 @pytest.mark.needs_display
 def test_the_warning_in_polish(monkeypatch):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         body, warning = _question(monkeypatch, "006-V0000-00")
-    finally:
-        i18n.setup("en")
     assert warning == (WARNING_PL, ["heading", "warning"])
     assert body.startswith(f"Test Bundle {VERSIONS}\nRozmiar: 12\u00a0B\n")
 
@@ -903,13 +895,6 @@ def test_the_question_names_both_versions_of_a_system_update(monkeypatch):
 
 
 # --- the status at the top of the Updates page ---------------------------------------------------
-
-
-def _children(widget):
-    child = widget.get_first_child()
-    while child is not None:
-        yield child
-        child = child.get_next_sibling()
 
 
 def _labels(widget):
@@ -1043,18 +1028,13 @@ def test_a_second_system_update_is_listed_as_system_software():
 
 @pytest.mark.needs_display
 def test_the_status_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         _w, current, _g, _b = _updates_page([])
         _w, system, groups, _b = _updates_page(_items(BUNDLE_ENTRY, FONT_ENTRY))
         _w, plain, _g, _b = _updates_page(_items(FONT_ENTRY))
         second = _entry("006-B0000-00", "Test Software", "Firmware", "Garmin", "GUPDATE.GCD",
                         b"fw")
         _w, _s, (listed,), _b = _updates_page(_items(BUNDLE_ENTRY, second))
-    finally:
-        i18n.setup("en")
     assert [t for t, _c in current["texts"]] == ["Oprogramowanie jest aktualne",
                                                  "Wersja oprogramowania 23.39"]
     assert current["buttons"] == [("Sprawdź ponownie", False)]
@@ -1208,15 +1188,10 @@ def test_the_window_says_it_is_a_beta_before_installing(monkeypatch):
 
 @pytest.mark.needs_display
 def test_beta_in_the_window_in_polish(monkeypatch):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         body, warning = _beta_question(monkeypatch, BETA)
         items = updates.parse_updates(lower_keys(beta_answer()), _test_watch())
         _w, status, _g, _b = _updates_page(items, beta=True)
-    finally:
-        i18n.setup("en")
     assert body.endswith("\n\nTo jest wersja beta.")
     assert warning == (WARNING_PL, ["heading", "warning"])
     assert [t for t, _c in status["texts"]] == [
@@ -1334,16 +1309,11 @@ def test_a_license_that_is_not_a_web_address_is_only_text(monkeypatch, url):
 
 @pytest.mark.needs_display
 def test_the_license_in_polish(monkeypatch):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         link, warning = _below(_dialog(monkeypatch, "006-V0000-00",
                                        _with_license("https://example.org/license.txt")))
         text, _warning = _below(_dialog(monkeypatch, "006-V0000-00",
                                         _with_license("file:///etc/passwd")))
-    finally:
-        i18n.setup("en")
     assert link.get_label() == "Umowa licencyjna (EULA)"
     assert warning.get_label() == WARNING_PL
     assert text.get_label() == "Licencja: file:///etc/passwd"
@@ -1590,7 +1560,7 @@ def test_status_of_a_waiting_update_lists_what_is_still_to_install():
     assert [r.get_title() for r in available.rows] == ["Test Font"]
 
 
-def _overview(items=None, drive=False):
+def _overview(drive=False):
     """The "Device Software" row and the software label of the device page; `drive`: the
     device is in mass storage mode."""
     from gi.repository import Adw, Gtk
@@ -1661,15 +1631,11 @@ def test_device_page_says_several_updates_wait_for_the_device(drive, words):
     (12, "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować"),
     (22, "Aktualizacje gotowe: odłącz urządzenie, aby je zainstalować")])
 def test_updates_ready_in_polish(waiting, words):
-    from openexpress import i18n
     from openexpress.gui.words import update_state_text
 
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         said = update_state_text("ready", waiting=waiting)
         on_a_drive = update_state_text("ready", waiting=waiting, mass_storage=True)
-    finally:
-        i18n.setup("en")
     assert said == words
     assert on_a_drive == words.replace("odłącz", "wysuń")
 
@@ -1737,16 +1703,11 @@ def test_after_copying_the_page_says_ready_without_asking_again(monkeypatch):
 
 @pytest.mark.needs_display
 def test_ready_in_polish():
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         _w, status, _g, _b = _updates_page(_staged_items(BETA), beta=True)
         win, MainWindow = _overview()
         items = _staged_items()
         MainWindow._set_update_state(win, updates.pending(items), updates.staged(items))
-    finally:
-        i18n.setup("en")
     assert [t for t, _c in status["texts"]][:3] == [
         "Aktualizacja gotowa", "Odłącz urządzenie, aby ją zainstalować",
         f"{VERSIONS}\u00a0· Beta"]

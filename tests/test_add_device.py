@@ -28,10 +28,10 @@ def device() -> GarminDevice:
                         description="fenix 5x", raw=XML)
 
 
-def garmin(lists, answer=None, status_answer=None, **kw):
+def garmin(lists, answer=None, **kw):
     """A client whose Garmin lists, at each reading of the account's list, the next of
     `lists`, and answers the registration with `answer` (by default: added, active) and a
-    change of status with `status_answer`."""
+    change of status with 204."""
     lists = list(lists)
     client = make_client(**kw)
     client.http.routes[DEVICES_PATH] = lambda: response(body=lists.pop(0) if len(lists) > 1
@@ -43,7 +43,7 @@ def garmin(lists, answer=None, status_answer=None, **kw):
         if method == "POST":
             return answer if answer is not None else response(body=added)
         if method == "PUT":
-            return status_answer if status_answer is not None else response(204, b"")
+            return response(204, b"")
         return None  # the account's list: the routes answer it
 
     client.http.handlers[REGISTER_PATH] = handler

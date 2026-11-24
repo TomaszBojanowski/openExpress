@@ -8,9 +8,8 @@ import dataclasses
 import json
 
 import pytest
-import requests
 from conftest import DEVICE_XML
-from fakes import another_account
+from fakes import another_account, response
 
 from openexpress import connect, devicelist, service, tile_facts
 from openexpress.auth import store
@@ -42,13 +41,6 @@ NOT_REGISTERED = "This device is not registered to your Garmin account."
 @pytest.fixture
 def device():
     return parse(DEVICE_XML.encode())
-
-
-def response(status=200, body=b""):
-    r = requests.Response()
-    r.status_code = status
-    r._content = body if isinstance(body, bytes) else json.dumps(body).encode()
-    return r
 
 
 class Account:
@@ -97,8 +89,8 @@ class Account:
                     self.training = json.loads(data)["deviceId"]
                 else:
                     self.wearable = UNIT
-            return response(self.put_status)
-        return response(404)
+            return response(self.put_status, b"")
+        return response(404, b"")
 
     def client(self):
         """A client of this account."""

@@ -17,7 +17,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import device_session
+from fakes import device_session, kept_copy
 
 from openexpress import (
     crashes,
@@ -93,20 +93,6 @@ def session_of(st, dev, found):
 def fresh_process(monkeypatch):
     monkeypatch.setattr(history, "_noted", set())
     monkeypatch.setattr(diagnostics, "_done", {})
-
-
-def kept_copy(kind, files, when="2026-10-21 11.00.00"):
-    """A copy of diagnostic files as the window keeps it (diagnostics: objects, snapshots)."""
-    where = diagnostics.folder(UNIT)
-    (where / "objects").mkdir(parents=True, exist_ok=True)
-    (where / "snapshots").mkdir(exist_ok=True)
-    listed = {}
-    for path, data in files.items():
-        sha = hashlib.sha256(data).hexdigest()
-        (where / "objects" / sha).write_bytes(data)
-        listed[path] = {"sha256": sha, "size": len(data), "mtime": None}
-    (where / "snapshots" / f"{when}.json").write_text(json.dumps(
-        {"kind": kind, "at": when, "software_version": "23.39", "files": listed, "listed": {}}))
 
 
 def write_lines(*lines):
@@ -269,8 +255,6 @@ def test_the_log_line_of_the_page_says_the_error_logs_were_not_read(caplog):
 
 
 def clock_now():
-    from datetime import datetime
-
     return datetime(2026, 10, 30, 12, 0)
 
 
@@ -375,7 +359,7 @@ def test_an_update_waiting_in_the_main_folder_counts_as_an_update(tmp_path, cloc
 
 def test_the_free_space_line_matches_the_page(tmp_path, clock, capsys, monkeypatch):
     """The command line's list of what can be freed and the page's facts: the same dumps."""
-    from openexpress import cli, freeing
+    from openexpress import cli
 
     monkeypatch.setattr(freeing, "updates_not_installed",
                         lambda client, storage, device, fresh=False: ([], None))
@@ -429,8 +413,6 @@ def test_a_removal_not_counted_again_puts_the_line_right_by_what_it_removed(tmp_
 def test_a_line_counted_after_the_removal_is_not_put_right_again(tmp_path, clock):
     """The window and the command line at once: the device was counted again after a removal
     that could not count it; that removal must not take its sizes off the newer count."""
-    from datetime import timedelta
-
     root = make_root(tmp_path, err=[], dumps=[("RAM_bak1.zip", 200), ("RAM.zip", 300)])
     st, dev = opened(root)
     assert history.note_connection(dev, st)
@@ -634,8 +616,6 @@ def test_no_diagnostic_data_means_the_same_connected_and_from_the_records(tmp_pa
 def test_a_test_drive_changes_nothing_of_the_device_s_records(tmp_path, clock, monkeypatch):
     """A test drive carries a real device's unit ID: neither the places of its diagnostic files
     nor what can be freed on it changes what this computer keeps of that device."""
-    from openexpress import freeing, known_devices
-
     root = make_root(tmp_path, err=[])
     st, dev = opened(root)
     st.test_drive, st.mass_storage = True, True
@@ -823,8 +803,6 @@ def test_a_crash_kept_only_in_a_copy_and_one_on_the_device_40_s_later_are_two(tm
                                                                                 clock):
     """A crash only an earlier copy of the error log holds and the next one on the device, 40 s
     later with the same codes, are two crashes, live and from the records."""
-    import hashlib
-
     x, y = trap("2026-10-20 10:00:00"), trap("2026-10-20 10:00:40")
     where = diagnostics.folder(UNIT)
     (where / "objects").mkdir(parents=True)
@@ -910,9 +888,6 @@ def test_the_report_after_a_removal_whose_dumps_could_not_be_listed(tmp_path, cl
                                                                       monkeypatch):
     """After a removal whose count could not list the dumps, the report tells the dumps of now or
     that they are not known, never those of before the removal."""
-    from openexpress import report
-    from openexpress.device.storage import DeviceError
-
     root = make_logs_root(tmp_path, dumps=[("RAM.zip", 90, 1_700_000_400),
                                       ("RAM_bak1.zip", 300, 1_700_000_300),
                                       ("RAM_bak2.zip", 200, 1_700_000_200)])
@@ -1220,12 +1195,6 @@ def test_a_crash_kept_only_in_a_copy_does_not_join_the_crash_before_it_through_a
         tmp_path, clock):
     """A boot log line joins one crash: the next crash 40 s later, kept only in a copy, stays a crash
     of its own."""
-    import json
-
-    from test_status_sources import kept_copy
-
-    from openexpress import crashes
-
     root = make_root(tmp_path, err=[trap("2026-10-20 22:00:00")])
     st, _dev = opened(root)
     kept_copy("files", {"GARMIN/Debug/err_log.txt": json.dumps([trap("2026-10-20 22:00:40")])
@@ -1238,9 +1207,6 @@ def test_a_crash_kept_only_in_a_copy_does_not_join_the_crash_before_it_through_a
 
 
 def test_two_crashes_of_the_two_error_logs_stay_two_also_with_the_boot_line_of_the_first(clock):
-    from datetime import datetime, timedelta
-
-    from openexpress import crashes
     from openexpress.diagnostics import ErrorEntry
 
     t = datetime(2026, 10, 20, 10, 0, 0)

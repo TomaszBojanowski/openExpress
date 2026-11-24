@@ -2,7 +2,8 @@
 activities · 1 of 4", "Downloading from Garmin Connect · 1 of 2"), one count for all the
 uploads; never the name of a file. All devices, files and answers are made up."""
 from fakes import SyncClient
-from test_sync import UPLOAD_CONFIG, _setup
+from fakes import sync_setup as _setup
+from test_sync import UPLOAD_CONFIG
 
 from openexpress import sync
 from openexpress.progress import Step

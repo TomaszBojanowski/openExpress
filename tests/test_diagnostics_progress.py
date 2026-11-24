@@ -1,9 +1,10 @@
 """The progress of the copies of diagnostic files: what is copied and which of how many
 ("Copying crash logs · 1 of 2"), never the name of a file. All devices and files are made
 up."""
+from fakes import in_language
 from test_diagnostics import device, hiding  # noqa: F401 - fixtures
 
-from openexpress import diagnostics, i18n
+from openexpress import diagnostics
 from openexpress.progress import Step
 
 NB = " "
@@ -54,13 +55,10 @@ def test_the_diagnostic_files_read_are_counted(device, clock):
 def test_diagnostics_progress_in_polish(hiding, clock):
     st, dev, _fake = hiding
     seen = []
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         diagnostics.copy_crash_logs(dev, st, progress=seen.append)
         diagnostics.copy_dumps(dev, st, progress=seen.append)
         diagnostics.copy_files(dev, st, progress=seen.append)
-    finally:
-        i18n.setup("en")
     heads = list(dict.fromkeys(m.head for m in seen))
     assert heads == ["Kopiowanie dzienników awarii", "Kopiowanie zrzutów pamięci",
                      "Kopiowanie plików diagnostycznych"]

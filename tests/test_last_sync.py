@@ -4,11 +4,11 @@ the window, on the command line and in the notification of the background sync."
 from pathlib import Path
 
 import pytest
-from fakes import step_words
+from fakes import in_language, step_words
 from fakes import window as stand_in
 from test_fixes_ui import fake_client  # noqa: F401 - the fixture
 
-from openexpress import i18n, last_sync, service, sync
+from openexpress import last_sync, service, sync
 from openexpress.cli import main
 
 
@@ -68,13 +68,10 @@ def _in_english_and_polish(data, english, polish):
     data = {**data, "time": datetime(2026, 10, 19, 12, 0).timestamp()}
     now = datetime(2026, 10, 22, 12, 0)
     for language, words, when in (("en", english, "3 days ago"), ("pl", polish, "3 dni temu")):
-        i18n.setup(language)
-        try:
+        with in_language(language):
             assert service.describe_counts(data) == words, language
             assert last_sync_words(data, now) == (
                 f"{when} · {words}".replace(" · ", "\u00a0· ")), language
-        finally:
-            i18n.setup("en")
 
 
 @pytest.mark.parametrize(("data", "english", "polish"), ROWS, ids=[r[1] for r in ROWS])
@@ -130,11 +127,8 @@ def test_every_row_of_a_sync_that_uploaded_nothing(data, english, polish):
 ])
 def test_the_details_say_in_full_why_nothing_was_uploaded(reason, english, polish):
     for language, words in (("en", english), ("pl", polish)):
-        i18n.setup(language)
-        try:
+        with in_language(language):
             assert step_words(_blocked(reason)["lines"]) == [words], language
-        finally:
-            i18n.setup("en")
     assert step_words(_blocked("a reason of a newer version")["lines"]) == []
 
 
@@ -151,12 +145,9 @@ def test_an_older_record_of_a_blocked_sync_keeps_its_words_as_the_details():
     (1, "5 nowych plików, 1 wysłany"), (2, "6 nowych plików, 2 wysłane"),
     (5, "9 nowych plików, 5 wysłanych"), (22, "26 nowych plików, 22 wysłane")])
 def test_the_row_in_polish(count, words):
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         row = service.describe_counts({"uploaded": count, "skipped_known": 3, "rejected": 1,
                                        "downloaded": 2, "errors": ["x"]})
-    finally:
-        i18n.setup("en")
     assert row == f"{words} · 2 odebrane"
 
 
@@ -173,12 +164,9 @@ def test_the_row_of_a_sync_in_polish():
                                                 "FIT_TYPE_44": 1, "FIT_TYPE_58": 1}},
                 {"kind": "uploads", "uploaded": 6, "known": 2, "known_checked": 1,
                  "known_server": 1, "rejected": 0, "errors": 0}]}
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         row = last_sync_words(data, datetime(2026, 10, 20, 10, 0))
         details = step_words(data["lines"])
-    finally:
-        i18n.setup("en")
     assert row == "2 dni temu\u00a0· 8 nowych plików, 6 wysłanych"  # two days back (by the date)
     assert details == [("Pliki z\u00a0urządzenia: aktywności, monitorowanie ×5, zestawienia, dziennik "
                         "urządzenia"), "2 pliki były już w\u00a0Garmin Connect"]
@@ -187,11 +175,8 @@ def test_the_row_of_a_sync_in_polish():
 @pytest.mark.parametrize(("received", "words"), [(1, "1 odebrany"), (2, "2 odebrane"),
                                                  (5, "5 odebranych")])
 def test_the_files_from_connect_in_polish(received, words):
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         row = service.describe_counts({"uploaded": 1, "downloaded": received})
-    finally:
-        i18n.setup("en")
     assert row == f"1 nowy plik, 1 wysłany · {words}"
 
 
@@ -214,11 +199,8 @@ def test_the_details_leave_how_files_were_recognised_to_the_log():
 
 def test_the_details_in_polish():
     step = service.uploads_step(_report(uploaded=7, checked=2, server=1))
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         (line,) = step_words([step])
-    finally:
-        i18n.setup("en")
     assert line == "3 pliki były już w\u00a0Garmin Connect"
 
 
@@ -374,11 +356,8 @@ def test_new_files_in_polish():
     step = {"kind": "new_files", "types": {"FIT_TYPE_4": 1, "FIT_TYPE_49": 1, "FIT_TYPE_61": 1,
                                            "FIT_TYPE_79": 1, "BACKUP_PRIMARY": 1,
                                            "FIT_TYPE_70": 1}}
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         (line,) = step_words([step])
-    finally:
-        i18n.setup("en")
     assert line == ("Pliki z\u00a0urządzenia: aktywności, sen, EKG, zaburzenia snu, kopia zapasowa "
                     "urządzenia, inne dane (FIT_TYPE_70)")
 
@@ -388,11 +367,8 @@ def test_the_device_level_monitoring_is_the_device_log():
     "device log", told apart from the settings change log and the primary device's data."""
     assert service.type_name("FIT_TYPE_58") == "device log"
     assert service.type_name("FIT_TYPE_32") == "monitoring"
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert service.type_name("FIT_TYPE_58") == "dziennik urządzenia"
-    finally:
-        i18n.setup("en")
 
 
 def test_names_for_the_training_status_primary_device_and_coach_files():
@@ -403,11 +379,8 @@ def test_names_for_the_training_status_primary_device_and_coach_files():
     assert step_words([step]) == [
         ("Files from the device: settings change log, training status data, primary training "
          "device data, Garmin Coach plan ×2, other data (FIT_TYPE_70)")]
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         (line,) = step_words([step])
-    finally:
-        i18n.setup("en")
     assert line == ("Pliki z\u00a0urządzenia: dziennik zmian ustawień, dane stanu wytrenowania, dane "
                     "podstawowego urządzenia treningowego, plan Garmin Coach ×2, inne dane "
                     "(FIT_TYPE_70)")

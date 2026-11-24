@@ -5,26 +5,19 @@ stands for the device; made-up files only (fakes.fit_activity)."""
 
 import os
 import xml.etree.ElementTree as ET
-from datetime import UTC, datetime
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import fit_activity
+from fakes import fit_activity, fit_time
 
 from openexpress import cli
 
-FIT_EPOCH = int(datetime(1989, 12, 31, tzinfo=UTC).timestamp())
 UNIT = 1234567890  # the unit ID of DEVICE_XML
 RUNNING, CYCLING, TRAINING = 1, 2, 10
 WARSAW = (624_000_000, 250_000_000)  # a made-up position, in semicircles
 GPX = "{http://www.topografix.com/GPX/1/1}"
 RUN = "2026-10-30-07-00-00.fit"
 RUN_GPX = "2026-10-30 07.00 Running.gpx"
-
-
-def fit_time(*when) -> int:
-    """A moment of local time as a time of the FIT protocol."""
-    return int(datetime(*when).timestamp()) - FIT_EPOCH
 
 
 @pytest.fixture

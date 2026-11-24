@@ -44,15 +44,14 @@ def record(second: int, metres: float, heart_rate: int | None = 140) -> FitData:
                        2500))
 
 
-def run(*, records=None, laps=None, sessions=None, cut=None, bad_crc=False) -> bytes:
+def run(*, records=None, laps=None, sessions=None, bad_crc=False) -> bytes:
     records = [record(s, s * 2.5) for s in range(4)] if records is None else records
     laps = [FitData(3, (START + 2, START, 2000, 2000, 500, 1, 2500, 2500, 140, 141, 0)),
             FitData(3, (START + 4, START + 2, 2000, 2000, 500, 1, 2500, 2500, 142, 145, 1))
             ] if laps is None else laps
     sessions = [FitData(2, (START, 1, 0, 4000, 4000, 1000, 2, 2500, 2500, 141, 145, 1))
                 ] if sessions is None else sessions
-    return fit_file(*FILE_ID, RECORD, *records, LAP, *laps, SESSION, *sessions, cut=cut,
-                    bad_crc=bad_crc)
+    return fit_file(*FILE_ID, RECORD, *records, LAP, *laps, SESSION, *sessions, bad_crc=bad_crc)
 
 
 def test_the_series_of_a_run():

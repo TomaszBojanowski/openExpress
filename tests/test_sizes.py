@@ -6,8 +6,9 @@ import re
 
 import pytest
 from conftest import make_fit
-from fakes import SyncClient
-from test_sync import UPLOAD_CONFIG, _setup
+from fakes import SyncClient, in_language
+from fakes import sync_setup as _setup
+from test_sync import UPLOAD_CONFIG
 from test_updates_maps import maps_response, server, sw_response  # noqa: F401 - the fixture
 
 from openexpress import i18n, maps, music, sync, updates
@@ -46,13 +47,10 @@ def test_a_size_never_breaks_between_its_number_and_its_unit():
     the number and the unit, in English and in Polish; the device report, text for GitHub,
     keeps a plain one (and the command line and the log write plain spaces)."""
     for language in ("en", "pl"):
-        i18n.setup(language)
-        try:
+        with in_language(language):
             for n in VALUES[1:]:
                 number, unit = human_size(n).split("\u00a0")
                 assert unit in ("B", "kB", "MB", "GB") and " " not in number, (language, n)
-        finally:
-            i18n.setup("en")
     assert human_size(4_700_000_000, localize=False) == "4.7 GB"
 
 
@@ -131,7 +129,7 @@ def test_map_download_progress_shows_a_readable_size(server, device_root, xdg):
         f"Downloading {east.name}\u00a0· {human_size(east.size)} of {human_size(east.size)}")
 
 
-def not_enough_space(server, device_root, tmp_path, monkeypatch):
+def not_enough_space(server, device_root, monkeypatch):
     """The three places that refuse to write when the device is too full (a big one: an
     update keeps 2 MiB free)."""
     monkeypatch.setattr(LocalStorage, "free_space", lambda self: 1_200_000)
@@ -154,7 +152,7 @@ def not_enough_space(server, device_root, tmp_path, monkeypatch):
 
 def test_not_enough_space_is_said_with_readable_sizes(server, device_root, xdg, tmp_path,
                                                       monkeypatch):
-    said = not_enough_space(server, device_root, tmp_path, monkeypatch)
+    said = not_enough_space(server, device_root, monkeypatch)
     for text in said:
         assert text.startswith("Not enough space on the device: ") and "1200000" not in text
     # An update says what it keeps free besides (maps and music do not).
@@ -165,7 +163,7 @@ def test_not_enough_space_is_said_with_readable_sizes(server, device_root, xdg, 
 
 def test_not_enough_space_in_polish(polish, server, device_root, xdg, tmp_path,
                                     monkeypatch):
-    said = not_enough_space(server, device_root, tmp_path, monkeypatch)
+    said = not_enough_space(server, device_root, monkeypatch)
     assert said[2] == "Za mało miejsca na urządzeniu: potrzeba 2,5\u00a0MB, wolne 1,2\u00a0MB"
     assert all(text.endswith(", wolne 1,2\u00a0MB") for text in said)
 

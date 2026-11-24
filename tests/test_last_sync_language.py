@@ -7,10 +7,11 @@ import types
 from pathlib import Path
 
 import pytest
-from fakes import step_words
+from fakes import in_language, step_words
+from fakes import last_sync_details as _details
 from test_received_from_queue import APP, TRUEUP, UNIT, _synced_once
 
-from openexpress import ciq, i18n, last_sync, service
+from openexpress import ciq, service
 
 PATTERNS = Path(__file__).resolve().parent / "data" / "last_sync"
 NB = "\u00a0"
@@ -33,28 +34,17 @@ SECOND = {  # the details of the second sync, in each language
 }
 
 
-def _details(record, language):
-    i18n.setup(language)
-    try:
-        return [text for text, _warning in last_sync.describe(record).steps]
-    finally:
-        i18n.setup("en")
-
-
 @pytest.mark.parametrize("written_in, shown_in", [("pl", "en"), ("en", "pl")])
 def test_details_are_put_into_words_in_the_language_they_are_shown_in(
         written_in, shown_in, device_root, xdg, monkeypatch):
     monkeypatch.setattr(ciq, "install_queued", lambda *a, **kw: ciq.IqInstallReport(
         installed=["Face It"], for_phone=["Another app"]))
-    i18n.setup(written_in)
-    try:
+    with in_language(written_in):
         session = _synced_once(device_root)  # the first sync: existing files marked
         first = service.load_last_sync(UNIT)
         session.client.messages = [APP, TRUEUP, NOT_TAKEN]
         service.run_sync(session)
         second = service.load_last_sync(UNIT)
-    finally:
-        i18n.setup("en")
     (marked,) = _details(first, shown_in)
     if shown_in == "en":
         assert marked.startswith("Marked ") and marked.endswith(" as already uploaded")
@@ -73,7 +63,7 @@ def test_a_record_of_an_older_version_keeps_its_words():
             f"TrueUp: dzienne podsumowania uzgodnione z{NB}innymi urządzeniami Garmin"]
 
 
-def test_the_pattern_of_0_6_20_is_what_the_steps_of_a_sync_write():
+def test_the_pattern_of_details_as_data_is_what_the_steps_of_a_sync_write():
     """format-0.6.20-details-as-data.json: each line as the step that writes it."""
     record = json.loads((PATTERNS / "format-0.6.20-details-as-data.json").read_text())
     report = types.SimpleNamespace(uploaded=["a"], already_in_connect=[], duplicates=[],

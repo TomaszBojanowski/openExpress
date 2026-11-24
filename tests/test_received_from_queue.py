@@ -4,10 +4,11 @@ to upload" alone when something came; an app left in the queue (not written) is 
 here are made up."""
 
 import pytest
-from fakes import step_words
+from fakes import in_language, step_words
+from fakes import last_sync_details as _details
 from test_upload_consent import UNIT, Account
 
-from openexpress import ciq, i18n, last_sync, service, sync
+from openexpress import ciq, last_sync, service, sync
 from openexpress.device.storage import LocalStorage
 from openexpress.device.xmldevice import parse
 from openexpress.settings import Settings
@@ -49,11 +50,8 @@ def _synced_once(device_root):
 
 
 def _row(record, language="en"):
-    i18n.setup(language)
-    try:
+    with in_language(language):
         return last_sync.describe(record).counts
-    finally:
-        i18n.setup("en")
 
 
 def test_trueup_written_from_the_queue_is_received(device_root, xdg):
@@ -109,14 +107,6 @@ METRICS = [{"messageid": 20 + n, "devicexmldatatype": "FIT_TYPE_44",
            for n in range(3)]
 COURSE = {"messageid": 5, "devicexmldatatype": "FIT_TYPE_6",
           "metadata": {"messageurl": "course", "messagename": "A course"}}
-
-
-def _details(record, language="en"):
-    i18n.setup(language)
-    try:
-        return [text for text, _warning in last_sync.describe(record).steps]
-    finally:
-        i18n.setup("en")
 
 
 def test_the_files_of_the_queue_get_a_line_of_their_types(device_root, xdg, monkeypatch):
@@ -193,7 +183,7 @@ def test_a_record_without_the_received_files_line_shows_its_downloaded_count():
     assert _row(record) == "nothing to upload · 4 received"
 
 
-def test_the_pattern_of_0_6_21_is_what_a_sync_writes():
+def test_the_pattern_of_received_files_is_what_a_sync_writes():
     """tests/data/last_sync/format-0.6.21-received-files.json has the lines a sync writes for
     a sync of an Edge (eight new files, three metrics files and TrueUp)."""
     import json
@@ -231,11 +221,8 @@ QUEUE_TYPES = [
 @pytest.mark.parametrize("datatype, english, polish", QUEUE_TYPES)
 def test_the_types_the_queue_brings_have_names(datatype, english, polish):
     assert service.type_name(datatype) == english
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         assert service.type_name(datatype) == polish
-    finally:
-        i18n.setup("en")
 
 
 def test_courses_and_workouts_in_the_line_of_the_queue():

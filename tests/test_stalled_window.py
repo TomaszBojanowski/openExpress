@@ -7,10 +7,16 @@ devices are made up."""
 import types
 
 import pytest
-from fakes import stalled_session, tasks_at_once, tells_stalls, usb_devices, window_methods
+from fakes import (
+    in_language,
+    stalled_session,
+    tasks_at_once,
+    tells_stalls,
+    usb_devices,
+    window_methods,
+)
 from fakes import window as stand_in
 
-from openexpress import i18n
 from openexpress.device.storage import DeviceError, DeviceNotResponding
 
 gio_storage = pytest.importorskip("openexpress.device.gio_storage")
@@ -245,11 +251,8 @@ def test_the_words_of_the_banner(language):
     """With the names when every one is known; two devices, both named."""
     from openexpress.gui import words
 
-    i18n.setup(language)
-    try:
+    with in_language(language):
         said = [words.stalled_text([None]), words.stalled_text(["fēnix 8"]),
                 words.stalled_text(["fēnix 8", "Edge 1050"]),
                 words.stalled_text(["fēnix 8", None])]
-    finally:
-        i18n.setup("en")
     assert said == WORDS[language]

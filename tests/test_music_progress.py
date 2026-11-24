@@ -1,9 +1,10 @@
 """The progress of copying music: how many files and how many bytes, never a file nor a
 track ("Copying music · 1 of 2 · 103 B of 306 B"): the names are the user's own. All files
 and devices are made up."""
+from fakes import in_language
 from test_ciq_music import iq_device, library, songs  # noqa: F401 - fixtures
 
-from openexpress import i18n, music
+from openexpress import music
 from openexpress.progress import Step
 
 NB = " "
@@ -59,11 +60,8 @@ def test_on_a_drive_each_file_is_checked_in_a_step_of_its_own(iq_device, songs, 
 def test_music_progress_in_polish(iq_device, songs):
     st, _dev, plan = _plan(iq_device, songs)
     seen = []
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         music.copy(plan, st, progress=seen.append)
-    finally:
-        i18n.setup("en")
     assert seen[-1] == f"Kopiowanie muzyki{NB}· 2 z{NB}2{NB}· 306{NB}B z{NB}306{NB}B"
 
 

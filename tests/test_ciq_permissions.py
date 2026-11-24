@@ -7,7 +7,8 @@ import dataclasses
 import types
 
 import pytest
-from fakes import RunNow
+from fakes import RunNow, in_language
+from fakes import answer_dialog as _answer
 from fakes import window as stand_in
 from test_ciq_music import (
     FACE,
@@ -193,12 +194,6 @@ def _question(monkeypatch, apps, asking):
     return win, dialog, installed
 
 
-def _answer(dialog, response):
-    """As a click does it: "closed" first, then "response" (libadwaita 1.9)."""
-    dialog.emit("closed")
-    dialog.emit("response", response)
-
-
 @pytest.mark.needs_display
 def test_allow_installs_all_and_cancel_nothing(monkeypatch):
     plain = store_app(STORE_ID, "Connect IQ Store", "watch-app")
@@ -277,18 +272,13 @@ def test_names_not_read_from_the_store_are_said_in_the_log(iq_device, monkeypatc
 
 @pytest.mark.needs_display
 def test_the_question_in_polish(monkeypatch):
-    from openexpress import i18n
-
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         plain = store_app(STORE_ID, "Connect IQ Store", "watch-app")
         _win, dialog, _installed = _question(monkeypatch, [plain, FACE_IT], [FACE_IT])
         heading, body = dialog.get_heading(), dialog.get_body()
         labels = [dialog.get_response_label(r) for r in ("cancel", "others", "allow")]
         _win, several, _installed = _question(monkeypatch, [FACE_IT, FACE_IT], [FACE_IT, FACE_IT])
         several_heading = several.get_heading()
-    finally:
-        i18n.setup("en")
     assert heading == "Zezwolić na nowe uprawnienia?"
     assert body == ("Face It 1.0 potrzebuje tych uprawnień:\n"
                     "• lokalizacja GPS\n"

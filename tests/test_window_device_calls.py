@@ -7,7 +7,7 @@ import threading
 import types
 
 import pytest
-from fakes import RunNow, device_session, window_methods
+from fakes import RunNow, device_session, in_language, window_methods
 from fakes import window as stand_in
 
 from openexpress.device.storage import LocalStorage
@@ -620,8 +620,6 @@ def test_after_a_task_that_writes_the_free_space_is_read_again(iq_device):
 def test_a_space_read_after_the_device_was_unplugged_is_dropped(iq_device):
     """The device is unplugged while its free space is read: the answer that comes later
     changes nothing, says nothing."""
-    import threading
-
     st, dev = iq_device
     answer = threading.Event()
     storage = Space(st.root, free=1, wait=answer)
@@ -794,12 +792,10 @@ def test_storage_is_named_for_what_it_is(iq_device, language, device_page, prefe
     """The group of "Device Storage" on the device page is about the device ("Pamięć"); the
     group of the cache in the preferences about the disk of the computer ("Miejsce na
     dysku"): in English both are "Storage", in Polish each has its own name."""
-    from openexpress import i18n
     from openexpress.gui.app import MainWindow
 
     st, dev = iq_device
-    i18n.setup(language)
-    try:
+    with in_language(language):
         win, section, _s = _overview_window(Space(st.root), dev, space=(FREE, SIZE))
         win.show_overview()
         titles = [g.get_title() for g in section.groups]
@@ -808,8 +804,6 @@ def test_storage_is_named_for_what_it_is(iq_device, language, device_page, prefe
         prefs = window_methods(stand_in(busy=False), ["_ask_clear_cache"])
         group = MainWindow._cache_group(prefs)
         assert group.get_title() == preferences
-    finally:
-        i18n.setup("en")
 
 
 # --- the button of a task spins, its words wait 500 ms (5406923): the other buttons ------------

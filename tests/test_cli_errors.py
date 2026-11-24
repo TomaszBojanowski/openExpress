@@ -9,6 +9,7 @@ import types
 from pathlib import Path
 
 import pytest
+from fakes import in_language
 
 import openexpress
 
@@ -131,19 +132,16 @@ def test_a_server_error_is_not_called_one_twice_on_the_command_line(language, st
     before it, not "Server error:" a second time; other answers keep "Server error:"."""
     from fakes import DEVICE_UNIT, make_client, response
 
-    from openexpress import ciq, i18n
+    from openexpress import ciq
     from openexpress.connect import ApiError
 
     client = make_client(**{"express/appstore/rest/apps/downloads": response(status, b"")})
     client.verified_unit_id = DEVICE_UNIT
     device = types.SimpleNamespace(unit_id=DEVICE_UNIT, part_number="006-B0000-00")
-    i18n.setup(language)
-    try:
+    with in_language(language):
         with pytest.raises(ApiError) as raised:
             ciq.StoreApi(client).account_apps(device, "en-US")
         code, _log = _run(raised.value, log_file)
-    finally:
-        i18n.setup("en")
     assert code == 1
     assert capsys.readouterr().err.strip() == said
 
@@ -160,8 +158,6 @@ def test_an_error_nobody_foresaw_says_it_is_a_bug_in_openexpress_on_the_command_
 
 
 def test_the_line_about_a_bug_in_polish(log_file, capsys):
-    from fakes import in_language
-
     with in_language("pl"):
         code, _log = _run(RuntimeError("made-up failure"), log_file)
     assert code == 1

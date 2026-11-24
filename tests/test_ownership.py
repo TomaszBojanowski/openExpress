@@ -15,6 +15,7 @@ from fakes import (
     OTHER_UNIT,
     RunNow,
     another_account,
+    in_language,
     make_client,
     response,
 )
@@ -410,19 +411,13 @@ def test_the_refusal_of_downloads_does_not_say_that_something_was_sent(
         device, device_root, tmp_path):
     """The words of the refusal fit both ways: "Nothing was transferred", not
     "sent", in English and in Polish."""
-    from openexpress import i18n
-
     st, state, items, client = _queue_for_an_unverified_client(device, device_root, tmp_path)
     with pytest.raises(DeviceNotVerified) as refused:
         sync.run_downloads(items, st, client, state=state)
     said = str(refused.value)
     assert "sent" not in said.casefold() and said.endswith("Nothing was transferred.")
-    i18n.setup("pl")
-    try:
-        with pytest.raises(DeviceNotVerified) as refused:
-            sync.run_downloads(items, st, client, state=state)
-    finally:
-        i18n.setup("en")
+    with in_language("pl"), pytest.raises(DeviceNotVerified) as refused:
+        sync.run_downloads(items, st, client, state=state)
     said = str(refused.value)
     assert "wysłano" not in said and said.endswith("Niczego nie przesłano.")
 
@@ -1349,10 +1344,6 @@ def test_cli_primary_set_wearable_refusal(device_root, xdg, cli_client, capsys):
 
 
 def _wearable_window(account, device):
-    import types
-
-    from fakes import RunNow
-
     from openexpress import devicelist
 
     devices = service.require_account_device(account.client, UNIT)

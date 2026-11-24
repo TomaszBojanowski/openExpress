@@ -17,6 +17,7 @@ from fakes import (
     OtherProcessSession,
     RunNow,
     UpdateServer,
+    in_language,
     record_sync,
     replace_in_window,
     row_words,
@@ -857,15 +858,11 @@ def test_the_drive_text_says_what_is_not_supported_not_that_it_does_not_apply():
     """A navigator with lifetime maps connects as a USB drive (a nüvi 52LMT): its
     maps exist, openExpress does not handle them in this mode. The text says so, in English
     and in Polish (no "nie dotyczą")."""
-    from openexpress import i18n
     from openexpress.device.gio_storage import mass_storage_text
 
     assert mass_storage_text() == MASS_STORAGE_TEXT
-    i18n.setup("pl")
-    try:
+    with in_language("pl"):
         polish = mass_storage_text()
-    finally:
-        i18n.setup("en")
     assert polish.endswith("nie są w\u00a0tym trybie obsługiwane.")
     assert "dotycz" not in polish
 
@@ -4469,13 +4466,13 @@ class _SyncButtons:
         self.visible = value
 
 
-def _sync_window(session=None, busy=False):
+def _sync_window(session=None):
     from openexpress.gui.app import MainWindow
 
     enabled = {}
     action = lambda name: types.SimpleNamespace(  # noqa: E731
         set_enabled=lambda value: enabled.__setitem__(name, value))
-    win = stand_in(session=session, busy=busy, lookup_action=action,
+    win = stand_in(session=session, busy=False, lookup_action=action,
                    _usb_title="", enabled=enabled, sync_button=_SyncButton(),
                    sync_icon_button=_SyncButton(), sync_buttons=_SyncButtons(),
                    _ownership_title=MainWindow._ownership_title)
@@ -7221,7 +7218,7 @@ def test_the_icons_of_the_kinds_are_found_as_the_window_finds_them():
 # --- the device view's icon before its picture --------------------------------------------------
 
 
-def _device_view_icon(drive_window, monkeypatch, account=None, name=None):
+def _device_view_icon(drive_window, monkeypatch, name=None):
     """The icon the device view of the RTL515 drive shows before its picture comes (the
     picture is not asked here), and the stand-in of the window; `name`: another model name
     (one that tells no kind)."""
@@ -7234,7 +7231,7 @@ def _device_view_icon(drive_window, monkeypatch, account=None, name=None):
     win.session = drive_session(drive_window, monkeypatch)
     if name is not None:
         win.session.device.description = name
-    win._account = account
+    win._account = None
     win.update_state, win.map_state = None, None
     for name in ("_show_device_picture", "_check_updates_quietly", "_check_maps_quietly",
                  "_show_last_sync", "_render_update_state", "_render_map_state",
