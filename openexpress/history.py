@@ -776,7 +776,7 @@ def valid(raw: str) -> dict | None:
         return None
     line = {"v": VERSION, "time": when, "conn": conn, "via": via, "software": software,
             "categories": {k: v for k, v in categories.items() if k in CATEGORIES}}
-    for key in ("capacity", "free"):
+    for key in ("capacity", "free", "errors", "error_logs"):
         if key in item:
             if not _count(item[key]):
                 return None
@@ -792,11 +792,6 @@ def valid(raw: str) -> dict | None:
         if not (isinstance(found, list) and all(_crash_ok(c) for c in found)):
             return None
         line["crashes"] = [_crash_kept(c) for c in found]
-    for key in ("errors", "error_logs"):
-        if key in item:
-            if not _count(item[key]):
-                return None
-            line[key] = item[key]
     if "hidden" in item:
         if not isinstance(item["hidden"], bool):
             return None

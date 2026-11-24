@@ -595,11 +595,11 @@ def _since_write(state: State, now: float) -> str:
 
 def _taken_or_replaced(content: bytes, known: dict) -> str:
     """For the log, what is in the place of ours written before: ours as the device unpacked it,
-    or another file (the phone's, or the device's own). A record without the sum of ours
-    unpacked cannot tell them apart. Either way ours no longer waits to be taken."""
-    if not known.get("raw"):
-        return "taken or replaced, not told apart"
-    return "taken (ours unpacked)" if _sha(content) == known["raw"] else "replaced by another file"
+    or another file (the phone's, or the device's own). Either way ours no longer waits to be
+    taken."""
+    if _sha(content) == known.get("raw"):
+        return "taken (ours unpacked)"
+    return "replaced by another file"
 
 
 def waits_to_be_taken(state: State | None, device, storage) -> bool:

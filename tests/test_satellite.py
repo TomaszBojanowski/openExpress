@@ -705,23 +705,6 @@ def test_a_newer_one_from_the_phone_is_kept(tmp_path, clock, monkeypatch, caplog
                                 "another file, its data 1.0 h old, young enough")]
 
 
-def test_a_record_without_the_sum_of_ours_unpacked_says_it_cannot_tell(
-        tmp_path, clock, monkeypatch, caplog):
-    storage, device, server, served = written_once(tmp_path, clock, monkeypatch)
-    record = satellite.paths.device_dir(UNIT) / satellite.FILE_NAME
-    kept = json.loads(record.read_text(encoding="utf-8"))
-    del kept["files"]["GPES.bin"]["raw"]  # as a record that never had it
-    record.write_text(json.dumps(kept), encoding="utf-8")
-    unplugged(storage)
-    clock.current += timedelta(hours=1)
-    caplog.clear()
-    with caplog.at_level(logging.INFO, logger="openexpress.satellite"):
-        assert satellite.update(device, storage) == satellite.Result("current")
-    assert satellite.load(UNIT).files["GPES.bin"]["pending"] is False  # ours no longer waits to be taken
-    assert caplog.messages == [("satellite data: in a session of our own: GPES.bin: taken or "
-                                "replaced, not told apart, its data 1.5 h old, young enough")]
-
-
 def test_each_sync_says_in_one_line_what_it_found_of_each_file_and_did(
         tmp_path, clock, monkeypatch, caplog):
     from openexpress import applog

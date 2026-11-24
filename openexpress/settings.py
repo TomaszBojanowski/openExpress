@@ -39,11 +39,6 @@ ENVIRONMENTS: dict[str, dict[str, str]] = {
 SSO_CLIENT_ID = "GarminExpress_WIN_ShowLegalTerms"
 UPLOAD_CONFIG_CLIENT_ID = "express-windows"
 
-# Older versions wrote "locale": "pl_PL" into settings.json on the first start, chosen or not:
-# now ignored.
-_OLD_LOCALE_KEY = "locale"
-
-
 class SetupError(UserFacingError):
     pass
 
@@ -90,29 +85,23 @@ class Settings:
 
     @classmethod
     def load(cls) -> Settings:
-        s, data = cls._read()
-        if s.client_guid and _OLD_LOCALE_KEY not in data:
+        s = cls._read()
+        if s.client_guid:
             return s
-        # The first start (no client GUID yet), or the key of an older version: written once,
-        # under the lock, from the file read again under it. The window, the background
-        # service and the command line (or two devices the window opens at once) may load
-        # the settings at the same moment, and each would make a GUID of its own.
+        # The first start (no client GUID yet): written once, under the lock, from the file
+        # read again under it. The window, the background service and the command line (or two
+        # devices the window opens at once) may load the settings at the same moment, and each
+        # would make a GUID of its own.
         with paths.settings_locked():
-            s, data = cls._read()
-            old_locale = _OLD_LOCALE_KEY in data
-            if old_locale:
-                log.info("settings: the locale saved by an older version (%r) is no longer used; "
-                         "now %s (%s)", data[_OLD_LOCALE_KEY], s.locale,
-                         "chosen" if s.chosen_locale
-                         else "as the program" if i18n.chosen_language() else "as the system")
-            if not s.client_guid or old_locale:
-                s.client_guid = s.client_guid or str(uuid.uuid4())
-                s._write()  # without the old key, so that it is told once
+            s = cls._read()
+            if not s.client_guid:
+                s.client_guid = str(uuid.uuid4())
+                s._write()
         return s
 
     @classmethod
-    def _read(cls) -> tuple[Settings, dict]:
-        """The settings as the file has them, and the file as it was read."""
+    def _read(cls) -> Settings:
+        """The settings as the file has them."""
         path = paths.settings_file()
         data: object = {}
         if path.exists():
@@ -128,12 +117,12 @@ class Settings:
         s = cls(**known)
         # Keys owned by other parts of the program (e.g. "ui_language") survive save().
         s._extra = {k: v for k, v in data.items()
-                    if k not in cls.__dataclass_fields__ and k != _OLD_LOCALE_KEY}
+                    if k not in cls.__dataclass_fields__}
         if s.environment not in ENVIRONMENTS:
             # TRANSLATORS: error: the settings file names a set of Garmin servers openExpress does
             # not know; {name}: e.g. "production"
             raise SetupError(_("Unknown environment: {name}").format(name=s.environment))
-        return s, data
+        return s
 
     def save(self) -> None:
         with paths.settings_locked():
@@ -147,7 +136,7 @@ class Settings:
             # Keys written by others since load() (e.g. the GUI language choice) win.
             current = json.loads(path.read_text()) if path.exists() else {}
             data.update({k: v for k, v in current.items()
-                         if k not in self.__dataclass_fields__ and k != _OLD_LOCALE_KEY})
+                         if k not in self.__dataclass_fields__})
         except (OSError, ValueError):
             pass
         data.update(asdict(self))
