@@ -80,11 +80,7 @@ if activity_map.Shumate is not None:
             width, height = self.get_width(), self.get_height()
             if width <= 0 or height <= 0 or not self.lines:
                 return
-            viewport = self.get_viewport()
-            zoom = viewport.get_zoom_level()
-            scale = 2 ** zoom
-            cx, cy = world_xy(viewport.get_latitude(), viewport.get_longitude(), zoom)
-            dx, dy = width / 2 - cx, height / 2 - cy
+            scale, dx, dy = activity_map.view_offset(self.get_viewport(), width, height)
             cr = snapshot.append_cairo(Graphene.Rect().init(0, 0, width, height))
             cr.set_line_join(cairo.LINE_JOIN_ROUND)
             cr.set_line_cap(cairo.LINE_CAP_ROUND)
@@ -96,9 +92,7 @@ if activity_map.Shumate is not None:
                                       (TRACK_WIDTH, colour)):
                     cr.set_line_width(stroke)
                     cr.set_source_rgba(shade.red, shade.green, shade.blue, 1)
-                    cr.move_to(*points[0])
-                    for point in points[1:] or points[:1]:
-                        cr.line_to(*point)
+                    activity_map.trace(cr, points, range(len(points)))
                     cr.stroke()
                 cr.set_dash(())
                 if dashed:
