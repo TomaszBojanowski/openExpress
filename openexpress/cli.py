@@ -89,7 +89,7 @@ def open_storage(args) -> Storage:
     from openexpress.device.gio_storage import open_device_storage
 
     # A device that was just plugged in needs a while before its files can be seen.
-    wait = not getattr(args, "no_wait", False)
+    wait = not args.no_wait
 
     def notify(line):
         print(line, file=sys.stderr, flush=True)
@@ -221,7 +221,7 @@ def cmd_setup(args) -> int:
         settings.environment = args.environment
     if args.locale:
         settings.chosen_locale = args.locale
-    if getattr(args, "diagnostics_copy", None):
+    if args.diagnostics_copy:
         settings.diagnostics_copy = args.diagnostics_copy == "on"
     settings.save()  # keeps the keys of the others, ui_language among them
     if args.ui_language:
@@ -237,7 +237,7 @@ def cmd_setup(args) -> int:
             # TRANSLATORS: fills {language} in "Interface language: {language}": the program follows
             # the system's language
             else _("system language")))
-    if getattr(args, "diagnostics_copy", None):
+    if args.diagnostics_copy:
         print(_diagnostics_copy_text(settings.diagnostics_copy))
     return 0
 
@@ -1571,7 +1571,7 @@ def cmd_sync(args) -> int:
     return code
 
 
-def _print_sync_plan(plan, client, drive: bool = False, makers=None) -> None:
+def _print_sync_plan(plan, client, drive: bool, makers) -> None:
     """What `sync` would do (its dry run), as service.plan_sync worked it out. On a `drive`
     a Connect IQ app stays in Garmin Connect's queue (service.stays_in_queue). Under each file
     of the queue the sync would write to the device: what it is (sync.describe_queue, which
@@ -1624,7 +1624,7 @@ def _print_sync_plan(plan, client, drive: bool = False, makers=None) -> None:
                 print("      " + _queue_file_words(described[id(it)], makers))
 
 
-def _queue_file_words(found, makers=None) -> str:
+def _queue_file_words(found, makers) -> str:
     """The line under a file of Garmin Connect's queue in the dry run of `sync`: what it is,
     its sport and name or days, who made it (when it says so), when it was made, and whether
     it is whole."""
@@ -1656,7 +1656,7 @@ def _queue_file_words(found, makers=None) -> str:
         parts.append(ngettext("{count} day from {first} to {last}",
                               "{count} days from {first} to {last}", len(d.days)).format(
             count=len(d.days), first=day(d.days[0]), last=day(d.days[-1])))
-    who = makers.words(d) if makers is not None else None
+    who = makers.words(d)
     if who:
         # TRANSLATORS: dry run of sync: the device (or Garmin Connect) that made a queue file
         parts.append(_("made by {maker}").format(maker=who))
@@ -1857,7 +1857,7 @@ def _copied_note(u) -> str | None:
     return _("Copied {when}: check on the device that it is installed.").format(when=when)
 
 
-def _to_install_staged(st, count: int = 1) -> str:
+def _to_install_staged(st, count: int) -> str:
     """What makes the device install the `count` updates copied already: a device in mass
     storage mode takes them once its drive is ejected."""
     if getattr(st, "mass_storage", False):
@@ -2037,7 +2037,7 @@ def cmd_updates(args) -> int:
     _print_hidden(refused, extra if args.install == ["all"] else [], lines=True)
     # Nor to a folder the device hides inside a folder that is seen: the others go on. Tried
     # with --hidden-folder-trial: only those, each named.
-    trial = getattr(args, "hidden_folder_trial", False)
+    trial = args.hidden_folder_trial
     inside = [u for u in chosen if (u.folder_hidden is not None if trial else u.refused_inside)]
     if trial:
         if args.install == ["all"]:
@@ -2182,7 +2182,7 @@ def _loses_data_on_update(client, dev) -> bool:
     return upd.loses_data_on_update(info)
 
 
-def _load_maps(args, client, own: bool = False):
+def _load_maps(args, client, own: bool):
     """The device and Garmin's maps for it. `own`: a command on maps of your own, which works
     whatever map service Garmin serves the device through; any other command is refused when
     map updates for the device are not supported."""
@@ -2321,7 +2321,7 @@ def cmd_maps(args) -> int:
             raise mp.MapError(mp.no_maps_message())
         print(mp.no_maps_message())
         return 0
-    if args.maps_cmd in (None, "list"):
+    if args.maps_cmd is None:
         on_device = [m for m in all_maps if m.listed or m.waiting]
         shown = all_maps if args.all else on_device
         print((_("Maps for {device} (all):") if args.all
@@ -2564,7 +2564,7 @@ def _apps_consent(args, targets):
     from openexpress import ciq
 
     asking = ciq.needs_consent(targets)
-    allow = getattr(args, "allow_permissions", False)
+    allow = args.allow_permissions
     for a in asking:
         for line in ciq.permissions_text(a).splitlines():
             print("  " + line)
@@ -2783,9 +2783,8 @@ def cmd_apps(args) -> int:
 
     if cmd == "install" and state.no_app_list:
         return _apps_queue_only(args, dev, st, client, api, account)
-    if cmd != "list":
-        # Before anything is queued or written: the device's app list must be complete.
-        ciq.require_complete(state)
+    # Before anything is queued or written: the device's app list must be complete.
+    ciq.require_complete(state)
 
     if cmd == "order":
         return _apps_order(args, dev, st, state)
@@ -4070,15 +4069,12 @@ def _device_options(parser: argparse.ArgumentParser, after_command: bool = False
 
 
 def _with_its_commands(parser: argparse.ArgumentParser):
-    """A command's parser and those of its own commands (maps install …), each once."""
+    """A command's parser and those of its own commands (maps install …)."""
     yield parser
-    seen = set()
     for action in parser._actions:
         if isinstance(action, argparse._SubParsersAction):
             for child in action.choices.values():
-                if id(child) not in seen:
-                    seen.add(id(child))
-                    yield from _with_its_commands(child)
+                yield from _with_its_commands(child)
 
 
 def _lang_from_argv(argv: list[str]) -> str | None:
@@ -4160,7 +4156,7 @@ def _main(argv: list[str] | None) -> int:
         code = _run(args)
         return code
     finally:
-        log.info("end: %s, exit code %s, %.1f s", args.cmd or "-", code,
+        log.info("end: %s, exit code %s, %.1f s", args.cmd, code,
                  time.monotonic() - started)
 
 
@@ -4176,7 +4172,7 @@ def no_pygobject_text() -> str:
 def _command_line(args, argv) -> str:
     """The command as it goes to the log: its name, its subcommand and the names of the
     options given, never their values or other arguments (names, paths, addresses)."""
-    words = [args.cmd or "-"]
+    words = [args.cmd]
     words += [str(getattr(args, name)) for name in sorted(vars(args))
               if name.endswith("_cmd") and getattr(args, name)]
     given = sys.argv[1:] if argv is None else argv

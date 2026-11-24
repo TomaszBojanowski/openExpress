@@ -422,14 +422,14 @@ def _trim(path: Path) -> None:
         paths.write_private(path, end[end.find(b"\n") + 1:].decode("utf-8", errors="replace"))
 
 
-def crash_tail(count: int = CRASH_LINES) -> list[str]:
-    """The last `count` lines of crash.log, through the same filter as the log (no home
+def crash_tail() -> list[str]:
+    """The last CRASH_LINES lines of crash.log, through the same filter as the log (no home
     folder, no unit ID): empty when there is none."""
     try:
         text = crash_path().read_text(encoding="utf-8", errors="replace")
     except OSError:
         return []
-    return [redact(line) for line in text.splitlines()[-count:]]
+    return [redact(line) for line in text.splitlines()[-CRASH_LINES:]]
 
 
 def file_level(verbose: bool = False) -> int | None:

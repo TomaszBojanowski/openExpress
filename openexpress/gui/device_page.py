@@ -278,14 +278,13 @@ def status_changed(win) -> None:
     the crash logs found absent, a file written to the device or removed): at once while it is
     shown, else when it is chosen."""
     status_row(win)
-    sections = getattr(win, "sections", None)
-    sec = sections.get("status") if isinstance(sections, dict) else None
+    sec = win.sections.get("status")
     if sec is None:
         return
     waited = win.session is not None and win.session.page_waits  # None: unplugged
     if not (waited or sec.loaded):
         return
-    pages = getattr(win, "pages", None)
+    pages = win.pages
     shown = pages.get_visible_child_name() if pages is not None else "status"
     if shown == "status":
         win.load_section("status", force=True)
@@ -1278,8 +1277,7 @@ class DevicePage:
                 # A drive whose kind Garmin has not told: asked once a run as well, so that
                 # the log says what unit-info tells of it (an inReach).
                 def address():
-                    return picture_from_unit_info(s.client, s.device,
-                                                  ask=lambda: service.unit_info(s))
+                    return picture_from_unit_info(s.device, lambda: service.unit_info(s))
 
                 self.in_background(lambda: remember_picture_address(s.device, address()),
                                    lambda _r: None)
@@ -1300,8 +1298,7 @@ class DevicePage:
                 path = cached_download(s.client.http, url, name) if url else None
                 if path:
                     return path, "the account"
-            url = picture_from_unit_info(s.client, s.device,
-                                         ask=lambda: service.unit_info(s))
+            url = picture_from_unit_info(s.device, lambda: service.unit_info(s))
             if not url:
                 return None, NO_ADDRESS
             remember_picture_address(s.device, url)

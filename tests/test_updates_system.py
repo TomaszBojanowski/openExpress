@@ -394,7 +394,7 @@ def test_a_copy_that_wrote_nothing_is_not_shown_copied_nor_ejected(monkeypatch, 
     win.progress = win.fraction = None
     for name in ("show_updates", "_show_installed"):
         setattr(win, name, types.MethodType(getattr(MainWindow, name), win))
-    in_the_window("is_bike_accessory", lambda client, device, ask: False)
+    in_the_window("is_bike_accessory", lambda device, ask: False)
     MainWindow.confirm_update(win, items[1])
     asked[0].emit("response", "ok")
     assert given == [[items[1]]]  # the update clicked, nothing else of its part number
@@ -2311,7 +2311,7 @@ def test_after_copying_components_the_page_says_ready_not_up_to_date(monkeypatch
         written=list(chosen)))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    in_the_window("is_bike_accessory", lambda client, device, ask: False)
+    in_the_window("is_bike_accessory", lambda device, ask: False)
     win.session.client = types.SimpleNamespace(http=None)
     win.session.storage = None
     win.updates_beta = False
@@ -2358,7 +2358,7 @@ def test_install_all_copies_every_update_then_ejects_the_drive_once(monkeypatch,
         list(chosen)) or InstallReport(written=list(chosen)))
     asked = []
     monkeypatch.setattr(Adw.AlertDialog, "present", lambda self, parent: asked.append(self))
-    in_the_window("is_bike_accessory", lambda client, device, ask: False)
+    in_the_window("is_bike_accessory", lambda device, ask: False)
     win.session.client = types.SimpleNamespace(http=None)
     win.session.storage = None
     win.updates_beta = False

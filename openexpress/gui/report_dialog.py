@@ -110,12 +110,10 @@ class ReportDialog:
             text = about
         log.info("report dialog opened (device connected: %s)", s is not None)
         d = Adw.AlertDialog(heading=_("Report a Device or Problem"), body=text)
-        buffer = None
         kept = {"log": None}  # the log shown, for the form's "Log" field (_report_view)
-        if body_text:
-            box, buffer = self._report_view(body_text, kept, report_width(self.get_width()))
-            d.set_extra_child(box)
-            d.add_response("copy", _("Copy"))
+        box, buffer = self._report_view(body_text, kept, report_width(self.get_width()))
+        d.set_extra_child(box)
+        d.add_response("copy", _("Copy"))
         d.add_response("close", _("Close"))
         # TRANSLATORS: button of the problem report dialog: opens a new issue form on GitHub with
         # the report filled in
@@ -145,7 +143,7 @@ class ReportDialog:
                 self.toast(_("Report copied"))
             elif r == "open":
                 attached = self._open_report_form(
-                    body_text, shown() if buffer is not None else "", kept["log"],
+                    body_text, shown(), kept["log"],
                     s.device.description if s is not None else report.model_on_usb())
                 if attached:
                     stay["open"] = True
@@ -163,9 +161,9 @@ class ReportDialog:
         an address goes to the clipboard whole (`shown`), with the empty form."""
         from openexpress import report
 
-        attached = bool(report_text) and log_for_form is not None
-        url = report.issue_url(report_text, model) if report_text else None
-        if report_text and url is None:
+        attached = log_for_form is not None
+        url = report.issue_url(report_text, model)
+        if url is None:
             self.get_clipboard().set(shown)
             self.toast(_("Report copied: paste it into the form"))
             attached = False

@@ -717,9 +717,9 @@ def test_the_page_chosen_while_the_error_logs_are_read(review, shape, monkeypatc
     real = diagnostics.at_open
     gate = threading.Event()
 
-    def slow(device, storage, now=None):
+    def slow(device, storage):
         gate.wait(10)
-        return real(device, storage, now)
+        return real(device, storage)
 
     monkeypatch.setattr(diagnostics, "at_open", slow)
     with gtk_complaints(("Adwaita", "Gtk", "GLib", "GLib-GObject")) as said:

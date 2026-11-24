@@ -211,8 +211,7 @@ def _install_task(win, s, chosen):
 
     def install():
         rep = install_updates(s, chosen, win.progress, offered=win.updates_cache)
-        return rep, mass_storage and is_bike_accessory(
-            s.client, s.device, ask=lambda: service.unit_info(s))
+        return rep, mass_storage and is_bike_accessory(s.device, lambda: service.unit_info(s))
 
     def installed(result):
         rep, bike_accessory = result

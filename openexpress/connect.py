@@ -325,8 +325,7 @@ class GarminClient:
         h = self._client_headers()
         h.update(headers or {})
         h["Authorization"] = self._sign(method, url)
-        data = kw.pop("data", None)
-        resp = self._request(method, url, what, headers=h, data=data, **kw)
+        resp = self._request(method, url, what, headers=h, **kw)
         return self._check(resp, what)
 
     # --- authentication -------------------------------------------------------------

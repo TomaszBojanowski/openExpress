@@ -7029,9 +7029,12 @@ def test_unit_info_read_for_the_picture_tells_a_bike_accessory(monkeypatch):
 
     varia = types.SimpleNamespace(unit_id=VARIA, part_number="006-B3592-03")
     venu = types.SimpleNamespace(unit_id=VENU, part_number="006-B3703-00")
-    assert picture_from_unit_info(Client("bikeaccessory"), varia) == (
+    def answer(segment, device):
+        return lambda: Client(segment).unit_info(device.unit_id, device.part_number)
+
+    assert picture_from_unit_info(varia, answer("bikeaccessory", varia)) == (
         "https://res.garmin.com/x.png")
-    assert picture_from_unit_info(Client("fitness"), venu) == "https://res.garmin.com/x.png"
+    assert picture_from_unit_info(venu, answer("fitness", venu)) == "https://res.garmin.com/x.png"
     assert asked == ["006-B3592-03", "006-B3703-00"]
     known = known_devices.load()
     assert known[VARIA].category == "bike-accessory" and known[VENU].category is None

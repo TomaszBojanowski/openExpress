@@ -509,7 +509,7 @@ def _storage(win, sec, facts: status.Facts, now: datetime) -> None:
 
 
 def _collapsed(win) -> bool:
-    split = getattr(win, "split", None)
+    split = win.split
     return bool(split is not None and split.get_collapsed())
 
 
@@ -834,7 +834,7 @@ def confirm_remove_update(win, u, button=None) -> None:
         freed, counted = result
         if freed.removed:
             u.on_device = u.changed_on_device = False  # gone: offered again (updates.pending)
-            updates = getattr(win, "sections", {}).get("updates")
+            updates = win.sections.get("updates")
             if updates is not None:
                 updates.loaded = False
         # TRANSLATORS: after the file of an update the device did not install was removed

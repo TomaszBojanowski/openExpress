@@ -129,8 +129,7 @@ def page_column(child) -> Adw.Clamp:
     if page_clamp is not None:
         column.set_maximum_size(page_clamp.get_maximum_size())
         column.set_tightening_threshold(page_clamp.get_tightening_threshold())
-        if hasattr(page_clamp, "get_unit"):
-            column.set_unit(page_clamp.get_unit())
+        column.set_unit(page_clamp.get_unit())
     return column
 
 

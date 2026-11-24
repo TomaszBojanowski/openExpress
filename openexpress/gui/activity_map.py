@@ -134,11 +134,11 @@ def track_of(data) -> Track | None:
     return Track(tuple(t for t, _p in found), tuple(p for _t, p in found))
 
 
-def thinned(points, most: int = PATH_POINTS) -> list:
-    """At most about `most` of the points, evenly, the last one kept."""
-    if len(points) <= most:
+def thinned(points) -> list:
+    """At most about PATH_POINTS of the points, evenly, the last one kept."""
+    if len(points) <= PATH_POINTS:
         return list(points)
-    out = list(points[::math.ceil(len(points) / most)])
+    out = list(points[::math.ceil(len(points) / PATH_POINTS)])
     if out[-1] != points[-1]:
         out.append(points[-1])
     return out

@@ -232,7 +232,8 @@ _CRC_TABLE = (0x0000, 0xCC01, 0xD801, 0x1400, 0xF001, 0x3C00, 0x2800, 0xE401,
               0xA001, 0x6C00, 0x7800, 0xB401, 0x5000, 0x9C01, 0x8801, 0x4400)
 
 
-def crc16(data: bytes, crc: int = 0) -> int:
+def crc16(data: bytes) -> int:
+    crc = 0
     for byte in data:
         tmp = _CRC_TABLE[crc & 0xF]
         crc = ((crc >> 4) & 0x0FFF) ^ tmp ^ _CRC_TABLE[byte & 0xF]

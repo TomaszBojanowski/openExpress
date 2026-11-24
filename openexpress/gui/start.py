@@ -644,7 +644,7 @@ class StartPage:
                     section.list.remove_all()
                     for key, tile, how in part:
                         picture = self._picture_of(tile.image_part_number)
-                        item = (row_widget(tile, how, picture) if mode == LIST
+                        item = (DeviceRow(tile, how, picture) if mode == LIST
                                 else tile_widget(tile, how, picture))
                         item.key = key
                         (section.list if mode == LIST else section.grid).append(item)
@@ -1029,11 +1029,6 @@ class DeviceRow(Gtk.ListBoxRow):
         label = ", ".join([self._title, *(words for words, _style, _tooltip in said)]
                           + ([self._subtitle] if self._subtitle else []))
         self.update_property([Gtk.AccessibleProperty.LABEL], [label])
-
-
-def row_widget(tile, how: str, picture=None) -> DeviceRow:
-    """One row of a section of many devices (DeviceRow)."""
-    return DeviceRow(tile, how, picture)
 
 
 def tile_widget(tile, how: str, picture=None) -> Gtk.FlowBoxChild:

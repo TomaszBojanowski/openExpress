@@ -246,14 +246,14 @@ def note_account(devices) -> None:
         log.info("devices: the account's list kept for %d of %d remembered", changed, len(facts))
 
 
-def synced_fact(unit_id: int, now: float | None = None) -> SyncedFact:
+def synced_fact(unit_id: int) -> SyncedFact:
     """What this installation knows of the sync of a device now: its state.json, its last
     sync recorded (when; whether it could not upload) and the version of its sync state."""
     record = service.load_last_sync(unit_id)
     when = record.get("time") if record is not None else None
     return SyncedFact(sync.synced_here(unit_id), when,
                       record is not None and service.not_uploaded(record) is not None,
-                      time.time() if now is None else now, service.sync_stamp(unit_id))
+                      time.time(), service.sync_stamp(unit_id))
 
 
 def note_synced(unit_id: int | None) -> None:

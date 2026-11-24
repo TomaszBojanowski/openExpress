@@ -218,7 +218,7 @@ def test_cli_report_with_log_prints_what_the_window_puts_in_the_clipboard(
     from openexpress.cli import main
 
     monkeypatch.setattr(applog, "tail", lambda count=200: ["one", "device <number>"])
-    monkeypatch.setattr(applog, "crash_tail", lambda count=50: ["Fatal Python error"])
+    monkeypatch.setattr(applog, "crash_tail", lambda: ["Fatal Python error"])
     assert main(["--path", str(device_root), "report", "--log"]) == 0
     out = capsys.readouterr()
     assert out.out == ("~~~\none\ndevice <number>\n\n# Crash log (last 1 lines of crash.log)\n"

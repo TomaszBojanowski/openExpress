@@ -291,7 +291,7 @@ def watch_drives_while_open(win) -> None:
         schedule_detection(win, PLUGGED_MS, cause=Cause.PLUGGED)
         return
     connected = win.connected
-    if connected is not None and any(u.startswith(UNMOUNTED_DRIVE) for u in connected.unread()):
+    if any(u.startswith(UNMOUNTED_DRIVE) for u in connected.unread()):
         log.info("USB: a Garmin device in mass storage mode went while a device is open, the "
                  "list of devices is read again in 1.5 s")
         schedule_detection(win, 1500, READ_THE_LIST, Cause.UNPLUGGED_OTHER)
@@ -342,10 +342,8 @@ def detection_due(win) -> None:
     what = detection_plan(cause, reasons,
                           open_label=str(getattr(s.storage, "label", "")) if s is not None
                           else None,
-                          listed=uris(connected.devices) if connected is not None
-                          else frozenset(),
-                          unread=connected.unread() if connected is not None
-                          else frozenset(),
+                          listed=uris(connected.devices),
+                          unread=connected.unread(),
                           open_moved=lambda: (usb is not None and usb.bus is not None
                                               and not usb_still_there(usb)))
     # Mounts of devices already on the start page's list (e.g. reported by gvfs as the
@@ -516,7 +514,7 @@ class DeviceDetection:
         # A Garmin drive is known by its label as well: an unplugged one is gone from /sys.
         ours = s is not None and str(getattr(s.storage, "label", "")).startswith(uri)
         connected = self.connected
-        if s is None and connected is not None and connected.is_choice(uri):
+        if s is None and connected.is_choice(uri):
             log.info("mount removed (%s): one of the devices to choose from, detecting in "
                      "1.5 s", where)
             schedule_detection(self, 1500, cause=Cause.UNPLUGGED_CHOICE)
@@ -529,7 +527,7 @@ class DeviceDetection:
             return
         if (not ours and s is not None
                 and usb_still_there(getattr(s.storage, "usb", None))):
-            if connected is not None and not connected.listed(uri):
+            if not connected.listed(uri):
                 # A pendrive, a phone, a share: none of the devices on the start page (one
                 # mounted but not listed yet is read with the list its mount asked for).
                 log.info("mount removed (%s): not a device on the list, ignored", where)
@@ -621,7 +619,7 @@ class DeviceDetection:
         # The open device was just unplugged: a device left on USB is looked for (below).
         unplugged, self._open_unplugged = self._open_unplugged, False
         connected = self.connected
-        if connected is not None and connected.choosing and connected.devices:
+        if connected.choosing and connected.devices:
             # The list stays as it is; a Garmin device plugged in or out (also one that was
             # never mounted, which sends no mount event) brings one new detection.
             if connected.usb_changed(garmin_products_on_usb()):

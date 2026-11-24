@@ -123,12 +123,12 @@ class Status:
     def note_failure(self, service: str | None, url: str) -> None:
         self.note(service, Result(NETWORK, time.time(), urlsplit(url).netloc))
 
-    def network_changed(self, at: float | None = None) -> None:
+    def network_changed(self) -> None:
         """The computer's network changed (Gio.NetworkMonitor). Nothing is asked and the state
         stays as it is until a request ends; from then on (counted) a request that got no
         answer before the change no longer counts."""
         with self._lock:
-            self._changed = time.time() if at is None else at
+            self._changed = time.time()
 
     def counted(self) -> tuple[dict[str, Result], dict[str, float]]:
         """What the state and the rows of the window come from: the last results, but once a

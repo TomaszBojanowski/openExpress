@@ -1678,9 +1678,8 @@ def on_test_drive(s) -> bool:
     return bool(getattr(getattr(s, "storage", None), "test_drive", False))
 
 
-def plan_queue(s: DeviceSession, progress: Progress | None = None) -> QueuePlan:
+def plan_queue(s: DeviceSession, progress: Progress) -> QueuePlan:
     """Garmin Connect's queue for the device, and what becomes of each item of it."""
-    progress = say_to(progress)
     progress(Waiting(_("Checking for files from Garmin Connect…")))
     messages = s.client.device_messages(s.device.unit_id)
     return QueuePlan(messages, sync.plan_downloads(s.device, messages))

@@ -1078,7 +1078,7 @@ def test_the_reading_is_in_the_session_before_anyone_learns_it_is_done(monkeypat
 
     crash_entry = ErrorEntry("RTL Trap", datetime(2026, 10, 20, 10, 0), "0x003")
 
-    def at_open(device, storage, now=None):
+    def at_open(device, storage):
         time.sleep(0.01)
         return AtOpen(entries=[crash_entry], dumps=[], hidden_logs=False)
 

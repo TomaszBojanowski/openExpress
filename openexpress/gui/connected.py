@@ -145,7 +145,7 @@ class Connected:
         if open_summary is None:
             shown = self.devices if self.choosing else []
             return shown, not shown
-        if is_open is not None and any(is_open(c) for c in self.devices):
+        if any(is_open(c) for c in self.devices):
             return self.devices, False
         return [open_summary, *self.devices], False
 
