@@ -38,7 +38,7 @@ from dataclasses import asdict, dataclass, fields
 from email.utils import parsedate_to_datetime
 
 from openexpress import applog, cache, paths
-from openexpress.device.storage import DeviceError, DeviceNotResponding
+from openexpress.device.storage import DeviceError, DeviceNotResponding, is_test_drive
 
 log = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ def load(unit_id: int) -> State | None:
     except (OSError, ValueError):
         log.warning("satellite data: %s cannot be read; taken as off", FILE_NAME)
         return State()
-    known = {f.name: f.type for f in fields(State)}
+    known = {f.name for f in fields(State)}
     values = {k: v for k, v in data.items() if k in known} if isinstance(data, dict) else {}
     try:
         state = State(**values)
@@ -285,7 +285,7 @@ def seen(device, storage) -> State | None:
     them (_offer_shown). Hidden ones are looked for at a sync (update): the opening never opens
     a PTP session."""
     unit = getattr(device, "unit_id", None)
-    if not unit or getattr(storage, "test_drive", False):
+    if not unit or is_test_drive(storage):
         return None
     state = load(unit)
     if state is not None and state.kind == RXNETWORKS:
@@ -422,7 +422,7 @@ def update(device, storage, apply: bool = True) -> Result | None:
     what was done (Result). `apply` False: the dry run, nothing written or kept, and the device
     never left to a PTP session."""
     unit = getattr(device, "unit_id", None)
-    if not unit or getattr(storage, "test_drive", False):
+    if not unit or is_test_drive(storage):
         return None
     state = load(unit)
     if state is None:

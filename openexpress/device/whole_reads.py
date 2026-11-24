@@ -21,7 +21,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 from openexpress import applog, cache, paths
-from openexpress.device.storage import CopyNotStarted, DeviceError, Storage
+from openexpress.device.storage import CopyNotStarted, DeviceError, Storage, os_said
 
 log = logging.getLogger(__name__)
 
@@ -109,7 +109,7 @@ def whole_file(storage: Storage, real_path: str, size: int | None,
                     log.info("whole reads: read as a stream, the copy was refused before it "
                              "began: %s", e)
             except OSError as e:  # the copy on this computer
-                raise DeviceError(f"{real_path}: {applog.system_words(e) or e}") from e
+                raise DeviceError(os_said(real_path, e)) from e
             finally:
                 target.unlink(missing_ok=True)
     return stream()

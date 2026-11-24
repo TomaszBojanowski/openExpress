@@ -27,7 +27,13 @@ from openexpress.connect import (
     Unauthorized,
 )
 from openexpress.console import error as _error
-from openexpress.device.storage import DeviceError, DeviceNotResponding, LocalStorage, Storage
+from openexpress.device.storage import (
+    DeviceError,
+    DeviceNotResponding,
+    LocalStorage,
+    Storage,
+    is_test_drive,
+)
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.errors import UserFacingError
 from openexpress.i18n import (
@@ -301,7 +307,7 @@ def cmd_diagnostics(args) -> int:
                                    size=human_size(sum(size for _p, size in dumps))))
     from openexpress import crashes
 
-    test_drive = bool(getattr(st, "test_drive", False))
+    test_drive = is_test_drive(st)
     found = crashes.history(dev.unit_id, None if missed else entries, test_drive=test_drive)
     # TRANSLATORS: `diagnostics`: heading of the crashes; each line under it says where its
     # crash was found

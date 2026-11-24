@@ -24,7 +24,13 @@ from pathlib import Path
 
 from openexpress import applog, paths
 from openexpress.device import whole_reads
-from openexpress.device.storage import DeviceError, DeviceNotResponding, Entry, Storage
+from openexpress.device.storage import (
+    DeviceError,
+    DeviceNotResponding,
+    Entry,
+    Storage,
+    is_test_drive,
+)
 from openexpress.device.xmldevice import GarminDevice
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, ngettext
@@ -234,7 +240,7 @@ def folder(unit_id: int, test_drive: bool = False) -> Path:
 
 
 def _folder_of(device: GarminDevice, storage: Storage) -> Path:
-    return folder(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    return folder(device.unit_id, is_test_drive(storage))
 
 
 @dataclass
@@ -627,7 +633,7 @@ def hidden_now(device: GarminDevice, storage: Storage, shown: bool | None = None
     connection (may_have_hidden_logs, with `shown`), unless a copy made since found none
     (hidden_logs_to_copy)."""
     return hidden_logs_to_copy(may_have_hidden_logs(storage, shown), device.unit_id,
-                               bool(getattr(storage, "test_drive", False)))
+                               is_test_drive(storage))
 
 
 def ptp_unavailable_text(storage: Storage) -> str:
@@ -866,7 +872,7 @@ def seen_now(device: GarminDevice, storage: Storage, with_files: bool) -> Seen:
     hold (read alone, only the folders of the logs and the dumps listed), else looked for
     through its folders, and the places kept anew. `with_files`: also the files a copy
     takes."""
-    where = (places_path(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    where = (places_path(device.unit_id, is_test_drive(storage))
              if device.unit_id else None)
     note = _load(where) if where is not None else {}
     seen = _at_the_places(note, device, storage, with_files) if note else None

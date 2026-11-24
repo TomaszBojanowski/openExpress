@@ -739,11 +739,7 @@ def _refusals_file(device: GarminDevice) -> Path:
 
 
 def _refusals(device: GarminDevice) -> dict:
-    try:
-        data = json.loads(_refusals_file(device).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return {}
-    refused = data.get("refused_dirs") if isinstance(data, dict) else None
+    refused = (paths.read_json_object(_refusals_file(device)) or {}).get("refused_dirs")
     return refused if isinstance(refused, dict) else {}
 
 
@@ -2017,43 +2013,42 @@ def changes_waiting(device: GarminDevice, storage: Storage) -> bool:
     return storage.exists(_config_path(device, True))
 
 
+def _app_key(app) -> tuple:
+    """An app of a list as the device tells its apps apart: its ID and its type."""
+    return app.app_id, app.app_type
+
+
 def plan_order(state: InstalledState, copy: InstalledState) -> OrderPlan:
     """The device's apps in the order of `copy`. Apps the copy does not have keep their
     place, apps only the copy has are left out, and every flag stays as it is now. Each
     type is ordered on its own, as the device keeps the types in blocks."""
-    def key(a):
-        return a.app_id, a.app_type
-
     current = state.listed
-    rank = {key(a): i for i, a in enumerate(copy.apps)}
+    rank = {_app_key(a): i for i, a in enumerate(copy.apps)}
     entries = list(current)
     for app_type in {a.app_type for a in current}:
-        slots = [i for i, a in enumerate(current) if a.app_type == app_type and key(a) in rank]
-        ordered = sorted((current[i] for i in slots), key=lambda a: rank[key(a)])
+        slots = [i for i, a in enumerate(current) if a.app_type == app_type and _app_key(a) in rank]
+        ordered = sorted((current[i] for i in slots), key=lambda a: rank[_app_key(a)])
         for i, app in zip(slots, ordered):
             entries[i] = app
-    on_device = {key(a) for a in current}
+    on_device = {_app_key(a) for a in current}
     return OrderPlan(
         entries=entries,
         moved=[(i + 1, now, then) for i, (now, then) in enumerate(zip(current, entries))
-               if key(now) != key(then)],
-        only_in_copy=[a for a in copy.apps if key(a) not in on_device],
-        only_on_device=[a for a in current if key(a) not in rank])
+               if _app_key(now) != _app_key(then)],
+        only_in_copy=[a for a in copy.apps if _app_key(a) not in on_device],
+        only_on_device=[a for a in current if _app_key(a) not in rank])
 
 
 def apps_moved(plan: OrderPlan) -> int:
     """The fewest apps to move to get from the order on the device to the order of the copy:
     those in both lists outside their longest common subsequence. Apps only on the device
     keep their place and are not counted."""
-    def key(a):
-        return a.app_id, a.app_type
-
     now = list(plan.entries)
     for position, before, _then in plan.moved:
         now[position - 1] = before
-    apart = {key(a) for a in plan.only_on_device}
-    first = [key(a) for a in now if key(a) not in apart]
-    second = [key(a) for a in plan.entries if key(a) not in apart]
+    apart = {_app_key(a) for a in plan.only_on_device}
+    first = [_app_key(a) for a in now if _app_key(a) not in apart]
+    second = [_app_key(a) for a in plan.entries if _app_key(a) not in apart]
     # Not the positions that change: one app taken from the top to the bottom changes every
     # position, but is one app moved. The longest common subsequence, a row of the table at a
     # time.

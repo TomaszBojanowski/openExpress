@@ -23,7 +23,13 @@ from pathlib import Path
 
 from openexpress import applog, diagnostics, paths, updates
 from openexpress.device import whole_reads
-from openexpress.device.storage import MAIN_FOLDERS, DeviceError, DeviceNotResponding, Storage
+from openexpress.device.storage import (
+    MAIN_FOLDERS,
+    DeviceError,
+    DeviceNotResponding,
+    Storage,
+    is_test_drive,
+)
 from openexpress.errors import UserFacingError
 from openexpress.i18n import _, human_size
 from openexpress.progress import Step, say_to
@@ -305,7 +311,7 @@ def remove_dumps(storage: Storage, unit_id: int, asked: DumpPlan, progress=None,
     if not unit_id:
         raise ValueError("no removal of memory dumps without a unit ID")
     freed = freed if freed is not None else Freed()
-    test_drive = bool(getattr(storage, "test_drive", False))
+    test_drive = is_test_drive(storage)
     copies: dict[str, Path] = {}
     where = None
     try:
