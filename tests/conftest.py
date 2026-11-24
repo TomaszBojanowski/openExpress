@@ -792,3 +792,55 @@ def documents_portal_stays(request):
     if before is not None and _documents_mount() != before:
         pytest.exit(f"{request.node.nodeid} took {DOCUMENTS} away or put another portal there: "
                     f"the document portal needs a restart ({RESTART})", returncode=3)
+
+
+# --- fixtures several test modules use ---------------------------------------------------
+
+
+@pytest.fixture
+def http_server():
+    """A local HTTP server of made-up answers (fakes.Server): its routes, the requests it got."""
+    from fakes import Server
+
+    s = Server()
+    yield s
+    s.srv.shutdown()
+    s.srv.server_close()
+
+
+@pytest.fixture
+def fake_client(monkeypatch):
+    """The command line's Garmin client is fakes.FakeClient (`holder["client"]`, which a test
+    may replace)."""
+    from fakes import FakeClient
+
+    from openexpress import cli
+
+    holder = {"client": FakeClient()}
+    monkeypatch.setattr(cli, "make_client", lambda settings, need_auth: holder["client"])
+    monkeypatch.setattr(cli, "GarminClient", lambda *a, **k: holder["client"])
+    return holder
+
+
+@pytest.fixture
+def offered(device_root, monkeypatch):
+    """The server offers three map support files and a real update. The device has the first
+    file as offered, the second with other content of the same size, and not the third."""
+    from fakes import OFFERED_BYTES, update_answer
+
+    from openexpress.connect import GarminClient
+
+    (device_root / "GARMIN/SID").mkdir()
+    (device_root / "GARMIN/SID/da00100.sid").write_bytes(b"same file")  # other letter case
+    (device_root / "GARMIN/SID/DA00200.sid").write_bytes(b"other txt")
+    answer = update_answer(
+        ("006-DA001-00", "Etyp", "Etyp", "DA00100.sid", OFFERED_BYTES["DA00100.sid"], "Recommended"),
+        ("006-DA002-00", "Etyp", "Etyp", "DA00200.sid", OFFERED_BYTES["DA00200.sid"], "Recommended"),
+        ("006-DA003-00", "Etyp", "Etyp", "DA00300.sid", OFFERED_BYTES["DA00300.sid"], "Recommended"),
+        ("006-B0000-00", "Test watch Device Software", "Firmware", "GUPDATE.GCD",
+         OFFERED_BYTES["GUPDATE.GCD"], "Critical"))
+    monkeypatch.setattr(GarminClient, "software_updates",
+                        lambda self, raw, include_reinstalls=False: answer)
+    # An install asks the kind of device (the data-loss warning): an ordinary one.
+    monkeypatch.setattr(GarminClient, "unit_info", lambda self, unit_id, part_number: {})
+    return device_root, answer

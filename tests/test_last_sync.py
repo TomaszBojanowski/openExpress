@@ -6,7 +6,6 @@ from pathlib import Path
 import pytest
 from fakes import in_language, step_words
 from fakes import window as stand_in
-from test_fixes_ui import fake_client  # noqa: F401 - the fixture
 
 from openexpress import last_sync, service, sync
 from openexpress.cli import main

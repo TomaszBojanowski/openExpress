@@ -3,8 +3,7 @@
 
 import pytest
 import requests
-from fakes import in_language, step_words
-from test_fixes_ui import FakeClient, fake_client  # noqa: F401 - the fixture
+from fakes import FakeClient, in_language, step_words
 
 from openexpress import last_sync, service, sync
 from openexpress.cli import main
