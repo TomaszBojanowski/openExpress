@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 22:36+0100\n"
+"POT-Creation-Date: 2026-11-24 08:18+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -1629,16 +1629,16 @@ msgstr "bez awarii w dziennikach błędów"
 msgid "last crash: {crash}"
 msgstr "ostatnia awaria: {crash}"
 
-#: openexpress/cli.py
-#, ignore-reused, python-brace-format
-msgid "USB drive"
-msgstr "Dysk USB"
-
 #. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
 #: openexpress/cli.py
 #, python-brace-format
 msgid "USB drive ({name})"
 msgstr "Dysk USB ({name})"
+
+#: openexpress/cli.py
+#, ignore-reused, python-brace-format
+msgid "USB drive"
+msgstr "Dysk USB"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -2269,6 +2269,13 @@ msgstr "Dane satelitarne są już aktualne"
 msgid "Satellite data not updated: {reason}"
 msgstr "Nie zaktualizowano danych satelitarnych: {reason}"
 
+#. TRANSLATORS: after "Device software:" in openexpress status, of a device connected
+#. as a USB drive: an update openExpress copied is installed once the drive is ejected
+#: openexpress/cli.py
+#, python-brace-format
+msgid "an update is ready: eject the device to install it"
+msgstr "aktualizacja gotowa: wysuń urządzenie, aby ją zainstalować"
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid "an update is ready: unplug the device to install it"
@@ -2349,8 +2356,7 @@ msgid "Devices this installation has seen:"
 msgstr "Urządzenia, które widziała ta instalacja:"
 
 #. TRANSLATORS: the version of a device's software, under its name ("Software 23.39")
-#: openexpress/cli.py openexpress/gui/device_page.py
-#: openexpress/gui/start_window.py openexpress/gui/words.py
+#: openexpress/cli.py openexpress/gui/words.py
 #, python-brace-format
 msgid "Software {version}"
 msgstr "Wersja oprogramowania {version}"
@@ -5139,6 +5145,15 @@ msgstr ""
 #: openexpress/connect.py
 #, python-brace-format
 msgid ""
+"Internal error: this device was not checked against your Garmin account. "
+"Nothing was transferred."
+msgstr ""
+"Błąd wewnętrzny: nie sprawdzono, czy to urządzenie należy do tego konta "
+"Garmin. Niczego nie przesłano."
+
+#: openexpress/connect.py
+#, python-brace-format
+msgid ""
 "openExpress has no application key yet: first choose the Garmin Express "
 "installer for Windows (in the window: Preferences, Setup; on the command "
 "line: openexpress setup --from-installer GarminExpress.exe)."
@@ -5146,15 +5161,6 @@ msgstr ""
 "openExpress nie ma jeszcze klucza aplikacji: najpierw wskaż instalator "
 "Garmin Express dla Windows (w oknie: Preferencje, Konfiguracja; w wierszu "
 "poleceń: openexpress setup --from-installer GarminExpress.exe)."
-
-#: openexpress/connect.py
-#, python-brace-format
-msgid ""
-"Internal error: this device was not checked against your Garmin account. "
-"Nothing was transferred."
-msgstr ""
-"Błąd wewnętrzny: nie sprawdzono, czy to urządzenie należy do tego konta "
-"Garmin. Niczego nie przesłano."
 
 #: openexpress/connect.py
 #, python-brace-format
@@ -7978,27 +7984,6 @@ msgstr "Utwórz"
 #, python-brace-format
 msgid "Part Number"
 msgstr "Numer katalogowy"
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
-#. has none set
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "Not set"
-msgstr "Nie ustawiono"
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
-#. device shown
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "This device"
-msgstr "To urządzenie"
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
-#. of the account, its name not known
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "Another device"
-msgstr "Inne urządzenie"
 
 #: openexpress/gui/device_page.py
 #, python-brace-format
@@ -10840,6 +10825,27 @@ msgid_plural "{count} activities to upload now"
 msgstr[0] "{count} aktywność do wysłania teraz"
 msgstr[1] "{count} aktywności do wysłania teraz"
 msgstr[2] "{count} aktywności do wysłania teraz"
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
+#. has none set
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Not set"
+msgstr "Nie ustawiono"
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
+#. device shown
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "This device"
+msgstr "To urządzenie"
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
+#. of the account, its name not known
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Another device"
+msgstr "Inne urządzenie"
 
 #. TRANSLATORS: "Primary wearable" is Garmin's name of the setting (in Polish its manuals
 #. say "Podstawowe urządzenie noszone na ciele")

@@ -1067,7 +1067,7 @@ def test_status_online_says_what_the_window_says_after_the_reading(navigator):
     client = types.SimpleNamespace(
         software_updates=lambda raw, include_reinstalls=False: lower_keys(server_answer()))
     said = cli._status_updates_online(client, types.SimpleNamespace(device=device,
-                                                                    storage=storage))
+                                                                    storage=storage), False)
     # As the window once it has read .System: the time zone map is there at its size; the
     # software and the new part are updates.
     assert said == cli._update_words("available", 2, None) and storage.sessions == 1
