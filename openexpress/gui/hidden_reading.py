@@ -62,8 +62,8 @@ def _folders(s) -> list[str]:
 
 
 def _start(win, s) -> None:
-    kept = hidden_folders.kept(s.storage) if hasattr(s, "storage") else None
-    if (win.session is not s or not hasattr(s, "hidden_wanted") or s.hidden_reading
+    kept = hidden_folders.kept(s.storage)
+    if (win.session is not s or s.hidden_reading
             or (kept is not None and kept.state != hidden_folders.READ)):
         return  # a reading that failed, or no session to be had, is said once a connection
     if hidden_folders.busy_failures(s.storage) >= hidden_folders.BUSY_TRIES:

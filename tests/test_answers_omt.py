@@ -9,7 +9,6 @@ from datetime import timedelta
 import pytest
 from fakes import RTL515_XML, UpdateServer
 from fakes import window as stand_in
-from test_fixes_ui import offered  # noqa: F401 - the fixture
 
 from openexpress import answers
 from openexpress.connect import GarminClient

@@ -6,9 +6,8 @@ tell the user may still name them."""
 import logging
 
 import pytest
-from fakes import SyncClient
+from fakes import DOWNLOAD_DATA, SyncClient, md5hex
 from fakes import sync_setup as _setup
-from test_fixes_net import DATA, md5hex, server  # noqa: F401 - the fixture
 from test_sync import UPLOAD_CONFIG
 from test_upload_consent import Account
 
@@ -159,16 +158,16 @@ def test_the_background_sync_does_not_log_its_progress(monkeypatch, caplog):
     assert COURSE not in logged and ACTIVITY not in logged
 
 
-@pytest.mark.parametrize("size, md5", [(len(DATA) + 5, None), (None, "0" * 32)])
-def test_a_download_error_names_the_address_without_its_signature(server, tmp_path, size, md5):
+@pytest.mark.parametrize("size, md5", [(len(DOWNLOAD_DATA) + 5, None), (None, "0" * 32)])
+def test_a_download_error_names_the_address_without_its_signature(http_server, tmp_path, size, md5):
     """A wrong size or MD5: the address as far as its path (its query carries the signature
     of the download)."""
-    server.routes["/maps/gmapsupp.img"] = (200, {}, DATA)
-    url = server.url + "/maps/gmapsupp.img?garmindlm=" + SIGNATURE
+    http_server.routes["/maps/gmapsupp.img"] = (200, {}, DOWNLOAD_DATA)
+    url = http_server.url + "/maps/gmapsupp.img?garmindlm=" + SIGNATURE
     with pytest.raises(download.DownloadError) as e:
-        download.fetch([url], tmp_path / "f.img", size, md5 or md5hex(DATA))
+        download.fetch([url], tmp_path / "f.img", size, md5 or md5hex(DOWNLOAD_DATA))
     text = str(e.value)
-    assert server.url + "/maps/gmapsupp.img" in text
+    assert http_server.url + "/maps/gmapsupp.img" in text
     assert "garmindlm" not in text and "?" not in text and SIGNATURE[11:] not in text
 
 

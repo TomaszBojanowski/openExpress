@@ -6,7 +6,7 @@ network guard fails a test that asks). Every device and account is made up."""
 import types
 
 import pytest
-from fakes import login, noted, record_sync
+from fakes import in_language, login, noted, record_sync
 
 from openexpress import sync, tile_facts
 from openexpress.cli import main
@@ -85,6 +85,30 @@ def _recorded(kind):
     tile_facts.note_update_check(
         types.SimpleNamespace(unit_id=FENIX, software_version_str="23.39"),
         list(found.get("updates", ())), found.get("staged", ()), found.get("not_installed", ()))
+
+
+POLISH_EJECT = ("  Oprogramowanie urządzenia: aktualizacja gotowa: wysuń urządzenie, aby ją "
+                "zainstalować · sprawdzono przed chwilą")
+
+
+def test_status_says_a_drive_with_an_update_copied_is_ejected_not_unplugged(monkeypatch, capsys,
+                                                                           clock):
+    """As the device page says it of a device in mass storage mode: the update copied to it is
+    installed once the drive is ejected; in English and in Polish."""
+    login()
+    varia = _varia()
+    _connected(monkeypatch, [varia])
+    noted([varia], account=[{"unitid": VARIA}])
+    tile_facts.note_update_check(
+        types.SimpleNamespace(unit_id=VARIA, software_version_str="3.36"), [], [COPIED], ())
+    assert main(["status"]) == 0
+    english = capsys.readouterr().out.splitlines()[-1]
+    with in_language("pl"):
+        assert main(["status"]) == 0
+        polish = capsys.readouterr().out.splitlines()[-1]
+    assert (english, polish) == (
+        "  Device software: an update is ready: eject the device to install it · checked just now",
+        POLISH_EJECT)
 
 
 def test_status_says_an_update_copied_already_before_one_to_install(monkeypatch, capsys, clock):

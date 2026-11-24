@@ -454,25 +454,26 @@ def copy_not_read_text(name: str) -> str:
 
 
 def probe_step_text(folder: str) -> str:
-    # TRANSLATORS: a step of the trial on the command line: a small file written into a folder
-    # the device hides, read back and deleted, before anything there is replaced
+    # TRANSLATORS: a step of writing an update into a folder the device hides: a small file
+    # written there, read back and deleted, before anything there is replaced
     return _("Trying a small test file in {folder}…").format(folder=folder)
 
 
 def keeping_step_text(name: str) -> str:
-    # TRANSLATORS: a step of the trial on the command line; {name}: an update, whose file now on
-    # the device is copied to this computer before it is replaced
+    # TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+    # update, whose file now on the device is copied to this computer before it is replaced
     return _("Copying the old {name} to this computer").format(name=name)
 
 
 def removing_step_text(name: str) -> str:
-    # TRANSLATORS: a step of the trial on the command line; {name}: an update
+    # TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an update
     return _("Removing the old {name} from the device").format(name=name)
 
 
 def putting_back_step_text(name: str) -> str:
-    # TRANSLATORS: a step of the trial on the command line; {name}: an update whose new file was
-    # not written whole, so its old one is written back from the copy on this computer
+    # TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+    # update whose new file was not written whole, so its old one is written back from the copy
+    # on this computer
     return _("Putting the old {name} back on the device").format(name=name)
 
 

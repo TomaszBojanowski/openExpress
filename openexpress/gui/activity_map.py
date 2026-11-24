@@ -601,7 +601,16 @@ def _screen_scale(widget) -> float:
     return surface.get_scale() if surface is not None else widget.get_scale_factor()
 
 
-def _trace(cr, points, run) -> None:
+def view_offset(viewport, width: int, height: int) -> tuple[float, float, float]:
+    """How a layer of this size places a point of the whole map at zoom 0 (world_xy):
+    (scale, dx, dy), the point at (x * scale + dx, y * scale + dy), the view's centre in the
+    middle of the layer."""
+    zoom = viewport.get_zoom_level()
+    cx, cy = world_xy(viewport.get_latitude(), viewport.get_longitude(), zoom)
+    return 2 ** zoom, width / 2 - cx, height / 2 - cy
+
+
+def trace(cr, points, run) -> None:
     """The line through the points of a run (their indices); one point alone: a dot."""
     cr.move_to(*points[run[0]])
     for i in run[1:] or run[:1]:
@@ -688,10 +697,7 @@ if Shumate is not None:
             if width <= 0 or height <= 0 or not self.world:
                 return
             viewport = self.get_viewport()
-            zoom = viewport.get_zoom_level()
-            scale = 2 ** zoom
-            cx, cy = world_xy(viewport.get_latitude(), viewport.get_longitude(), zoom)
-            dx, dy = width / 2 - cx, height / 2 - cy
+            scale, dx, dy = view_offset(viewport, width, height)
             points = [(x * scale + dx, y * scale + dy) for x, y in self.world]
             cr = snapshot.append_cairo(Graphene.Rect().init(0, 0, width, height))
             rotation = viewport.get_rotation()
@@ -722,7 +728,7 @@ if Shumate is not None:
             cr.set_line_width(width + 2 * self.edge_width)
             cr.set_source_rgba(edge.red, edge.green, edge.blue, strength)
             for run in runs:
-                _trace(cr, points, run)
+                trace(cr, points, run)
             cr.stroke()
             cr.set_line_width(width)
             coloured = self.colours is not None
@@ -730,7 +736,7 @@ if Shumate is not None:
                 shade = self.track_colour
                 cr.set_source_rgba(shade.red, shade.green, shade.blue, strength)
                 for run in runs:
-                    _trace(cr, points, run)
+                    trace(cr, points, run)
                 cr.stroke()
                 return
             cr.push_group()
@@ -741,7 +747,7 @@ if Shumate is not None:
                 cr.set_source_rgba(shade.red, shade.green, shade.blue, 1)
                 for piece in pieces:
                     if piece[0] in firsts:
-                        _trace(cr, points, piece)
+                        trace(cr, points, piece)
                     else:
                         cr.move_to(*_just_before(points[piece[0] - 1], points[piece[0]]))
                         for i in piece:
@@ -751,7 +757,7 @@ if Shumate is not None:
             for i in {i for run in runs for i in (run[0], run[-1])}:
                 shade = rgba(self.colours[i])
                 cr.set_source_rgba(shade.red, shade.green, shade.blue, 1)
-                _trace(cr, points, [i])
+                trace(cr, points, [i])
                 cr.stroke()
             cr.pop_group_to_source()
             cr.paint_with_alpha(strength)

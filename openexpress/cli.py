@@ -1231,8 +1231,8 @@ def _print_status(s, entry, listed, client, now) -> None:
         # TRANSLATORS: `openexpress status`: {text} gives the window's words for the device's last
         # sync
         print("  " + _("Last sync: {text}").format(text=text))
-    text = (_status_updates_online(client, s) if client is not None
-            else _status_updates(entry, s.software_version, now))
+    text = (_status_updates_online(client, s, drive) if client is not None
+            else _status_updates(entry, s.software_version, now, drive))
     # TRANSLATORS: `openexpress status`: {text} says whether an update of the device's software is
     # available
     print("  " + _("Device software: {text}").format(text=text))
@@ -1295,14 +1295,20 @@ def _satellite_result(result) -> str | None:
     return _("Satellite data not updated: {reason}").format(reason=reason)
 
 
-def _update_words(state: str, count: int = 0, only=None) -> str:
+def _update_words(state: str, count: int = 0, only=None, drive: bool = False) -> str:
     """The words of `openexpress status` for the state of a device's updates (updates.state,
-    known_devices.recorded_state); `count`: the updates to install, `only`: the one of them."""
+    known_devices.recorded_state); `count`: the updates to install, `only`: the one of them;
+    `drive`: a device in mass storage mode, which installs an update once it is ejected."""
     from openexpress.gui import words
 
     if state == "ready":
-        return caption(_("an update is ready: unplug the device to install it"),
-                       words.more_available(count))
+        if drive:
+            # TRANSLATORS: after "Device software:" in openexpress status, of a device connected
+            # as a USB drive: an update openExpress copied is installed once the drive is ejected
+            ready = _("an update is ready: eject the device to install it")
+        else:
+            ready = _("an update is ready: unplug the device to install it")
+        return caption(ready, words.more_available(count))
     if state == "available":
         return words.updates_available(count, only)
     if state == "not-installed":
@@ -1313,24 +1319,26 @@ def _update_words(state: str, count: int = 0, only=None) -> str:
     return _("up to date")
 
 
-def _status_updates(entry, software: str, now) -> str:
+def _status_updates(entry, software: str, now, drive: bool) -> str:
     """What the last check of updates kept with the device found, while it holds (recent, of
-    the software it has now)."""
+    the software it has now); `drive`: a device in mass storage mode."""
     from openexpress.gui import words
 
     if entry is not None:
         recorded = known_devices.recorded_state(entry, software, now.timestamp())
         if recorded is not None:
             return words.checked_text(
-                _update_words(recorded.state, recorded.count, recorded.only), recorded.at, now)
+                _update_words(recorded.state, recorded.count, recorded.only, drive),
+                recorded.at, now)
         last = known_devices.last_update_check(entry)
         if last is not None:
             return words.not_checked_since(last)
     return _("not checked yet (openexpress status --online checks it)")
 
 
-def _status_updates_online(client, s) -> str:
-    """The updates of the device as Garmin's update server offers them now."""
+def _status_updates_online(client, s, drive: bool) -> str:
+    """The updates of the device as Garmin's update server offers them now; `drive`: a device
+    in mass storage mode."""
     from openexpress import updates as upd
     from openexpress.device import gio_storage
 
@@ -1351,7 +1359,7 @@ def _status_updates_online(client, s) -> str:
         return _("could not be checked: {error}").format(error=e)
     new = upd.pending(items)
     return _update_words(upd.state(new, upd.staged(items), upd.not_installed(items)), len(new),
-                         new[0] if len(new) == 1 else None)
+                         new[0] if len(new) == 1 else None, drive)
 
 
 def cmd_cache(args) -> int:
@@ -2063,7 +2071,7 @@ def cmd_updates(args) -> int:
             refused.append(u)
         tried = {u.part_number.upper() for u in inside}
         chosen = [u for u in chosen if u.hidden_inside is not None or (
-            u.is_metadata and u.part_number.upper().removesuffix("-META") in tried)]
+            u.is_metadata and u.part_key in tried)]
         if not inside:
             return 1
     else:

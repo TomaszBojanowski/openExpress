@@ -6,9 +6,9 @@
 #, fuzzy
 msgid ""
 msgstr ""
-"Project-Id-Version: openexpress 0.13.0\n"
+"Project-Id-Version: openexpress 0.13.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-23 22:36+0100\n"
+"POT-Creation-Date: 2026-11-24 08:40+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1470,15 +1470,15 @@ msgstr ""
 msgid "last crash: {crash}"
 msgstr ""
 
-#: openexpress/cli.py
-#, ignore-reused, python-brace-format
-msgid "USB drive"
-msgstr ""
-
 #. TRANSLATORS: a device connected as a USB drive; {name} is the label of its volume
 #: openexpress/cli.py
 #, python-brace-format
 msgid "USB drive ({name})"
+msgstr ""
+
+#: openexpress/cli.py
+#, ignore-reused, python-brace-format
+msgid "USB drive"
 msgstr ""
 
 #: openexpress/cli.py
@@ -2083,6 +2083,13 @@ msgstr ""
 msgid "Satellite data not updated: {reason}"
 msgstr ""
 
+#. TRANSLATORS: after "Device software:" in openexpress status, of a device connected
+#. as a USB drive: an update openExpress copied is installed once the drive is ejected
+#: openexpress/cli.py
+#, python-brace-format
+msgid "an update is ready: eject the device to install it"
+msgstr ""
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid "an update is ready: unplug the device to install it"
@@ -2161,8 +2168,7 @@ msgid "Devices this installation has seen:"
 msgstr ""
 
 #. TRANSLATORS: the version of a device's software, under its name ("Software 23.39")
-#: openexpress/cli.py openexpress/gui/device_page.py
-#: openexpress/gui/start_window.py openexpress/gui/words.py
+#: openexpress/cli.py openexpress/gui/words.py
 #, python-brace-format
 msgid "Software {version}"
 msgstr ""
@@ -4647,16 +4653,16 @@ msgstr ""
 #: openexpress/connect.py
 #, python-brace-format
 msgid ""
-"openExpress has no application key yet: first choose the Garmin Express "
-"installer for Windows (in the window: Preferences, Setup; on the command "
-"line: openexpress setup --from-installer GarminExpress.exe)."
+"Internal error: this device was not checked against your Garmin account. "
+"Nothing was transferred."
 msgstr ""
 
 #: openexpress/connect.py
 #, python-brace-format
 msgid ""
-"Internal error: this device was not checked against your Garmin account. "
-"Nothing was transferred."
+"openExpress has no application key yet: first choose the Garmin Express "
+"installer for Windows (in the window: Preferences, Setup; on the command "
+"line: openexpress setup --from-installer GarminExpress.exe)."
 msgstr ""
 
 #: openexpress/connect.py
@@ -7270,27 +7276,6 @@ msgstr ""
 #: openexpress/gui/device_page.py openexpress/gui/start.py
 #, python-brace-format
 msgid "Part Number"
-msgstr ""
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
-#. has none set
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "Not set"
-msgstr ""
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
-#. device shown
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "This device"
-msgstr ""
-
-#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
-#. of the account, its name not known
-#: openexpress/gui/device_page.py openexpress/gui/words.py
-#, python-brace-format
-msgid "Another device"
 msgstr ""
 
 #: openexpress/gui/device_page.py
@@ -9918,6 +9903,27 @@ msgid_plural "{count} activities to upload now"
 msgstr[0] ""
 msgstr[1] ""
 
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": the account
+#. has none set
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Not set"
+msgstr ""
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": it is the
+#. device shown
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "This device"
+msgstr ""
+
+#. TRANSLATORS: subtitle of "Primary Training Device" or "Primary Wearable": another device
+#. of the account, its name not known
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Another device"
+msgstr ""
+
 #. TRANSLATORS: "Primary wearable" is Garmin's name of the setting (in Polish its manuals
 #. say "Podstawowe urządzenie noszone na ciele")
 #: openexpress/gui/words.py
@@ -10886,28 +10892,29 @@ msgid ""
 "computer first. Nothing on the device was changed."
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line: a small file written into a folder
-#. the device hides, read back and deleted, before anything there is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides: a small file
+#. written there, read back and deleted, before anything there is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Trying a small test file in {folder}…"
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update, whose file now on
-#. the device is copied to this computer before it is replaced
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update, whose file now on the device is copied to this computer before it is replaced
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Copying the old {name} to this computer"
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an update
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Removing the old {name} from the device"
 msgstr ""
 
-#. TRANSLATORS: a step of the trial on the command line; {name}: an update whose new file was
-#. not written whole, so its old one is written back from the copy on this computer
+#. TRANSLATORS: a step of writing an update into a folder the device hides; {name}: an
+#. update whose new file was not written whole, so its old one is written back from the copy
+#. on this computer
 #: openexpress/hidden_folders.py
 #, python-brace-format
 msgid "Putting the old {name} back on the device"

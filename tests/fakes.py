@@ -3,6 +3,8 @@ data; nothing here reaches a device, the network or the disk of this computer ou
 test's own folder."""
 
 import contextlib
+import hashlib
+import http.server
 import os
 import struct
 import subprocess
@@ -1622,3 +1624,180 @@ def hidden_folder_waits(monkeypatch) -> list:
     waited = []
     monkeypatch.setattr(hidden_folders, "_sleep", waited.append)
     return waited
+
+
+# --- several modules: a local HTTP server, the command line's client, an update's answer -----
+
+
+class Server:
+    """A local HTTP server: `routes` maps a path to (status, headers, body) or to a function of
+    the request that gives them, `requests` keeps (method, path, headers) of each, `url` is its
+    address (conftest's http_server)."""
+
+    def __init__(self):
+        self.routes = {}
+        self.requests = []
+        server = self
+
+        class H(http.server.BaseHTTPRequestHandler):
+            def _handle(self):
+                n = int(self.headers.get("Content-Length") or 0)
+                if n:
+                    self.rfile.read(n)
+                server.requests.append((self.command, self.path, dict(self.headers)))
+                route = server.routes.get(self.path.split("?")[0])
+                if route is None:
+                    status, headers, body = 404, {}, b""
+                elif callable(route):
+                    status, headers, body = route(self)
+                else:
+                    status, headers, body = route
+                self.send_response(status)
+                for k, v in headers.items():
+                    self.send_header(k, v)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            do_GET = do_POST = _handle
+
+            def log_message(self, *a):
+                pass
+
+        self.srv = http.server.ThreadingHTTPServer(("127.0.0.1", 0), H)
+        self.url = f"http://127.0.0.1:{self.srv.server_address[1]}"
+        # A short poll: shutdown() waits for it (the default of 0.5 s took most of the run).
+        threading.Thread(target=self.srv.serve_forever, kwargs={"poll_interval": 0.05},
+                         daemon=True).start()
+
+
+# The bytes of a made-up download.
+DOWNLOAD_DATA = bytes(range(256)) * 20
+
+
+def md5hex(b):
+    """The MD5 of `b` in hexadecimal, as the servers give it."""
+    return hashlib.md5(b).hexdigest()
+
+
+# The upload settings FakeClient answers: one location, for activities.
+CLIENT_UPLOAD_CONFIG = {
+    "unittypename": "test",
+    "datatypes": [
+        {"datatypename": "FIT_TYPE_4", "uploadlocations": [
+            {"url": "https://up.example/activity", "requiresauthentication": True}]},
+    ],
+}
+
+
+class FakeClient:
+    """The Garmin client of the command line (conftest's fake_client): each upload answered
+    with `status`, the device's messages `messages`, the upload settings refused with
+    `fail_config`."""
+
+    def __init__(self, status=201, messages=None, fail_config=None):
+        self.status = status
+        self.messages = messages or []
+        self.fail_config = fail_config
+        self.uploads = []
+        self.auth = object()
+        self.verified_unit_id = None
+
+    def account_devices(self, fresh=False):
+        return [{"unitid": 1234567890}]
+
+    def require_verified(self, unit_id=None):
+        assert self.verified_unit_id is not None
+
+    # The account allows uploads, as a normal account does.
+    def consent(self, consent_type):
+        return {"useroption": "opt-in", "sourcetype": "CUSTOMER",
+                "consentenforcementstate": "HARD", "consenttypeid": consent_type}
+
+    def device_sync_preference(self):
+        return {"key": "account.deviceSync", "value": "true"}
+
+    def profile_country(self, fresh=False):
+        return "PL"
+
+    def upload_settings(self, unit_id):
+        if self.fail_config:
+            raise self.fail_config
+        return CLIENT_UPLOAD_CONFIG
+
+    def device_messages(self, unit_id):
+        return self.messages
+
+    def activity_matches(self, unit_id, ids):
+        return {i: False for i in ids}
+
+    def upload_file(self, url, data, *, is_zip, last_file, authenticated):
+        from openexpress.connect import UploadResult
+
+        self.uploads.append(url)
+        return UploadResult(self.status, {}, None, None)
+
+    def poll_location(self, url, delay):
+        return 201
+
+    def download_message(self, url, absolute):
+        return None
+
+    def ack_message(self, mid):
+        pass
+
+
+class Widget:
+    """A stand-in of the widgets the window sets while a task works with the device: what it
+    was last told to show (visible, text, icon)."""
+
+    def __init__(self):
+        self.visible, self.text, self.icon = None, None, None
+
+    def set_visible(self, visible):
+        self.visible = visible
+
+    def set_from_icon_name(self, name):  # the device view's icon of the kind
+        self.icon = name
+
+    def set_pixel_size(self, size):
+        pass
+
+    def set_size_request(self, width, height):
+        pass
+
+    def add_css_class(self, name):
+        pass
+
+    def set_text(self, text):
+        self.text = text
+
+    def set_tooltip_text(self, text):
+        pass
+
+    def set_reveal_child(self, revealed):
+        self.visible = revealed
+
+    def set_fraction(self, fraction):
+        pass
+
+    def set_sensitive(self, sensitive):
+        pass
+
+
+def update_answer(*entries):
+    """An answer of the update server; `entries`: (part, name, datatype, file, data, severity)."""
+    import hashlib
+
+    return {"updates": [{
+        "partnumber": part, "productname": name, "datatype": datatype, "version": "2.70",
+        "severity": severity,
+        "installation": {"path": "Garmin\\SID", "filename": file, "isreinstall": False},
+        "deliverable": {"downloadurl": "https://example.org/" + file,
+                        "md5": hashlib.md5(data).hexdigest().upper(), "sizeinbytes": len(data)},
+    } for part, name, datatype, file, data, severity in entries]}
+
+
+# The bytes of each file the server offers below, by its name.
+OFFERED_BYTES = {"DA00100.sid": b"same file", "DA00200.sid": b"new bytes",
+                 "DA00300.sid": b"missing", "GUPDATE.GCD": b"fw"}
