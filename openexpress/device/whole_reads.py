@@ -52,7 +52,7 @@ def _alive(pid: int) -> bool:
     return True
 
 
-def remove_leftovers(now: Callable[[], float] = time.time) -> None:
+def remove_leftovers() -> None:
     """The temporary files left by runs that ended during a copy, removed: those not written
     to for LEFT_AFTER_S, and, outside the Flatpak, those of processes that are gone (each
     instance of the Flatpak numbers its processes on its own, so there a number says nothing
@@ -66,7 +66,7 @@ def remove_leftovers(now: Callable[[], float] = time.time) -> None:
     for entry in entries:
         pid = entry.name.split("-", 1)[0]
         try:
-            stale = (now() - entry.stat().st_mtime > LEFT_AFTER_S
+            stale = (time.time() - entry.stat().st_mtime > LEFT_AFTER_S
                      or (by_process and (not pid.isdigit() or not _alive(int(pid)))))
             if stale:
                 entry.unlink()

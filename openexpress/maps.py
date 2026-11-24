@@ -28,7 +28,7 @@ from openexpress import answers, applog, awake, cache, download, hidden_folders,
 from openexpress.connect import ApiError, unexpected_answer_text
 from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage, connection
 from openexpress.errors import UserFacingError
-from openexpress.i18n import _, country_name
+from openexpress.i18n import _, country_name, human_size
 from openexpress.progress import (
     Step,
     byte_steps,
@@ -420,8 +420,8 @@ def read_maps(response: dict) -> tuple[list[UniversalMap], int]:
     return maps, len(_listed(response))
 
 
-def _text(value, limit: int = 200) -> str | None:
-    return value.strip()[:limit] if isinstance(value, str) and value.strip() else None
+def _text(value) -> str | None:
+    return value.strip()[:200] if isinstance(value, str) and value.strip() else None
 
 
 def _cleanup_rules(response) -> tuple[CleanupRule, ...]:
@@ -827,8 +827,6 @@ def folder_not_read_text(folder: str) -> str:
 
 
 def too_large_text(path: str, size: int) -> str:
-    from openexpress.i18n import human_size
-
     # TRANSLATORS: {path}: a file of a map on the device; {size}: its size
     return _("{path} is {size}: a file over 4 GiB cannot be sent to the device.").format(
         path=path, size=human_size(size))
@@ -868,8 +866,6 @@ def trial_refusals(storage: Storage, m: UniversalMap, removing: list[str]) -> li
 
 
 def no_room_on_computer_text(name: str, needed: int, free: int) -> str:
-    from openexpress.i18n import human_size
-
     # TRANSLATORS: {name} is a map; {needed} and {free} are sizes
     return _("Not enough space on this computer for the download of {name}: {needed} needed, "
              "{free} free.").format(name=name, needed=human_size(needed), free=human_size(free))
@@ -1149,7 +1145,7 @@ def _activation(m: UniversalMap, activate, say, strict: bool = False) -> list[tu
 
 def _install_hidden(m: UniversalMap, removing: list[str], storage: Storage, activate,
                     session, progress, url_salt: str | None,
-                    sleep: Callable[[float], None] = time.sleep) -> MapReport:
+                    sleep: Callable[[float], None]) -> MapReport:
     """The trial: a map into a folder the device hides, read through openExpress's own session.
     Nothing on the device changes until every file is downloaded and checked and the map is
     activated; then one session (hidden_folders.write_map) removes its old files (none that

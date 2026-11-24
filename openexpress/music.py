@@ -346,7 +346,6 @@ class PlaylistPlan:
     """What adding a local playlist would do."""
 
     name: str
-    target: str  # device path of the playlist file
     replaces: bool  # a playlist with this name is already on the device
     copy: CopyPlan
     skipped: list[tuple[str, str]] = field(default_factory=list)  # (entry, reason)
@@ -354,15 +353,14 @@ class PlaylistPlan:
     device_paths: list[str] = field(default_factory=list)
 
 
-def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage,
-                  name: str | None = None) -> PlaylistPlan:
+def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage) -> PlaylistPlan:
     """Plan adding a local .m3u/.m3u8 playlist: which tracks to copy, which cannot be added.
 
     Entries that are missing or in a format the device does not play are skipped with a
     reason instead of stopping the whole playlist. Nothing is written.
     """
     m3u = Path(m3u)
-    name = name or m3u.stem
+    name = m3u.stem
     target = _playlist_path(device, name)  # before the playlist is read
     tracks: dict[Path, Track] = {}  # one copy per local file, however often it is listed
     order: list[Path] = []
@@ -383,7 +381,7 @@ def plan_playlist(m3u: Path, device: GarminDevice, storage: Storage,
         order.append(key)
     copy_plan = plan_copy(list(tracks.values()), device, storage)
     dest = {t.local.resolve(): d for t, d in copy_plan.to_copy + copy_plan.already}
-    return PlaylistPlan(name, target, storage.resolve(target) is not None, copy_plan, skipped,
+    return PlaylistPlan(name, storage.resolve(target) is not None, copy_plan, skipped,
                         [dest[key] for key in order])
 
 

@@ -44,6 +44,7 @@ from openexpress.device.storage import (  # noqa: E402
     UmsStorage,
     connection,
 )
+from openexpress.device.xmldevice import parse  # noqa: E402
 from openexpress.errors import OrdinaryStop  # noqa: E402
 from openexpress.i18n import _, caption, pgettext  # noqa: E402
 from openexpress.paths import host_command, in_flatpak  # noqa: E402
@@ -1805,12 +1806,12 @@ def _at_another_port(entry: _Ejected) -> bool:
     return False
 
 
-def ejected_by_us(usb: GarminUsb | None, clock=time.monotonic) -> bool:
+def ejected_by_us(usb: GarminUsb | None) -> bool:
     """Whether this drive was ejected by openExpress and is still at its place on USB: then it
     is neither opened nor listed, and its mount is ignored, until it is unplugged."""
     if usb is None:
         return False
-    _forget_unplugged(clock)
+    _forget_unplugged()
     with _ejected_lock:
         return any(e.usb == usb and (e.usb.bus, e.usb.address) == (usb.bus, usb.address)
                    for e in _ejected)
@@ -2554,9 +2555,7 @@ def probe(found: FoundDevice) -> DeviceSummary:
     asked of such a device); else without details the summary says why. One log line,
     without the address or the unit ID. An MTP device read keeps what was opened (`device`,
     `storage`), for the window to count its activities later."""
-    from openexpress.device.xmldevice import parse
-
-    summary = _probe(found, parse)
+    summary = _probe(found)
     if summary.ok:
         applog.hide_unit_id(summary.unit_id)  # as hide_device: never in the log
     log.info("device: probed %s (USB %s): %s", found.kind,
@@ -2580,7 +2579,7 @@ def distinct_devices(summaries: list[DeviceSummary]) -> list[DeviceSummary]:
     return out
 
 
-def _probe(found: FoundDevice, parse) -> DeviceSummary:
+def _probe(found: FoundDevice) -> DeviceSummary:
     if not found.mounted:
         return DeviceSummary(found, reason=NOT_MOUNTED)
     try:
@@ -2598,8 +2597,6 @@ def _probe(found: FoundDevice, parse) -> DeviceSummary:
     except DeviceNotResponding:
         raise  # not one more device that cannot be read: nothing more is asked of it
     except Exception as e:  # noqa: BLE001 - a summary, never an error; the reason is kept
-        from openexpress import applog
-
         # Its kind and message (an MTP address in it carries the serial number: filtered
         # here, before the log's own filter); e.g. a device unplugged while gvfs still has it.
         log.info("device: probe could not open it (%s: %s)", type(e).__name__,
