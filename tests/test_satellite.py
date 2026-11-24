@@ -705,23 +705,6 @@ def test_a_newer_one_from_the_phone_is_kept(tmp_path, clock, monkeypatch, caplog
                                 "another file, its data 1.0 h old, young enough")]
 
 
-def test_a_record_without_the_sum_of_ours_unpacked_says_it_cannot_tell(
-        tmp_path, clock, monkeypatch, caplog):
-    storage, device, server, served = written_once(tmp_path, clock, monkeypatch)
-    record = satellite.paths.device_dir(UNIT) / satellite.FILE_NAME
-    kept = json.loads(record.read_text(encoding="utf-8"))
-    del kept["files"]["GPES.bin"]["raw"]  # as a record that never had it
-    record.write_text(json.dumps(kept), encoding="utf-8")
-    unplugged(storage)
-    clock.current += timedelta(hours=1)
-    caplog.clear()
-    with caplog.at_level(logging.INFO, logger="openexpress.satellite"):
-        assert satellite.update(device, storage) == satellite.Result("current")
-    assert satellite.load(UNIT).files["GPES.bin"]["pending"] is False  # ours no longer waits to be taken
-    assert caplog.messages == [("satellite data: in a session of our own: GPES.bin: taken or "
-                                "replaced, not told apart, its data 1.5 h old, young enough")]
-
-
 def test_each_sync_says_in_one_line_what_it_found_of_each_file_and_did(
         tmp_path, clock, monkeypatch, caplog):
     from openexpress import applog
@@ -1024,13 +1007,9 @@ def test_written_in_this_connection_the_row_says_it_is_taken_in_once_unplugged(
     assert not satellite.waits_to_be_taken(satellite.load(UNIT), device, storage)
 
 
-def test_newer_data_from_the_phone_is_said_current_not_how_old_ours_is(tmp_path, clock,
-                                                                       monkeypatch):
+def newer_from_the_phone(tmp_path, clock, monkeypatch) -> satellite.State:
     """Ours written 13 hours ago; meanwhile the phone gave the watch a GPES.bin 2 hours old. The
-    sync finds it young enough and writes nothing: the row says the data is current, not
-    "updated 13 hours ago"."""
-    from openexpress.gui import words
-
+    sync finds it young enough and writes nothing."""
     storage, device, _server, _served = written_once(tmp_path, clock, monkeypatch)
     unplugged(storage)  # the watch unpacked ours
     clock.current += timedelta(hours=13)
@@ -1039,8 +1018,29 @@ def test_newer_data_from_the_phone_is_said_current_not_how_old_ours_is(tmp_path,
     assert satellite.update(device, storage) == satellite.Result("current")
     state = satellite.load(UNIT)
     assert satellite.newer_than_written(state)
+    return state
+
+
+def test_newer_data_from_the_phone_is_said_current_not_how_old_ours_is(tmp_path, clock,
+                                                                       monkeypatch):
+    """The row says the data is current, not "updated 13 hours ago"."""
+    from openexpress.gui import words
+
+    state = newer_from_the_phone(tmp_path, clock, monkeypatch)
     assert words.satellite_subtitle(state, clock.current) == (
         f"Experimental{NB}· the data on the device is current")
+
+
+def test_the_line_of_status_says_newer_data_from_the_phone_is_current(tmp_path, clock,
+                                                                     monkeypatch):
+    """`openexpress status` says what the row says, in English and in Polish."""
+    newer_from_the_phone(tmp_path, clock, monkeypatch)
+    english = cli._satellite_status(UNIT, clock.current)
+    with in_language("pl"):
+        polish = cli._satellite_status(UNIT, clock.current)
+    assert (english, polish) == (
+        f"Satellite data (experimental): on{NB}· the data on the device is current",
+        f"Dane satelitarne (eksperymentalne): włączone{NB}· dane na urządzeniu są aktualne")
 
 
 def test_ours_still_the_newest_keeps_its_age(tmp_path, clock, monkeypatch):

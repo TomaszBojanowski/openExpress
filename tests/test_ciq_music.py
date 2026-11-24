@@ -253,7 +253,8 @@ def library(tmp_path):
 def test_plan_playlist_lists_what_cannot_be_added(iq_device, library):
     st, dev = iq_device
     plan = music.plan_playlist(library, dev, st)
-    assert plan.name == "Morning run" and plan.target == "Music/Morning run.m3u8"
+    assert plan.name == "Morning run"
+    assert music._playlist_path(dev, plan.name) == "Music/Morning run.m3u8"
     assert not plan.replaces
     assert plan.skipped == [("lossless.flac", "format not supported by the device"),
                             ("gone.mp3", "file not found")]
@@ -344,7 +345,7 @@ def test_window_playlist_summary(iq_device, library):
         "1 track", "0 files to copy (0\u00a0B), 1 already on the device",
         "A playlist with this name is already on the device and will be replaced."]
 
-    many = music.PlaylistPlan("x", "Music/x.m3u8", False, music.CopyPlan(),
+    many = music.PlaylistPlan("x", False, music.CopyPlan(),
                               [(f"t{i}.mp3", "file not found") for i in range(13)], [])
     lines = MainWindow._playlist_summary(many).splitlines()
     assert lines[3] == "13 tracks cannot be added:" and lines[-1] == "… and 3 more"

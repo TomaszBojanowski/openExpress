@@ -38,7 +38,7 @@ from dataclasses import asdict, dataclass, fields
 from email.utils import parsedate_to_datetime
 
 from openexpress import applog, cache, paths
-from openexpress.device.storage import DeviceError, DeviceNotResponding
+from openexpress.device.storage import DeviceError, DeviceNotResponding, is_test_drive
 
 log = logging.getLogger(__name__)
 
@@ -208,7 +208,7 @@ def load(unit_id: int) -> State | None:
     except (OSError, ValueError):
         log.warning("satellite data: %s cannot be read; taken as off", FILE_NAME)
         return State()
-    known = {f.name: f.type for f in fields(State)}
+    known = {f.name for f in fields(State)}
     values = {k: v for k, v in data.items() if k in known} if isinstance(data, dict) else {}
     try:
         state = State(**values)
@@ -285,7 +285,7 @@ def seen(device, storage) -> State | None:
     them (_offer_shown). Hidden ones are looked for at a sync (update): the opening never opens
     a PTP session."""
     unit = getattr(device, "unit_id", None)
-    if not unit or getattr(storage, "test_drive", False):
+    if not unit or is_test_drive(storage):
         return None
     state = load(unit)
     if state is not None and state.kind == RXNETWORKS:
@@ -308,7 +308,7 @@ def _cache_folder():
     return paths.cache_dir() / "software" / "satellite"
 
 
-def _cache_files(name: str = NAME):
+def _cache_files(name: str):
     folder = _cache_folder()
     return folder, folder / name, folder / ("fetched.json" if name == NAME
                                             else f"{name}.fetched.json")
@@ -357,7 +357,7 @@ def _note_blocked(retry_after: str | None) -> float:
     return until
 
 
-def _fetch(url: str, name: str, valid, http=None) -> bytes:
+def _fetch(url: str, name: str, valid) -> bytes:
     """Garmin's file at `url`: from the cache while it is fresh (KEPT), else asked unless the
     server asked to wait; raises NotUpdated when it cannot be had or is not `valid`."""
     import requests
@@ -374,7 +374,7 @@ def _fetch(url: str, name: str, valid, http=None) -> bytes:
             log.info("satellite data: not asked; the server asked to wait %d min more",
                      (until - time.time()) // 60 + 1)
             raise NotUpdated(f"{WAIT}{int(until)}")
-        http = http or useragent.session()
+        http = useragent.session()
         started = time.monotonic()
         try:
             r = http.get(url, headers={"Accept": "application/octet-stream"}, timeout=TIMEOUT)
@@ -404,10 +404,10 @@ def _fetch(url: str, name: str, valid, http=None) -> bytes:
         return data
 
 
-def download(http=None) -> bytes:
+def download() -> bytes:
     """Garmin's current CPE.BIN: from the cache while it is fresh (KEPT), else asked; raises
     NotUpdated when it cannot be had or is not of the format known."""
-    return _fetch(URL, NAME, known_format, http)
+    return _fetch(URL, NAME, known_format)
 
 
 def _failed(unit_id: int, state: State, reason: str, apply: bool) -> Result:
@@ -417,12 +417,12 @@ def _failed(unit_id: int, state: State, reason: str, apply: bool) -> Result:
     return Result("failed", reason=reason)
 
 
-def update(device, storage, apply: bool = True, http=None) -> Result | None:
+def update(device, storage, apply: bool = True) -> Result | None:
     """The satellite data of a sync: None when it is not for this device or is off; else
     what was done (Result). `apply` False: the dry run, nothing written or kept, and the device
     never left to a PTP session."""
     unit = getattr(device, "unit_id", None)
-    if not unit or getattr(storage, "test_drive", False):
+    if not unit or is_test_drive(storage):
         return None
     state = load(unit)
     if state is None:
@@ -435,14 +435,14 @@ def update(device, storage, apply: bool = True, http=None) -> Result | None:
                 log.info("satellite data: not looked for (%s)", type(e).__name__)
         return None
     if state.kind == RXNETWORKS:
-        return _rx_update(unit, device, storage, state, apply, http)
+        return _rx_update(unit, device, storage, state, apply)
     current = _read(storage, NAME)
     if _rejected(unit, state, storage, current, keep=apply):
         return Result("stopped")
     if not state.on:
         return None
     try:
-        data = download(http)
+        data = download()
     except NotUpdated as e:
         return _failed(unit, state, e.reason, apply)
     if current is not None and _sha(current) == _sha(data):
@@ -595,11 +595,11 @@ def _since_write(state: State, now: float) -> str:
 
 def _taken_or_replaced(content: bytes, known: dict) -> str:
     """For the log, what is in the place of ours written before: ours as the device unpacked it,
-    or another file (the phone's, or the device's own). A record without the sum of ours
-    unpacked cannot tell them apart. Either way ours no longer waits to be taken."""
-    if not known.get("raw"):
-        return "taken or replaced, not told apart"
-    return "taken (ours unpacked)" if _sha(content) == known["raw"] else "replaced by another file"
+    or another file (the phone's, or the device's own). Either way ours no longer waits to be
+    taken."""
+    if _sha(content) == known.get("raw"):
+        return "taken (ours unpacked)"
+    return "replaced by another file"
 
 
 def waits_to_be_taken(state: State | None, device, storage) -> bool:
@@ -623,6 +623,14 @@ def newer_than_written(state: State) -> bool:
     times = [known.get("time") for known in state.files.values()
              if isinstance(known.get("time"), int)]
     return bool(times) and max(times) > state.written_at
+
+
+def shows_device_data(state: State) -> bool:
+    """Whether what is said of the satellite data is said of the device's own rather than of
+    the file this computer wrote last: nothing written yet, or the device's data current and
+    newer than that file (from the phone). The row of the device page and `openexpress
+    status` say it alike."""
+    return state.written_at is None or (state.current and newer_than_written(state))
 
 
 def _connection(device, storage) -> str | None:
@@ -664,7 +672,7 @@ def _rx_write(session, store, folder, items, spec: RxFile, data: bytes) -> None:
         raise DeviceError("the file read back differs from the one written")
 
 
-def _rx_update(unit_id: int, device, storage, state: State, apply: bool, http) -> Result | None:
+def _rx_update(unit_id: int, device, storage, state: State, apply: bool) -> Result | None:
     if not state.on:
         return None
     now = time.time()
@@ -674,7 +682,7 @@ def _rx_update(unit_id: int, device, storage, state: State, apply: bool, http) -
         if not old:
             return Result("current")
         try:
-            size = sum(len(_fetch(s.url, s.name, lambda d, s=s: rx_served(d, s), http))
+            size = sum(len(_fetch(s.url, s.name, lambda d, s=s: rx_served(d, s)))
                        for s in old)
         except NotUpdated as e:
             return Result("failed", reason=e.reason)
@@ -741,7 +749,7 @@ def _rx_update(unit_id: int, device, storage, state: State, apply: bool, http) -
                     said[-1] += ", young enough"
                     continue
                 try:
-                    data = _fetch(spec.url, spec.name, lambda d, s=spec: rx_served(d, s), http)
+                    data = _fetch(spec.url, spec.name, lambda d, s=spec: rx_served(d, s))
                 except NotUpdated as e:
                     reason = reason or e.reason
                     said[-1] += ", Garmin's file not had"

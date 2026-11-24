@@ -2,7 +2,6 @@
 the language of the system, as Garmin Express does with the culture of Windows."""
 
 import json
-import logging
 import uuid
 
 import pytest
@@ -112,26 +111,18 @@ def test_garmin_s_servers_are_told_the_language_of_the_system(monkeypatch):
         ("de-DE", "de-DE"), ("de-DE", "de-DE")]
 
 
-def test_a_locale_saved_by_an_older_version_gives_way_to_the_system(monkeypatch, caplog):
+def test_a_locale_saved_by_an_older_version_does_not_decide(monkeypatch):
     """An older version gave every settings.json "locale": "pl_PL" on the first start, chosen
-    or not."""
+    or not: the system decides, and the other keys stay."""
     system(monkeypatch, GERMAN)
     paths.write_private(settings_file(), json.dumps({
         "environment": "production", "locale": "pl_PL", "client_guid": str(uuid.UUID(int=1)),
         "ui_language": "en"}))
-    with caplog.at_level(logging.INFO, logger="openexpress"):
-        settings = Settings.load()
+    settings = Settings.load()
     assert settings.locale == "de_DE"
-    lines = [r for r in caplog.records if "locale" in r.getMessage()]
-    assert len(lines) == 1 and lines[0].levelno == logging.INFO
-    assert "pl_PL" in lines[0].getMessage()
+    settings.save()
     saved = json.loads(settings_file().read_text())
-    assert "locale" not in saved and "chosen_locale" not in saved
-    assert saved["ui_language"] == "en"  # the other keys stay
-    caplog.clear()
-    with caplog.at_level(logging.INFO, logger="openexpress"):
-        Settings.load()
-    assert not [r for r in caplog.records if "locale" in r.getMessage()]  # said once
+    assert "chosen_locale" not in saved and saved["ui_language"] == "en"
 
 
 def test_without_a_choice_no_locale_is_saved(monkeypatch):

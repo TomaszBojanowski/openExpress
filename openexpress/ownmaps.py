@@ -382,11 +382,7 @@ def recorded_names(device: GarminDevice) -> set[str]:
 
 def recorded(device: GarminDevice) -> list[dict]:
     """The maps this program copied to the device: file name, size, map name, date."""
-    try:
-        data = json.loads(_state_file(device).read_text(encoding="utf-8"))
-    except (OSError, ValueError):
-        return []
-    maps = data.get("maps") if isinstance(data, dict) else None
+    maps = (paths.read_json_object(_state_file(device)) or {}).get("maps")
     return [m for m in maps if isinstance(m, dict)] if isinstance(maps, list) else []
 
 

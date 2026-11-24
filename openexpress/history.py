@@ -31,6 +31,7 @@ from openexpress.device.storage import (
     DeviceNotResponding,
     Entry,
     Storage,
+    is_test_drive,
     named_in_any_case,
 )
 from openexpress.device.xmldevice import DeviceFile, GarminDevice
@@ -434,7 +435,7 @@ def note_connection(device: GarminDevice, storage: Storage | None, found=None,
         return False
     via = _via(storage)
     key = _key(device, storage, via)
-    where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    where = path(device.unit_id, is_test_drive(storage))
     if (str(where), key) in _noted:
         return False
     try:
@@ -467,7 +468,7 @@ def connection_started(device: GarminDevice, storage: Storage) -> float | None:
     if not getattr(device, "unit_id", None):
         return None
     key = _key(device, storage, _via(storage))
-    kept = read(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    kept = read(device.unit_id, is_test_drive(storage))
     line = next((line for line in reversed(kept.lines) if line.get("conn") == key), None)
     return _when(line).timestamp() if line is not None else None
 
@@ -595,7 +596,7 @@ def note_counted(device: GarminDevice, storage: Storage,
         return kinds, capacity, free, dumps
     via = _via(storage)
     key = _key(device, storage, via)
-    where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    where = path(device.unit_id, is_test_drive(storage))
     later = []
     with records_locked():
         def fix(line: dict) -> None:
@@ -661,7 +662,7 @@ def connection_line(device: GarminDevice, storage: Storage) -> dict | None:
     if not getattr(device, "unit_id", None):
         return None
     via = _via(storage)
-    lines = read(device.unit_id, bool(getattr(storage, "test_drive", False))).lines
+    lines = read(device.unit_id, is_test_drive(storage)).lines
     return lines[-1] if lines and lines[-1]["conn"] == _key(device, storage, via) else None
 
 
@@ -683,7 +684,7 @@ def note_removed(device: GarminDevice, storage: Storage, removed: list[tuple[str
     except Exception as e:  # noqa: BLE001 - as below
         log.info("history: not put right by what was removed (%s)", type(e).__name__)
         return False
-    where = path(device.unit_id, bool(getattr(storage, "test_drive", False)))
+    where = path(device.unit_id, is_test_drive(storage))
     size = sum(s for _p, s in removed)
 
     def fix(line: dict) -> None:
@@ -775,7 +776,7 @@ def valid(raw: str) -> dict | None:
         return None
     line = {"v": VERSION, "time": when, "conn": conn, "via": via, "software": software,
             "categories": {k: v for k, v in categories.items() if k in CATEGORIES}}
-    for key in ("capacity", "free"):
+    for key in ("capacity", "free", "errors", "error_logs"):
         if key in item:
             if not _count(item[key]):
                 return None
@@ -791,11 +792,6 @@ def valid(raw: str) -> dict | None:
         if not (isinstance(found, list) and all(_crash_ok(c) for c in found)):
             return None
         line["crashes"] = [_crash_kept(c) for c in found]
-    for key in ("errors", "error_logs"):
-        if key in item:
-            if not _count(item[key]):
-                return None
-            line[key] = item[key]
     if "hidden" in item:
         if not isinstance(item["hidden"], bool):
             return None

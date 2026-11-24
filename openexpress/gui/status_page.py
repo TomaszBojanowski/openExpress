@@ -27,7 +27,7 @@ gi.require_version("Adw", "1")
 from gi.repository import Adw, Gio, GLib, Graphene, Gtk  # noqa: E402
 
 from openexpress import applog, diagnostics, freeing, history, status  # noqa: E402
-from openexpress.device.storage import DeviceNotResponding  # noqa: E402
+from openexpress.device.storage import DeviceNotResponding, is_test_drive  # noqa: E402
 from openexpress.gui import palette, words  # noqa: E402
 from openexpress.gui.device_page import (  # noqa: E402
     Section,
@@ -945,7 +945,7 @@ def open_copies(win, unit: int | None = None) -> None:
     test_drive = False
     if unit is None:
         unit = getattr(getattr(win.session, "device", None), "unit_id", None)
-        test_drive = bool(getattr(getattr(win.session, "storage", None), "test_drive", False))
+        test_drive = is_test_drive(getattr(win.session, "storage", None))
     if not unit:
         return
     log.info("status page: the folder of the copies opened")

@@ -37,6 +37,8 @@ from openexpress.device.storage import (
     DeviceNotResponding,
     Storage,
     connection,
+    device_place,
+    is_test_drive,
 )
 from openexpress.errors import UserFacingError
 from openexpress.i18n import N_, _, ngettext, pgettext
@@ -378,14 +380,14 @@ WRITTEN_TIME_SLACK_S = 2
 
 
 def _md5_key(storage: Storage, real: str, size: int, mtime: float) -> str:
-    where = getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
+    where = device_place(storage)
     return "|".join((hashlib.sha256(where.encode()).hexdigest()[:32], real, str(size),
                      repr(float(mtime))))
 
 
 def _written_key(storage: Storage, real: str) -> str:
     """The key of what openExpress last wrote at `real` on this device: one a file."""
-    where = getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
+    where = device_place(storage)
     return "|".join(("written", hashlib.sha256(where.encode()).hexdigest()[:32], real))
 
 
@@ -432,7 +434,7 @@ def remember_written(storage: Storage, real: str, md5: str | None) -> None:
     if entry is None or entry.is_dir or not entry.mtime:
         return
     digest = md5.casefold()
-    where = getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
+    where = device_place(storage)
     _md5_read[(where, real, entry.size, entry.mtime)] = digest
     _keep_md5(_written_key(storage, real),
               {"size": entry.size, "mtime": float(entry.mtime), "md5": digest})
@@ -446,7 +448,7 @@ def checking_file_text() -> str:
 
 
 def _md5_of(storage: Storage, real: str, size: int, mtime: float, told=None) -> str:
-    where = getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
+    where = device_place(storage)
     key = (where, real, size, mtime)
     if key in _md5_read:  # never one of a file without a time (below)
         return _md5_read[key]
@@ -1020,7 +1022,7 @@ def offered(storage: Storage, response: dict, device,
     compared with the device's storage (mark_present) and with what openExpress copied to it
     before (mark_copied; `forget_installed`: False for a check that keeps nothing). A test
     drive carries a real device's unit ID: what was copied to that device is not its."""
-    unit = None if _test_drive(storage) else getattr(device, "unit_id", None)
+    unit = None if is_test_drive(storage) else getattr(device, "unit_id", None)
     items = mark_present(storage, parse_updates(response, device), component_count(device),
                          inside=hidden_inside(storage, device),
                          writable=hidden_folders.session_possible(storage), progress=progress)
@@ -1042,10 +1044,6 @@ def _connection_started(device, storage) -> float | None:
     except Exception as e:  # noqa: BLE001 - only to tell an unplugging since a copy
         log.info("updates: the start of this connection not read (%s)", type(e).__name__)
         return None
-
-
-def _test_drive(storage) -> bool:
-    return bool(getattr(storage, "test_drive", False))
 
 
 def mark_copied(updates: list[SoftwareUpdate], unit_id: int | None,
@@ -1614,7 +1612,7 @@ def install(*args, unit_id: int | None = None, offered: list[SoftwareUpdate] | N
         # Also what was written before a failure; never a test drive's, which carries a real
         # device's unit ID.
         storage = next((a for a in (*args, *kwargs.values()) if isinstance(a, Storage)), None)
-        if unit_id and report.copied and not _test_drive(storage):
+        if unit_id and report.copied and not is_test_drive(storage):
             try:
                 known_devices.note_copied(unit_id, report.copied)
             except Exception as e:  # noqa: BLE001 - optional; the error may name the folder

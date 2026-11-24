@@ -32,7 +32,7 @@ from openexpress.device.storage import (
     connection,
     named_in_any_case,
 )
-from openexpress.i18n import _, ngettext
+from openexpress.i18n import _, human_size, ngettext
 from openexpress.progress import byte_steps, say_to
 
 log = logging.getLogger(__name__)
@@ -89,10 +89,6 @@ class Listing:
         if self.state != READ:
             return self.state
         return READ if self.knows(folder) else None
-
-    def asked(self) -> list[str]:
-        """The folders this reading was asked for, as asked or in the device's letter case."""
-        return [*(real for real, _entries in self.folders.values()), *self.missing.values()]
 
     def knows(self, folder: str) -> bool:
         """Whether the session told what is at `folder`: read, or not on the device."""
@@ -420,8 +416,6 @@ def contents_not_read_text(name: str) -> str:
 
 
 def no_space_text(name: str, needed: int, free: int) -> str:
-    from openexpress.i18n import human_size
-
     # TRANSLATORS: {needed} and {free} are sizes; the old file of the update counts as free, as
     # it is removed before the new one is written
     return _("Not enough space for {name}: {needed} needed, {free} free with its old file "
@@ -768,8 +762,6 @@ def map_not_whole_text(name: str, done: int, count: int) -> str:
 
 
 def no_space_map_text(name: str, needed: int, free: int) -> str:
-    from openexpress.i18n import human_size
-
     # TRANSLATORS: {name} is a map; {needed} and {free} are sizes; its old files and those it
     # writes over count as free, as they are removed first
     return _("Not enough space for {name}: {needed} needed, {free} free with its old files "

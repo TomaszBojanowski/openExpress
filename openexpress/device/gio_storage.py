@@ -43,7 +43,9 @@ from openexpress.device.storage import (  # noqa: E402
     Storage,
     UmsStorage,
     connection,
+    os_said,
 )
+from openexpress.device.xmldevice import parse  # noqa: E402
 from openexpress.errors import OrdinaryStop  # noqa: E402
 from openexpress.i18n import _, caption, pgettext  # noqa: E402
 from openexpress.paths import host_command, in_flatpak  # noqa: E402
@@ -79,11 +81,6 @@ def _refused(e: GLib.Error, what: str) -> DeviceError:
     # "Cannot write GARMIN/x.fit: Could not send object info.")
     said = _("The device refused it; a device report helps find out why.")
     return DeviceError(f"{what}: {e.message.rstrip('.')}. {said}")
-
-
-def _os_said(what: str, e: OSError) -> str:
-    """`what` with the system's words for `e` (applog.system_words), else its own."""
-    return f"{what}: {applog.system_words(e) or e}"
 
 
 def _host_visible(path: Path) -> bool:
@@ -124,7 +121,7 @@ def _temporary_file(what: str, keep_open: bool):
             if not keep_open:
                 os.close(fd)
         except OSError as e:
-            raise CopyNotStarted(_os_said(what, e)) from e
+            raise CopyNotStarted(os_said(what, e)) from e
         try:
             yield (fd if keep_open else None), Path(tmp)
         finally:
@@ -322,7 +319,7 @@ def host_copy(local: Path, target_uri: str, what: str, progress=None, started=No
         except subprocess.TimeoutExpired:
             log.warning("host copy: gio copy did not end 5 s after it was killed")
         reader.join(5)
-        raise DeviceError(_os_said(what, e)) from e
+        raise DeviceError(os_said(what, e)) from e
     finally:
         watchdog.cancel()
     reader.join(5)
@@ -608,7 +605,7 @@ class GioStorage(Storage):
         except DeviceNotResponding:
             raise  # a stall stops what meets it
         except OSError as e:
-            raise DeviceError(_os_said(what, e)) from e
+            raise DeviceError(os_said(what, e)) from e
         finally:
             if not done:
                 dest.unlink(missing_ok=True)
@@ -745,7 +742,7 @@ class GioStorage(Storage):
                 with os.fdopen(fd, "wb") as f:
                     f.write(data)
             except OSError as e:
-                raise CopyNotStarted(_os_said(what, e)) from e
+                raise CopyNotStarted(os_said(what, e)) from e
             self._write_file(real_path, tmp)
 
     @_on_the_device
@@ -759,7 +756,7 @@ class GioStorage(Storage):
         try:
             local.stat()
         except OSError as e:
-            raise CopyNotStarted(_os_said(what, e)) from e
+            raise CopyNotStarted(os_said(what, e)) from e
         # What the target is before the copy: the evidence _discard_partial goes by.
         self._attempts[real_path] = _Attempt(self._size_now(real_path))
         try:
@@ -777,7 +774,7 @@ class GioStorage(Storage):
                 try:
                     shutil.copyfile(local, tmp)
                 except OSError as e:
-                    raise CopyNotStarted(_os_said(what, e)) from e
+                    raise CopyNotStarted(os_said(what, e)) from e
                 self._copy_local(tmp, real_path, progress, what)
             return
         self._copy_local(local, real_path, progress, what)
@@ -1368,11 +1365,18 @@ def garmin_ums(mount) -> GarminUsb | None:
     uri = root.get_uri() if root is not None else None
     if not uri or not uri.lower().startswith("file://"):
         return None
-    volume = mount.get_volume() if hasattr(mount, "get_volume") else None
-    block = _block_usb(volume.get_identifier("unix-device") if volume is not None else None)
+    volume, block = _volume_usb(mount)
     if block is None or (block[0][0] != GARMIN_VID and not _named_for_testing(*block[0][:2])):
         return None
     return _drive_usb(block[0], block[1], volume)
+
+
+def _volume_usb(mount) -> tuple:
+    """The volume of a mount and the USB device of its block device (_block_usb); None for
+    either that is not there."""
+    volume = mount.get_volume() if hasattr(mount, "get_volume") else None
+    return volume, _block_usb(volume.get_identifier("unix-device") if volume is not None
+                              else None)
 
 
 def _hidden_in_sandbox(path: str | None) -> bool:
@@ -1390,8 +1394,7 @@ def drive_hidden_in_sandbox() -> bool:
 def _drive_of_unsupported(mount) -> bool:
     """Whether a mounted Garmin drive is that of a device openExpress cannot use (HID beside
     the drive: _unsupported). Only /sys is read."""
-    volume = mount.get_volume() if hasattr(mount, "get_volume") else None
-    block = _block_usb(volume.get_identifier("unix-device") if volume is not None else None)
+    block = _volume_usb(mount)[1]
     return block is not None and _unsupported(block[1])
 
 
@@ -1805,12 +1808,12 @@ def _at_another_port(entry: _Ejected) -> bool:
     return False
 
 
-def ejected_by_us(usb: GarminUsb | None, clock=time.monotonic) -> bool:
+def ejected_by_us(usb: GarminUsb | None) -> bool:
     """Whether this drive was ejected by openExpress and is still at its place on USB: then it
     is neither opened nor listed, and its mount is ignored, until it is unplugged."""
     if usb is None:
         return False
-    _forget_unplugged(clock)
+    _forget_unplugged()
     with _ejected_lock:
         return any(e.usb == usb and (e.usb.bus, e.usb.address) == (usb.bus, usb.address)
                    for e in _ejected)
@@ -2554,9 +2557,7 @@ def probe(found: FoundDevice) -> DeviceSummary:
     asked of such a device); else without details the summary says why. One log line,
     without the address or the unit ID. An MTP device read keeps what was opened (`device`,
     `storage`), for the window to count its activities later."""
-    from openexpress.device.xmldevice import parse
-
-    summary = _probe(found, parse)
+    summary = _probe(found)
     if summary.ok:
         applog.hide_unit_id(summary.unit_id)  # as hide_device: never in the log
     log.info("device: probed %s (USB %s): %s", found.kind,
@@ -2580,7 +2581,7 @@ def distinct_devices(summaries: list[DeviceSummary]) -> list[DeviceSummary]:
     return out
 
 
-def _probe(found: FoundDevice, parse) -> DeviceSummary:
+def _probe(found: FoundDevice) -> DeviceSummary:
     if not found.mounted:
         return DeviceSummary(found, reason=NOT_MOUNTED)
     try:
@@ -2598,8 +2599,6 @@ def _probe(found: FoundDevice, parse) -> DeviceSummary:
     except DeviceNotResponding:
         raise  # not one more device that cannot be read: nothing more is asked of it
     except Exception as e:  # noqa: BLE001 - a summary, never an error; the reason is kept
-        from openexpress import applog
-
         # Its kind and message (an MTP address in it carries the serial number: filtered
         # here, before the log's own filter); e.g. a device unplugged while gvfs still has it.
         log.info("device: probe could not open it (%s: %s)", type(e).__name__,

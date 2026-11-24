@@ -1115,7 +1115,7 @@ def satellite_subtitle(state, now: datetime, waits: bool = False) -> str:
         # them; {reason} says why
         return caption(first, pgettext("satellite data", "not updated: {reason}").format(
             reason=satellite_reason(state.error)))
-    if state.written_at is None or (state.current and satellite.newer_than_written(state)):
+    if satellite.shows_device_data(state):
         if state.current:
             # TRANSLATORS: in the subtitle of the row Satellite Data: on, nothing written yet,
             # as the watch's own satellite data (e.g. from the phone) is current

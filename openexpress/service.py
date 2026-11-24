@@ -30,7 +30,7 @@ from openexpress.connect import (
     Unauthorized,
     unexpected_answer_text,
 )
-from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage
+from openexpress.device.storage import DeviceError, DeviceNotResponding, Storage, is_test_drive
 from openexpress.device.xmldevice import GarminDevice, parse
 from openexpress.errors import OrdinaryStop, UserFacingError
 from openexpress.i18n import N_, _, ngettext, pgettext
@@ -1679,7 +1679,7 @@ def test_drive_step() -> dict:
 def on_test_drive(s) -> bool:
     """Whether a session (the window's too, which may have no storage: a remembered device) is
     on a test drive (Storage.test_drive)."""
-    return bool(getattr(getattr(s, "storage", None), "test_drive", False))
+    return is_test_drive(getattr(s, "storage", None))
 
 
 def plan_queue(s: DeviceSession, progress: Progress) -> QueuePlan:

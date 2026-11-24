@@ -16,6 +16,7 @@ from datetime import datetime, timedelta
 from itertools import pairwise
 
 from openexpress import crashes, diagnostics, history
+from openexpress.device.storage import is_test_drive
 
 # Little free space: under 10 % of the capacity or 500 MB, whichever is smaller (devices hold
 # from some megabytes to tens of gigabytes).
@@ -184,7 +185,7 @@ def crashes_known(device, storage, found) -> list[crashes.Crash]:
     errors_known = found is not None and found.errors_known
     return crashes.history(getattr(device, "unit_id", None),
                            found.entries if errors_known else None,
-                           test_drive=bool(getattr(storage, "test_drive", False)))
+                           test_drive=is_test_drive(storage))
 
 
 def dumps_now(device, storage, found) -> tuple[int, int] | None:
@@ -237,7 +238,7 @@ def told(session) -> Told:
     found = getattr(session, "diagnostics", None)
     device, storage = getattr(session, "device", None), getattr(session, "storage", None)
     unit = getattr(device, "unit_id", None)
-    test_drive = bool(getattr(storage, "test_drive", False))
+    test_drive = is_test_drive(storage)
     free, capacity = getattr(session, "space", None) or (None, None)
     line = _connection_line(device, storage)
     categories, counted_at, recounted = kinds_counted(line, session)
@@ -283,7 +284,7 @@ def read(session, ask_device: bool = True) -> Facts:
 
     device, storage = session.device, session.storage
     unit = device.unit_id
-    test_drive = bool(getattr(storage, "test_drive", False))
+    test_drive = is_test_drive(storage)
     lines = history.read(unit, test_drive).lines if unit else []
     # A test drive carries a real device's unit ID: when that device was first seen is not its.
     known = known_devices.load().get(unit) if unit and not test_drive else None

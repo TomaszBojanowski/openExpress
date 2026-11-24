@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import NoReturn
 
 from openexpress import applog
-from openexpress.errors import UserFacingError
+from openexpress.errors import UserFacingError, sentence
 from openexpress.i18n import _, human_size
 
 # The device's main folder, as a path from its root in lower case: the root itself or GARMIN.
@@ -74,11 +74,10 @@ class DeviceNotResponding(DeviceError):
 def replug_text(error: DeviceError) -> str:
     """A device not mounted again (RemountFailed) or one that stopped responding: its error as
     a sentence, then what to do, unless the error says that itself (`says_replug`)."""
-    text = str(error).rstrip()
-    sentence = text if text.endswith((".", "!", "?", "…")) else text + "."
+    said = sentence(error)
     if getattr(error, "says_replug", False):
-        return sentence
-    return _("{error} Unplug the device and plug it in again.").format(error=sentence)
+        return said
+    return _("{error} Unplug the device and plug it in again.").format(error=said)
 
 
 def refresh_to_read_again(storage: Storage, progress=None) -> bool:
@@ -91,12 +90,27 @@ def refresh_to_read_again(storage: Storage, progress=None) -> bool:
         raise RemountFailed(replug_text(e)) from e
 
 
+def device_place(storage: Storage) -> str:
+    """Where a device is: its address; a folder (a drive, the tests) by its path."""
+    return getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
+
+
 def connection(storage: Storage) -> tuple:
     """One connection of a device: its address and its place on USB (new at each plugging
     in); a folder (a drive, the tests) by its path."""
     usb = getattr(storage, "usb", None)
-    where = getattr(storage, "device_uri", None) or str(getattr(storage, "root", ""))
-    return where, getattr(usb, "bus", None), getattr(usb, "address", None)
+    return device_place(storage), getattr(usb, "bus", None), getattr(usb, "address", None)
+
+
+def is_test_drive(storage) -> bool:
+    """Whether `storage` is a USB drive taken for a Garmin drive for testing
+    (Storage.test_drive); False for anything without it (None, a stand-in)."""
+    return bool(getattr(storage, "test_drive", False))
+
+
+def os_said(what: str, e: OSError) -> str:
+    """`what` with the system's words for `e` (applog.system_words), else its own."""
+    return f"{what}: {applog.system_words(e) or e}"
 
 
 @dataclass(frozen=True)
@@ -505,7 +519,7 @@ def _os_errors(what: str):
     try:
         yield
     except OSError as e:
-        raise DeviceError(f"{what}: {applog.system_words(e) or e}") from e
+        raise DeviceError(os_said(what, e)) from e
 
 
 # Bytes written at a time when a large file is copied to a folder; one progress step each.
@@ -605,8 +619,7 @@ class LocalStorage(Storage):
         except FileNotFoundError:
             return None
         except OSError as e:
-            raise DeviceError(f"{_('Cannot read {path}').format(path=real_path)}: "
-                              f"{applog.system_words(e) or e}") from e
+            raise DeviceError(os_said(_("Cannot read {path}").format(path=real_path), e)) from e
         return Entry(p.name, p.is_dir(), st.st_size, st.st_mtime)
 
     def _read_start(self, real_path: str, count: int) -> bytes:

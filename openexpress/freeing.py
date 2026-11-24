@@ -21,11 +21,17 @@ from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from pathlib import Path
 
-from openexpress import applog, diagnostics, paths
+from openexpress import applog, diagnostics, paths, updates
 from openexpress.device import whole_reads
-from openexpress.device.storage import MAIN_FOLDERS, DeviceError, DeviceNotResponding, Storage
+from openexpress.device.storage import (
+    MAIN_FOLDERS,
+    DeviceError,
+    DeviceNotResponding,
+    Storage,
+    is_test_drive,
+)
 from openexpress.errors import UserFacingError
-from openexpress.i18n import _
+from openexpress.i18n import _, human_size
 from openexpress.progress import Step, say_to
 from openexpress.updates import SYSTEM_FILES
 
@@ -50,8 +56,6 @@ def limit_words() -> str:
     """REMOVED_LIMIT as the texts name it ("100 MB")."""
     if REMOVED_LIMIT % 1_000_000 == 0:
         return f"{REMOVED_LIMIT // 1_000_000}\u00a0MB"
-    from openexpress.i18n import human_size
-
     return human_size(REMOVED_LIMIT)
 
 
@@ -307,7 +311,7 @@ def remove_dumps(storage: Storage, unit_id: int, asked: DumpPlan, progress=None,
     if not unit_id:
         raise ValueError("no removal of memory dumps without a unit ID")
     freed = freed if freed is not None else Freed()
-    test_drive = bool(getattr(storage, "test_drive", False))
+    test_drive = is_test_drive(storage)
     copies: dict[str, Path] = {}
     where = None
     try:
@@ -415,15 +419,14 @@ def updates_not_installed(client, storage: Storage, device, fresh: bool = False
     from the update server's answer (asked as the pages ask it, reinstalls too: one answer for
     all), each with the size and time of its file (listed_file); ([], why) when it cannot be
     asked; ([], None) without a client. `fresh`: asked anew, before a removal."""
-    from openexpress import updates as upd
-
     if client is None:
         return [], None
     try:
         answer = client.software_updates(device.raw, include_reinstalls=True, fresh=fresh)
         # Only read: what was copied to the device is not forgotten here (the Updates page
         # does it), nor ever by a test drive, which carries a real device's unit ID.
-        found = upd.not_installed(upd.offered(storage, answer, device, forget_installed=False))
+        found = updates.not_installed(updates.offered(storage, answer, device,
+                                                      forget_installed=False))
     except DeviceNotResponding:
         raise
     except (UserFacingError, OSError) as e:  # the dumps are freed all the same
