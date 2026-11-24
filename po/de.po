@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-24 09:04+0100\n"
+"POT-Creation-Date: 2026-11-25 00:02+0100\n"
 "PO-Revision-Date: 2026-11-15 19:13+0000\n"
 "Last-Translator: BeGiBue <begibue@users.noreply.hosted.weblate.org>\n"
 "Language-Team: German <https://hosted.weblate.org/projects/openexpress/"
@@ -8387,22 +8387,6 @@ msgstr "openExpress hat diese Karte nicht auf das Gerät kopiert."
 msgid "Remove Anyway"
 msgstr "Trotzdem entfernen"
 
-#. TRANSLATORS: on the Maps page, in the row of a map with an update: {version} the
-#. version Garmin offers, e.g. 2027.20
-#: openexpress/gui/maps_page.py
-#, fuzzy, python-brace-format
-#| msgid "Version {version} available"
-msgid "{version} available"
-msgstr "Version {version} verfügbar"
-
-#. TRANSLATORS: on the Maps page, in the row of a map with an update: {size} what the
-#. update downloads, e.g. 8.3 GB
-#: openexpress/gui/maps_page.py
-#, fuzzy, python-brace-format
-#| msgid "Picture Not Downloaded"
-msgid "{size} to download"
-msgstr "Bild nicht heruntergeladen"
-
 #: openexpress/gui/maps_page.py
 #, python-brace-format
 msgid "Map Not Installed"
@@ -12138,6 +12122,14 @@ msgstr "Update verfügbar"
 msgid "update not offered in your account's country"
 msgstr "Update im Land Ihres Kontos nicht angeboten"
 
+#. TRANSLATORS: map status (the Maps page, `openexpress maps`): the device has a newer
+#. version of the map than the one Garmin's server offers for it; {version}: Garmin's
+#. version, e.g. 9.0
+#: openexpress/maps.py
+#, python-brace-format
+msgid "newer than version {version} Garmin offers"
+msgstr ""
+
 #. TRANSLATORS: map status (Garmin does not offer it in the account's country)
 #: openexpress/maps.py
 #, python-brace-format
@@ -12149,6 +12141,22 @@ msgstr "im Land Ihres Kontos nicht angeboten"
 #, python-brace-format
 msgid "available"
 msgstr "verfügbar"
+
+#. TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update:
+#. {version} the version Garmin offers, e.g. 2027.20
+#: openexpress/maps.py
+#, fuzzy, python-brace-format
+#| msgid "Version {version} available"
+msgid "{version} available"
+msgstr "Version {version} verfügbar"
+
+#. TRANSLATORS: on the Maps page and in `openexpress maps`, for a map with an update: {size}
+#. what the update downloads, e.g. 8.3 GB
+#: openexpress/maps.py
+#, fuzzy, python-brace-format
+#| msgid "Picture Not Downloaded"
+msgid "{size} to download"
+msgstr "Bild nicht heruntergeladen"
 
 #: openexpress/maps.py
 #, python-brace-format
@@ -12357,6 +12365,17 @@ msgstr ""
 #| msgid "openExpress does not remove these files yet."
 msgid "openExpress does not install maps into the folder {folder} yet."
 msgstr "openExpress entfernt diese Dateien noch nicht."
+
+#. TRANSLATORS: `openexpress maps install`, refused before anything: the device has a newer
+#. version of the map than the one Garmin's server offers ({version}, e.g. 9.0), and the
+#. install would write that older version over it
+#: openexpress/maps.py
+#, python-brace-format
+msgid ""
+"Map “{name}” cannot be installed: the device has a newer version than "
+"version {version} Garmin offers. Installing it would replace the newer "
+"version with the older one."
+msgstr ""
 
 #: openexpress/maps.py
 #, python-brace-format
