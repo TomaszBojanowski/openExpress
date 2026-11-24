@@ -303,7 +303,7 @@ def software_text(version: str, from_account: bool = False) -> str:
 def space_text(free: int | None, total: int | None = None, reading: bool = False) -> str:
     """The free space of the device in one caption, the same on every page and in every
     question: "2.1 GB free of 32.0 GB", "2.1 GB free" without its capacity, "Reading…" while it
-    is read, "Unknown" when the device does not say."""
+    is read, "Not known" when the device does not say."""
     if reading:
         # TRANSLATORS: the free space of the device while it is read
         return _("Reading…")

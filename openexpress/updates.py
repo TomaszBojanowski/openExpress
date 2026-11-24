@@ -192,7 +192,8 @@ class SoftwareUpdate:
     # said.
     product_installed: bool | None = None
     # The folder of the device's top level its file goes to when the ordinary listing does not
-    # show it (mark_present): openExpress never writes there.
+    # show it (mark_present): openExpress writes there only through its own session, once that
+    # session has read the folder.
     hidden_folder: str | None = None
     # For one with a hidden_folder: what became of reading its folder through openExpress's own
     # USB session on this connection (hidden_folders.Listing.state); None: not tried.

@@ -3,7 +3,7 @@
 (run_task, set_busy, progress, fraction; a wait of known length with Stop Waiting), optional
 work in the background (in_background), toasts and error messages, the action buttons. The
 functions: the widgets of a page (still_in_window, wrapping_row, trash_button, show_working,
-row_subtitle), the free space of the device read again after a task that writes to it
+row_label), the free space of the device read again after a task that writes to it
 (read_space, render_space, refresh_space), the bar at the bottom in the column of the pages
 (bottom_bar, page_column), the name of a task in the log (task_name), the
 collection of reference cycles after it (collect_garbage), an error nobody expected, in
@@ -540,7 +540,7 @@ def read_space(storage, capacity: int | None = None) -> tuple[int | None, int | 
 
 def render_space(win) -> None:
     """The subtitle (and the bar) of "Device Storage" from the space the session holds, in
-    the words of every page (space_text): "Reading…" until it is read, "Unknown" when the
+    the words of every page (space_text): "Reading…" until it is read, "Not known" when the
     device does not say. Nothing is asked of the device."""
     row, bar = win.storage_row, win.storage_bar
     s = win.session

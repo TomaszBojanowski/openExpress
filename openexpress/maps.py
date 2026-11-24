@@ -109,8 +109,9 @@ class UniversalMap:
     # be read, and nothing is done with it.
     unseen: bool = False
     # The folder of the device's top level its files go to when ordinary MTP does not show it
-    # (mark_waiting): nothing is installed or removed there; its files are known only when
-    # that folder was read through openExpress's own session (hidden_folders).
+    # (mark_waiting): nothing is installed or removed there, except by the command line's
+    # trial; its files are known only when that folder was read through openExpress's own
+    # session (hidden_folders).
     hidden_folder: str | None = None
     # The folder its files go to when the device hides it inside a folder the listing shows
     # (mark_waiting with the device: the rule of the updates, updates.hidden_inside): maps are

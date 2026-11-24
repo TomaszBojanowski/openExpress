@@ -1,6 +1,7 @@
 """Background service: sync when the watch is connected.
 
-Runs as a systemd user service (`openexpress install-desktop`).
+Runs as a systemd user service (`openexpress install-desktop`), in the Flatpak
+through the Background portal (background.py).
 Syncs only when the user is logged in and the first sync has already
 been done (so as not to make that decision for them).
 """

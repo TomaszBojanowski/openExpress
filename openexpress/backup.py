@@ -64,7 +64,7 @@ def is_backup_dir(p: Path) -> bool:
 def backups_of(root: Path, unit_id: int | None) -> list[tuple[datetime, Path]]:
     """The backups of the device `unit_id` in `root` (the folder of every device's backups),
     newest first, as (when it was made, its folder): only folders named as a backup is named,
-    never a symbolic link. None when the folder cannot be listed (one line of the log)."""
+    never a symbolic link. Empty when the folder cannot be listed (one line of the log)."""
     folder = root / str(unit_id) if unit_id else None
     try:
         if folder is None or not folder.is_dir():

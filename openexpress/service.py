@@ -1,4 +1,4 @@
-"""High-level operations shared by the GUI and the background service."""
+"""High-level operations shared by the window, the command line and the background service."""
 
 from __future__ import annotations
 
@@ -996,8 +996,9 @@ class SyncSummary:
     # The same errors as the log tells them: without the names of files, courses and
     # workouts (`errors` names them for the user). Not kept in last_sync.json.
     log_errors: list[str] = field(default_factory=list)
-    # What happened, in order: a text, or the numbers of a step as a dict, which is put into
-    # words only when it is shown (`describe_steps`): in the language of that moment.
+    # What happened, in order: the numbers of each step as a dict, put into words only when
+    # it is shown (`describe_steps`): in the language of that moment. A record kept by an
+    # earlier version may hold a text instead.
     lines: list = field(default_factory=list)
     # The uploads Garmin Connect took without confirming that it processed them (the command
     # line warns of them). Not kept in last_sync.json.
@@ -1450,9 +1451,10 @@ class SyncBusy(OrdinaryStop):
 
 @contextlib.contextmanager
 def sync_lock():
-    """Inter-process lock (the GUI and the background service never sync at the same time),
-    and that of the other install of this computer (paths.other_install_dir), held too while
-    it is there: the two never sync at the same time either. Its lock file is never made."""
+    """Inter-process lock (the window, the command line and the background service never
+    sync at the same time), and that of the other install of this computer
+    (paths.other_install_dir), held too while it is there: the two never sync at the same
+    time either. Its lock file is never made."""
     path = paths.data_dir() / "sync.lock"
     paths.make_dir(path.parent)
     with paths.locked(path, mode="w", wait=False, busy=lambda: SyncBusy(

@@ -557,7 +557,7 @@ def write(storage: Storage, path: str, local: Path, md5: str | None, name: str, 
     connection read (_note_written); after a file not written or not read back the folders
     are read anew (forget). The time of the copy and of the check are logged
     apart. `name`: of the update, for the words; `copying` and `checking`: the heads of the
-    steps told to `progress` (in bytes) while it is sent and read back. `keep_copy`: a trial
+    steps told to `progress` (in bytes) while it is sent and read back. `keep_copy`: a write
     that changes nothing the device refuses first: a small file (PROBE) written into the
     folder, read back and deleted (else WriteRefused), then the file there now copied whole
     to `keep_copy` on this computer before it is deleted (else WriteRefused); when the new one

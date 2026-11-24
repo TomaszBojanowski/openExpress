@@ -717,7 +717,7 @@ class UpdatesPage:
     def ask_to_eject(self, s) -> None:
         """After a sync wrote the files of Garmin Connect's queue to a Garmin drive: it is to
         be ejected first, so that the device takes them; that the cable can go out is said
-        only once it is (eject_device). An update is ejected unasked (confirm_update)."""
+        only once it is (eject_device). An update is ejected unasked (_install_task)."""
         confirm(self, "eject-ask", _("Files Saved on the Device"),
                 _("Eject the device before you unplug the cable: until then it may not see "
                   "the files from Garmin Connect."),
