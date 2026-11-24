@@ -105,6 +105,24 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.13.2" date="2026-11-24">
+      <description translate="no">
+        <p>A maintenance release: openexpress status says what the window says, and the French translation covers
+        nearly every text.</p>
+        <ul>
+          <li><em>Satellite data.</em> When the watch has newer satellite data from the phone, openexpress status now
+          says the data on the device is current, as the device page does, instead of how old the file written last
+          is.</li>
+          <li><em>USB drive mode.</em> For a device in USB drive mode with an update copied to it, openexpress status
+          now says to eject the device, as the window does, instead of to unplug it.</li>
+          <li><em>French.</em> The French translation covers every text but the one new in this release.</li>
+          <li><em>Czech.</em> Every text of the program is translated.</li>
+          <li><em>Code.</em> Unused code is gone and rules written in several places now live in one; the program does
+          what it did before.</li>
+        </ul>
+        <p>Thanks to Alex Giroux for the French translation and to prajzner for the Czech one.</p>
+      </description>
+    </release>
     <release version="0.13.1" date="2026-11-24">
       <description translate="no">
         <p>A maintenance release: clearer messages in the window and on the command line, and three more devices on
