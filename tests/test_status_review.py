@@ -19,7 +19,6 @@ device log telling the same numbers; a dump that fits the limit of the copies al
 room the others left removed without a copy, and the question saying why; nothing that needs the
 device on the page from the records, which stays the view of its device. All devices, files and
 sizes are made up."""
-
 import contextlib
 import io
 import json
@@ -41,6 +40,7 @@ from fakes import (
     offered_update,
     program_style,
     ptp_opened,
+    show_remembered,
     wait,
     window_picture,
     xml_with,
@@ -387,7 +387,7 @@ def remembered(r, unit: int) -> None:
     """Its tile on the start page chosen: the view of the device not connected."""
     from openexpress import known_devices
 
-    r.win._show_remembered(known_devices.load()[unit])
+    show_remembered(r.win, known_devices.load()[unit])
     wait(lambda: r.win.navigation.get_visible_page() is r.win.remembered.page and
          r.win.remembered.status_row.get_visible() == (r.win.kept_status is not None),
          "the remembered view")

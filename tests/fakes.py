@@ -1811,3 +1811,25 @@ def update_answer(*entries):
 # The bytes of each file the server offers below, by its name.
 OFFERED_BYTES = {"DA00100.sid": b"same file", "DA00200.sid": b"new bytes",
                  "DA00300.sid": b"missing", "GUPDATE.GCD": b"fw"}
+
+
+# --- the view of a remembered device, as the start page opens it -------------------------------
+
+
+def remembered_tile(known):
+    """The tile the start page draws for a remembered device not connected (devicelist.entries),
+    which its view takes its picture from."""
+    from openexpress import devicelist
+
+    [(tile, _source)] = devicelist.entries([], {known.unit_id: known}, None, logged_in=False)
+    return tile
+
+
+def show_remembered(win, known) -> None:
+    """A click on the tile of a remembered device: its view, with that tile."""
+    win._show_remembered(known, remembered_tile(known))
+
+
+def fill_remembered(win, known) -> None:
+    """The view of a remembered device filled again, with its tile (_redraw_remembered)."""
+    win._fill_remembered(known, remembered_tile(known))

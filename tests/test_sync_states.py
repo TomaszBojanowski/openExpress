@@ -2,11 +2,10 @@
 tile and page, "Synced" only with a sync recorded, the count of "To sync" at the end of "Last
 sync", "Primary Training Device" when it cannot be read, and the start page without the
 account's list. All devices and files are made up."""
-
 import types
 
 import pytest
-from fakes import device_session, in_language, record_sync, window_methods
+from fakes import device_session, in_language, record_sync, show_remembered, window_methods
 from fakes import tile as _tile
 from fakes import window as stand_in
 
@@ -124,10 +123,10 @@ def test_the_page_of_a_remembered_device_says_the_same():
     known = _remembered()  # the unit of conftest's device
     assert known.unit_id == UNIT
     win = _window()
-    win._show_remembered(known)
+    show_remembered(win, known)
     assert win.remembered.last_sync_row.get_subtitle() == NEVER
     _state()
-    win._show_remembered(known)
+    show_remembered(win, known)
     assert win.remembered.last_sync_row.get_subtitle() == NO_RECORD
 
 

@@ -3,7 +3,6 @@ device view and the start page fit, in English and in the longer Polish.
 
 The real window, on the tests' hidden display, holds stand-ins: an Edge 1050 with a beta
 update, long component names, maps, apps and music. Nothing asks a device or a server."""
-
 import os
 import re
 import time
@@ -19,6 +18,7 @@ from fakes import (
     Waits,
     descendants,
     device_session,
+    fill_remembered,
     gpx_file,
     gpx_route,
     gpx_track,
@@ -1126,7 +1126,7 @@ def test_the_view_of_a_remembered_device_fits_the_narrowest_window(narrow_window
 
     known = known_devices.remember(UNIT, "Edge 1050", "006-B4440-00", "33.13", "mtp", now=1.0)
     win = narrow_window(language)
-    win._fill_remembered(known)
+    fill_remembered(win, known)
     win.navigation.set_animate_transitions(False)
     win.navigation.push(win.remembered.page)
     _iterate(0.05)

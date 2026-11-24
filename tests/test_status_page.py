@@ -3,7 +3,6 @@ the storage by kind of file, the crashes and updates, the space to free (only to
 removed), the diagnostic files and the report; the device page's row that leads to it; a
 device without diagnostic data, a drive, and what is not known told apart from none. All
 devices, crashes and sizes are made up."""
-
 import json
 import os
 import types
@@ -11,7 +10,7 @@ from datetime import datetime, timedelta
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import device_session, in_language
+from fakes import device_session, in_language, show_remembered
 
 from openexpress import diagnostics, freeing, history, status
 from openexpress.crashes import Crash
@@ -966,7 +965,7 @@ def test_the_view_of_a_device_not_connected_leads_to_its_status_from_the_records
     known = remembered_device()
     write_log(known.unit_id, [crash_line(2)])
     win = remembered_window()
-    win._show_remembered(known)
+    show_remembered(win, known)
     row = win.remembered.status_row
     assert row.get_visible() and row.get_activatable()
     assert row.get_subtitle() == "1 crash in the last 30 days\u00a0· as of 2026-10-20 12:00"
@@ -983,7 +982,7 @@ def test_a_device_without_records_has_no_status_row(clock):
     from fakes import remembered_device, remembered_window
 
     win = remembered_window()
-    win._show_remembered(remembered_device())
+    show_remembered(win, remembered_device())
     assert not win.remembered.status_row.get_visible()
 
 
@@ -1260,7 +1259,7 @@ def test_the_page_from_the_records_stays_the_view_of_its_device_when_redrawn(clo
     win = remembered_window()
     win.start = types.SimpleNamespace(page=object())
     win.navigation.get_visible_page = lambda: win.pushed[-1]
-    win._show_remembered(known)
+    show_remembered(win, known)
     win.remembered.status_row.emit("activated")
     kept_page = win.pushed[-1]
     tile = types.SimpleNamespace(image_part_number="", image_url=None, category="watch",
@@ -1288,7 +1287,7 @@ def test_the_page_from_the_records_is_released_once_closed(clock, narrow):
     win = remembered_window()
     win.split = types.SimpleNamespace(get_collapsed=lambda: narrow)
     win._action_buttons = []
-    win._show_remembered(known)
+    show_remembered(win, known)
     win.remembered.status_row.emit("activated")
     page_ = win.pushed.pop()
     assert len(win.kept_status.status_history_rows) >= 5
@@ -1340,7 +1339,7 @@ def test_the_records_of_a_device_read_after_another_was_shown_are_left(clock):
     win = remembered_window()
     later = []
     win.in_background = lambda work, done, failed=None: later.append((work, done))
-    win._show_remembered(first)
+    show_remembered(win, first)
     win._remembered_entry = second  # another device's view meanwhile
     for work, done in later:
         done(work())
@@ -1628,7 +1627,7 @@ def test_the_page_from_the_records_is_released_once_closed_with_back(clock):
     win = remembered_window()
     win.split = types.SimpleNamespace(get_collapsed=lambda: False)
     win._action_buttons = []
-    win._show_remembered(known)
+    show_remembered(win, known)
     win.start = types.SimpleNamespace(page=None)
     win._render_start = lambda: None
     win.remembered.status_row.emit("activated")
