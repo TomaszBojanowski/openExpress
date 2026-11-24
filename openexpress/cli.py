@@ -2346,9 +2346,11 @@ def cmd_maps(args) -> int:
         print((_("Maps for {device} (all):") if args.all
                else _("Maps for {device} (installed):")).format(device=dev.description))
         for m in sorted(shown, key=lambda m: (m not in on_device, m.map_type, m.name)):
-            # Of a map newer on the device, the version and the size the server lists are those
-            # of its older version: only the status, which names that version.
-            version, size = ("", "") if m.newer_on_device else (m.version, human_size(m.size))
+            # Of a map newer on the device, or with an update not offered in the account's
+            # country, the version and the size the server lists are not those of its files on
+            # the device: only the status.
+            shown = not (m.newer_on_device or (m.would_update and not m.update_available))
+            version, size = (m.version, human_size(m.size)) if shown else ("", "")
             print(f"  {m.name:48} {version:>9}  {size:>9}  {m.status}")
             if (note := mp.restriction_note(m)) is not None:
                 print("    " + note)

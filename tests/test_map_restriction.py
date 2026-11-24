@@ -208,6 +208,16 @@ def test_the_maps_page_has_no_button_for_a_map_not_offered_in_the_account_countr
 
 
 @pytest.mark.needs_display
+def test_an_update_not_offered_in_the_account_country_shows_only_its_state(device_root):
+    """The version and the size of the answer are those of the update, which the device does not
+    have: the row says only the state, as for a map newer on the device."""
+    rows = _page_rows(device_root, "KR")
+    east_line, _east_buttons = rows["TopoActive East"]
+    first = east_line.split("\n")[0]
+    assert first == "TopoActive\u00a0· update not offered in your account's country"
+
+
+@pytest.mark.needs_display
 def test_with_the_country_not_known_the_maps_page_marks_the_map(device_root):
     rows = _page_rows(device_root, None)
     japan_line, japan_buttons = rows["TopoActive Japan"]
@@ -262,6 +272,17 @@ def test_cli_refuses_to_install_a_map_not_offered_in_the_account_country(cli_map
     assert main(["maps", "install", "Japan"]) == 1
     assert ("Map “TopoActive Japan” cannot be installed: Garmin does not offer it in your "
             "account's country (South Korea).") in capsys.readouterr().err
+
+
+def test_cli_lists_an_update_not_offered_in_the_account_country_without_its_version_or_size(
+        cli_maps, capsys):
+    from openexpress.cli import main
+
+    cli_maps.country = "KR"
+    assert main(["maps"]) == 0
+    line = next(x for x in capsys.readouterr().out.splitlines() if "TopoActive East" in x)
+    shown = " ".join(line.split()[2:])
+    assert shown == "update not offered in your account's country"
 
 
 def test_cli_update_says_what_it_does_not_update(cli_maps, capsys):

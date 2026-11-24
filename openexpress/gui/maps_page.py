@@ -402,9 +402,9 @@ class MapsPage:
     @staticmethod
     def _map_subtitle(m) -> str:
         """Type, version, size and status of an installed map; with an update, the version
-        offered and what it downloads instead; of a map newer on the device, only its status
-        (which names Garmin's version); without the type when the map is named like its type
-        ("Base maps")."""
+        offered and what it downloads instead; of a map newer on the device or with an update not
+        offered in the account's country, only its status; without the type when the map is
+        named like its type ("Base maps")."""
         from openexpress import maps as mp
 
         kind = _kind(m)
@@ -418,9 +418,9 @@ class MapsPage:
             # update downloads, e.g. 8.3 GB
             download = _("{size} to download").format(size=human_size(m.size))
             parts = [kind, available, download]
-        elif m.newer_on_device:
-            # The version and the size the server lists are those of its older version, not of
-            # the files on the device.
+        elif m.newer_on_device or m.would_update:
+            # The version and the size the server lists are not those of the files on the
+            # device: of its older version, or of an update not offered in the account's country.
             parts = [kind, m.status]
         else:
             parts = [kind, m.version, human_size(m.size), m.status]
