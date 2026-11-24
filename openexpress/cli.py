@@ -2071,7 +2071,7 @@ def cmd_updates(args) -> int:
             refused.append(u)
         tried = {u.part_number.upper() for u in inside}
         chosen = [u for u in chosen if u.hidden_inside is not None or (
-            u.is_metadata and u.part_number.upper().removesuffix("-META") in tried)]
+            u.is_metadata and u.part_key in tried)]
         if not inside:
             return 1
     else:

@@ -251,6 +251,12 @@ class SoftwareUpdate:
         return self.part_number.endswith("-META")
 
     @property
+    def part_key(self) -> str:
+        """The part number in capitals without "-META": an update and its -META entry share
+        it (is_metadata tells them apart, by the part number as the server gives it)."""
+        return self.part_number.upper().removesuffix("-META")
+
+    @property
     def refused_inside(self) -> bool:
         """In a folder the device hides inside a folder that is seen, where openExpress's own
         session cannot be had (the Flatpak without USB, a device not over MTP): not installed."""
@@ -1181,7 +1187,7 @@ def sort_for_install(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
 def present_with_metadata(updates: list[SoftwareUpdate]) -> list[SoftwareUpdate]:
     """The offered files the device already has, each with its -META entry: what 'all' skips."""
     parts = {u.part_number.upper() for u in updates if u.on_device}
-    return [u for u in updates if u.part_number.upper().removesuffix("-META") in parts]
+    return [u for u in updates if u.part_key in parts]
 
 
 def select(updates: list[SoftwareUpdate], wanted: list[str],
@@ -1196,8 +1202,8 @@ def select(updates: list[SoftwareUpdate], wanted: list[str],
         return [u for u in updates if not any(u is s for s in skipped)]
     keys = {w.upper() for w in wanted}
     chosen = [u for u in updates if u.part_number.upper() in keys
-              or u.part_number.upper().removesuffix("-META") in keys]
-    missing = keys - {u.part_number.upper().removesuffix("-META") for u in chosen}
+              or u.part_key in keys]
+    missing = keys - {u.part_key for u in chosen}
     if missing:
         raise UpdateError(_("Not in the list: {items}").format(items=", ".join(sorted(missing))))
     return chosen
@@ -1295,7 +1301,7 @@ def one_per_file(updates: list[SoftwareUpdate], waiting: list[SoftwareUpdate] = 
     copied = {u.part_number.upper() for u in updates
               if not u.is_metadata and not any(u is p for p, _other in put_off)}
     kept = [u for u in updates if not any(u is p for p, _other in put_off)
-            and (not u.is_metadata or u.part_number.upper().removesuffix("-META") in copied)]
+            and (not u.is_metadata or u.part_key in copied)]
     for u, other in put_off if say else ():
         log.info("software update: %s %s put off, it goes to the file of %s %s (%s): one at a "
                  "time", u.part_number, u.version, other.part_number, other.version,
@@ -1393,7 +1399,7 @@ def _install(
                 _write_hidden(storage, u, local_files[u.key], progress, report,
                               keep_copy=hidden_trial / f"{u.part_number}-{u.version}-{name}")
                 continue
-            if u.is_metadata and u.part_number.upper().removesuffix("-META") in not_written:
+            if u.is_metadata and u.part_key in not_written:
                 log.info("software update: %s left out, its update was not installed",
                          u.part_number)
                 continue

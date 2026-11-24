@@ -311,7 +311,7 @@ def confirm_install_all(win, items) -> None:
     kept, put_off = upd.one_per_file(items, say=False)
     parts = {u.part_number.upper() for u in kept}
     chosen = [x for x in win.updates_cache if any(x is u for u in kept) or (
-        x.is_metadata and x.part_number.upper().removesuffix("-META") in parts)]
+        x.is_metadata and x.part_key in parts)]
     lines = [f"{u.title} {versions_text(u)}" for u in kept]
     lines += [f"{u.title}: " + _("Can be installed once the device has installed {name}").format(
         name=other.title) for u, other in put_off]
@@ -692,7 +692,7 @@ class UpdatesPage:
         s = self.session
         # The update clicked, with its -META entries: not another version of its part.
         chosen = [x for x in self.updates_cache if x is u or (
-            x.is_metadata and x.part_number.upper().removesuffix("-META") == u.part_number.upper())]
+            x.is_metadata and x.part_key == u.part_number.upper())]
         body = (f"{u.title} {versions_text(u)}\n"
                 + _("Size: {size}").format(size=human_size(u.size)) + "\n"
                 + _("On the device: {path}").format(path=u.device_path)
