@@ -841,6 +841,7 @@ class DevicePage:
         self.update_checked_at = self._update_record_at = None
         self.apps_count = self.music_count = None  # read again by their pages
         self.activities = self.activities_list = self.activities_more = None
+        self.activities_note = None
         self.map_state = None
         for sec in self.sections.values():
             sec.loaded = False

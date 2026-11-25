@@ -197,7 +197,9 @@ class ActivitiesPage:
             return
         self.activities = found
         sec = self.sections["activities"]
-        self.activities_list = self.activities_more = None
+        # The groups of the drawing before are gone (the section cleared): none of them is
+        # pointed at any more, so that nothing below moves or removes one of them.
+        self.activities_list = self.activities_more = self.activities_note = None
         journal_card(self, sec)  # until the activity journal is answered: on top
         if not found.listing:
             _no_activities(sec)

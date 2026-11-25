@@ -2,7 +2,8 @@
 is there until it is answered, and only its two buttons answer (the yes saved, the journal of
 the open device read; the no saved, the line instead); leaving the page, drawing it again or
 unplugging the device saves nothing; a save that fails leaves the card and says why; the line
-stays at the very bottom when more rows come, and its button opens the preferences.
+stays at the very bottom when more rows come, and its button opens the preferences; drawn
+again in one window (plugged in again, Try Again, the answer changed) the page is drawn whole.
 Made-up files only; a folder stands for the device."""
 
 import json
@@ -16,10 +17,10 @@ from fakes import FIT_EPOCH, descendants, fit_activity, page_window, window_meth
 
 pytestmark = [pytest.mark.needs_display, pytest.mark.journal_answer]
 
-PAGE_METHODS = ["load_activities", "show_activities"]
+PAGE_METHODS = ["load_activities", "show_activities", "load_section"]
 
 
-def the_page(tmp_path, count=3):
+def the_page(tmp_path, count=3, ownership_error=None):
     """The Activities page of a folder as a watch with `count` runs, drawn: the stand-in and
     the page. The stand-in records the errors it says and the preferences it opens."""
     from datetime import datetime
@@ -43,8 +44,8 @@ def the_page(tmp_path, count=3):
     win.error = lambda title, text, private=False: win.errors.append((title, text))
     win.show_preferences = lambda: win.preferences_opened.append(True)
     win.session = types.SimpleNamespace(device=parse(storage.read("GARMIN/GarminDevice.xml")),
-                                        storage=storage, ownership_error=None,
-                                        journal_read=False)
+                                        storage=storage, ownership_error=ownership_error,
+                                        journal_read=False, mass_storage=False)
     win.load_activities()
     return win, section
 
@@ -75,7 +76,7 @@ def answer_saved():
 def reading(in_the_window):
     """The readings of the journal the card starts (read_journal), recorded."""
     started = []
-    in_the_window("read_journal", lambda win: started.append(win))
+    in_the_window("read_journal", lambda win, again=False: started.append(win))
     return started
 
 
@@ -164,3 +165,111 @@ def test_the_line_s_button_opens_the_preferences(tmp_path, reading):
     win, section = the_page(tmp_path)
     button(section, "Preferences").emit("clicked")
     assert win.preferences_opened == [True]
+
+
+# --- the page drawn again in one window ------------------------------------------------------
+# Plugged in again, Try Again, another device, a changed answer: the page is drawn anew in the
+# same window, and nothing of the drawing before it (its line, its groups) may stand in its way.
+
+def answer(value) -> None:
+    from openexpress.settings import Settings
+
+    s = Settings.load()
+    s.activity_journal = value
+    s.save()
+
+
+LINE = ["An activity journal shows your weeks and your year", "Preferences"]
+OTHER_ACCOUNT = ["The activity journal is not kept for a device on another Garmin Connect account"]
+
+
+def texts_of(group) -> list[str]:
+    """The words a group of the page shows, in order."""
+    from gi.repository import Gtk
+
+    return [w.get_label() for w in descendants(group)
+            if isinstance(w, Gtk.Label) and w.get_label()]
+
+
+def unexpected(caplog) -> list[str]:
+    return [r.getMessage() for r in caplog.records if r.levelname == "ERROR"]
+
+
+def test_the_no_drawn_again_with_more_than_a_page(tmp_path, reading, caplog):
+    answer(False)
+    win, section = the_page(tmp_path, count=31)
+    win.load_activities()  # plugged in again, or the page chosen again
+    assert unexpected(caplog) == []
+    assert section.stack.get_visible_child_name() == "content"
+    assert section.groups[-1] is win.activities_note
+    assert texts_of(win.activities_note) == LINE
+    button(section, "Show 1 More")
+
+
+def test_the_switch_turned_off_and_on_again_with_the_page_open(tmp_path, reading, caplog):
+    """True, false, true again in the preferences while the Activities page of more than a page
+    of activities is shown: drawn again each time, the line after the no only, and the device
+    read again after the yes."""
+    from gi.repository import Adw
+
+    from openexpress.gui.preferences import journal_group
+
+    answer(True)
+    win, section = the_page(tmp_path, count=31)
+    win.toast = lambda text, on_preferences=False: None
+    (switch,) = [w for w in descendants(journal_group(win)) if isinstance(w, Adw.SwitchRow)]
+    switch.set_active(False)
+    assert section.groups[-1] is win.activities_note and texts_of(win.activities_note) == LINE
+    switch.set_active(True)
+    assert unexpected(caplog) == [] and win.errors == []
+    assert win.activities_note is None
+    assert all(texts_of(g) != LINE for g in section.groups)
+    button(section, "Show 1 More")
+    assert reading == [win]
+
+
+def test_the_line_of_another_account_drawn_again(tmp_path, reading, caplog):
+    from openexpress.connect import NotAccountDevice
+
+    answer(True)
+    win, section = the_page(tmp_path, count=31,
+                            ownership_error=NotAccountDevice("made up: on another account"))
+    win.load_activities()
+    assert unexpected(caplog) == []
+    assert section.groups[-1] is win.activities_note
+    assert texts_of(win.activities_note) == OTHER_ACCOUNT
+
+
+def test_show_more_after_the_page_was_drawn_again(tmp_path, reading, caplog):
+    answer(False)
+    win, section = the_page(tmp_path, count=32)
+    win.load_activities()
+    button(section, "Show 2 More").emit("clicked")
+    assert unexpected(caplog) == []
+    assert win.activities_more is None
+    assert section.groups[-1] is win.activities_note
+
+
+def test_try_again_after_the_page_failed_draws_it_anew(tmp_path, reading, caplog, in_the_window):
+    """A drawing that fails once (an error of the window's own, injected) leaves nothing of it
+    to the next: Try Again draws the whole page, its line at the very bottom."""
+    from openexpress.gui import activities_page
+
+    answer(False)
+    win, section = the_page(tmp_path, count=31)
+    plain, failed = activities_page.activity_row, []
+
+    def once(win, read):
+        if not failed:
+            failed.append(True)
+            raise RuntimeError("made up: a row that cannot be drawn")
+        return plain(win, read)
+    in_the_window("activity_row", once)
+    win.load_activities()
+    assert section.stack.get_visible_child_name() == "error"
+    assert len(unexpected(caplog)) == 1
+    win.load_section("activities", force=True)  # Try Again
+    assert len(unexpected(caplog)) == 1
+    assert section.stack.get_visible_child_name() == "content"
+    assert section.groups[-1] is win.activities_note and texts_of(win.activities_note) == LINE
+    button(section, "Show 1 More")
