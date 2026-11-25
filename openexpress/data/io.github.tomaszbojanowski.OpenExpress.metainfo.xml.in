@@ -105,6 +105,23 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.13.3" date="2026-11-25">
+      <description translate="no">
+        <p>A maintenance release: the Maps page and the command line say more exactly what is on the device.</p>
+        <ul>
+          <li><em>Newer maps.</em> A map that is newer on the device than the version Garmin offers, as the base map on
+          an Edge can be right after an update, now says so instead of showing Garmin's older version and size as its
+          own.</li>
+          <li><em>Map install.</em> openexpress maps install refuses to replace such a map with the older version, and
+          says why.</li>
+          <li><em>Old map files.</em> The question before a map is installed counts only the old files that are really
+          on the device.</li>
+          <li><em>Updates.</em> openexpress maps says an update in the same words as the window, and an update not
+          offered in your account's country no longer shows its version as the installed one.</li>
+          <li><em>Code.</em> Code that only the tests used is gone; the program does what it did before.</li>
+        </ul>
+      </description>
+    </release>
     <release version="0.13.2" date="2026-11-24">
       <description translate="no">
         <p>A maintenance release: openexpress status says what the window says, and the French translation covers
