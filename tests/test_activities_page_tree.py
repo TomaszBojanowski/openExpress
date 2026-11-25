@@ -101,7 +101,7 @@ def write_device(folder: Path, files: dict[str, bytes], xml: str = DEVICE_XML):
 
 
 def write_backup(backups: Path, files: dict[str, bytes]) -> None:
-    """A backup of the made-up watch, made on 2 October 2025, with these activity files."""
+    """A backup of the made-up watch with these activity files."""
     from openexpress.backup import STAMP
     from openexpress.sync import ACTIVITY_TYPE
 
