@@ -250,7 +250,9 @@ def cmd_setup(args) -> int:
     if args.diagnostics_copy:
         print(_diagnostics_copy_text(settings.diagnostics_copy))
     if args.activity_journal:
+        # TRANSLATORS: `openexpress setup --activity-journal on|off`: the answer saved
         print(_("Activity journal: on") if settings.activity_journal
+              # TRANSLATORS: `openexpress setup --activity-journal on|off`: the answer saved
               else _("Activity journal: off"))
     return 0
 
@@ -930,6 +932,8 @@ def _journal_command(args, dev, st) -> int:
     if args.delete:
         count = sum(activity_journal.count(p) for p in found)
         if not args.apply:
+            # TRANSLATORS: `openexpress activities journal --delete` without --apply: what it
+            # would delete
             print(ngettext("Would delete every activity journal on this computer: {count} "
                            "activity.", "Would delete every activity journal on this computer: "
                            "{count} activities.", count).format(count=count)
@@ -940,6 +944,7 @@ def _journal_command(args, dev, st) -> int:
             print(_("Dry run: nothing was deleted. Add --apply to delete it."))
             return 0
         count = activity_journal.delete(found)
+        # TRANSLATORS: `openexpress activities journal --delete --apply`: what it deleted
         print(ngettext("Deleted every activity journal on this computer: {count} activity.",
                        "Deleted every activity journal on this computer: {count} activities.",
                        count).format(count=count)
@@ -3861,8 +3866,9 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--diagnostics-copy", choices=("on", "off"),
                    help=_("copy the device's diagnostic files to this computer at each "
                           "connection in the window (never sent)"))
-    # TRANSLATORS: help of `openexpress setup --activity-journal on|off`; "on" is the user's yes
     s.add_argument("--activity-journal", choices=("on", "off"),
+                   # TRANSLATORS: help of `openexpress setup --activity-journal on|off`; "on" is
+                   # the user's yes
                    help=_("keep an activity journal: a summary and the shape of each activity "
                           "stay on this computer, also after the device deletes its file "
                           "(\"on\" is your yes to it; nothing is sent)"))

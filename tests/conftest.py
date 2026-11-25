@@ -187,6 +187,9 @@ def pytest_configure(config):
                    "one of the tests (it lists the mounts of this computer)")
     config.addinivalue_line(
         "markers", f"stress: a long stress test; run only with {STRESS}=1")
+    config.addinivalue_line(
+        "markers", "journal_answer: the answer to the activity journal as settings.json has it, "
+                   "not the tests' no")
 
 
 # The long stress tests (e.g. of gio_storage._wait) run only when asked for:
@@ -290,6 +293,18 @@ def stop_windows(monitor: QuietVolumeMonitor) -> None:
         if getattr(win, "_relative_timer", None) is not None:
             win._relative_timer = None
         monitor.disconnect(handler_id)
+
+
+@pytest.fixture(autouse=True)
+def journal_answered_no(request, monkeypatch):
+    """The tests answer no to the activity journal: the pages as they were (the Activities
+    page with the journal's line at its bottom), nothing read or written for it. A test marked
+    journal_answer gets the answer settings.json has, as the program does (none until given)."""
+    if request.node.get_closest_marker("journal_answer"):
+        return
+    from openexpress import activity_journal
+
+    monkeypatch.setattr(activity_journal, "answered", lambda: False)
 
 
 @pytest.fixture(autouse=True)

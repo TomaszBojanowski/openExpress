@@ -3,7 +3,7 @@ out, the key from Garmin Express's installer), the sync in the background, the l
 cache (its parts, counted and cleared), the copy of the diagnostic files; the shortcuts.
 Preferences is a mixin of MainWindow (gui/app.py), without __init__ of its own.
 
-Has: the Preferences open and their rows: _preferences, _account_row, _storage.
+Has: the Preferences open and their rows: _preferences, _account_row, _storage, _journal_delete.
 """
 from __future__ import annotations
 
@@ -19,9 +19,10 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import cache, diagnostics, i18n, paths, service  # noqa: E402
+from openexpress import activity_journal, cache, diagnostics, i18n, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.gui import activity_map  # noqa: E402
+from openexpress.gui.activities_journal import journal_changed  # noqa: E402
 from openexpress.gui.connected import open_address  # noqa: E402
 from openexpress.gui.gui_settings import update_gui_settings  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
@@ -80,6 +81,89 @@ def diagnostics_switch(win) -> Adw.SwitchRow:
 
     sw.connect("notify::active", toggled)
     return sw
+
+
+def journal_group(win) -> Adw.PreferencesGroup:
+    """The "Activity Journal" group: its switch (on is the yes to it, settings.json; the same
+    as `setup --activity-journal`; off until answered) and the deletion of every device's
+    journal, after a question. A change that cannot be saved puts the switch back and says why
+    (switch_saved); turned off, a toast says what it holds stays. The Activities page shown is
+    drawn again as the answer has it (its card, its line)."""
+    # TRANSLATORS: group in the preferences: what openExpress keeps of each activity on this
+    # computer, so that the Activities page can show it after the device deleted its file
+    g = Adw.PreferencesGroup(title=_("Activity Journal"))
+    # TRANSLATORS: switch in the preferences: keep the activity journal (on is the yes to it)
+    sw = Adw.SwitchRow(title=_("Keep an Activity Journal"),
+                       subtitle=_("A summary and the shape of each activity stay on this "
+                                  "computer, also after the device deletes its file"),
+                       active=activity_journal.kept())
+
+    def save(on: bool) -> None:
+        settings = Settings.load()
+        settings.activity_journal = on
+        settings.save()
+
+    def toggled(row, _pspec):
+        if not switch_saved(win, row, toggled, activity_journal.kept(), save):
+            return
+        on = row.get_active()
+        log.info("activity journal: %s", "on" if on else "off")
+        if not on:
+            # TRANSLATORS: a toast after the activity journal was turned off in the preferences
+            win.toast(_("Activity journal turned off; what it holds stays until you delete it"),
+                      on_preferences=True)
+        journal_changed(win)
+
+    sw.connect("notify::active", toggled)
+    g.add(sw)
+    # TRANSLATORS: row in the preferences, with the button Delete…: every device's activity
+    # journal deleted from this computer
+    row = Adw.ActionRow(title=_("Delete the Activity Journal"))
+    # TRANSLATORS: button of the row "Delete the Activity Journal" in the preferences: asks first
+    button = Gtk.Button(label=_("Delete…"), valign=Gtk.Align.CENTER,
+                        sensitive=_journal_count() > 0)
+    button.add_css_class("destructive-action")
+    button.connect("clicked", lambda _button: ask_to_delete_the_journal(win))
+    row.add_suffix(button)
+    g.add(row)
+    win._journal_delete = button
+    return g
+
+
+def _journal_count() -> int:
+    """How many activities every journal on this computer holds."""
+    return sum(activity_journal.count(p) for p in activity_journal.journals())
+
+
+def ask_to_delete_the_journal(win) -> None:
+    """Delete (destructive) or Cancel (the default): Delete deletes every device's journal,
+    then a toast; one that cannot be deleted is an error. The button is found when the answer
+    comes (the handler holds no widget)."""
+    count = _journal_count()
+
+    def delete():
+        try:
+            activity_journal.delete(activity_journal.journals())
+        except OSError as e:
+            # TRANSLATORS: heading of the error when the activity journal could not be deleted
+            win.error(_("Activity Journal Not Deleted"), str(e))
+            return
+        # TRANSLATORS: a toast after the activity journal was deleted in the preferences
+        win.toast(_("Activity journal deleted"), on_preferences=True)
+        if win._journal_delete is not None:
+            win._journal_delete.set_sensitive(_journal_count() > 0)
+        journal_changed(win)
+
+    # TRANSLATORS: heading of the question before the activity journal is deleted
+    confirm(win, "activity-journal-delete", _("Delete the Activity Journal?"),
+            # TRANSLATORS: the question before the activity journal is deleted
+            ngettext("The journal of {count} activity is deleted from this computer. "
+                     "Activities the devices no longer keep cannot be read again.",
+                     "The journal of {count} activities is deleted from this computer. "
+                     "Activities the devices no longer keep cannot be read again.",
+                     count).format(count=count),
+            # TRANSLATORS: button of the question before the activity journal is deleted
+            Answer("delete", _("Delete"), delete, look="destructive"), default="cancel")
 
 
 def maps_group(win) -> Adw.PreferencesGroup:
@@ -369,6 +453,7 @@ class Preferences:
         self._preferences = dialog
         dialog.connect("closed", lambda _d: (setattr(self, "_account_row", None),
                                              setattr(self, "_storage", None),
+                                             setattr(self, "_journal_delete", None),
                                              setattr(self, "_preferences", None)))
         g = Adw.PreferencesGroup(title=_("Sync With Garmin Connect"))
         g.add(self._auto_sync_row())
@@ -414,6 +499,7 @@ class Preferences:
         page.add(g)
         page.add(self._cache_group())
         page.add(diagnostics_group(self))
+        page.add(journal_group(self))
         page.add(maps_group(self))
         dialog.add(page)
         dialog.present(self)

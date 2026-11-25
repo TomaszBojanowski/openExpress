@@ -221,7 +221,22 @@ def test_the_first_reading_takes_the_device_and_its_backups(tmp_path, backups, c
                                                                             UNIX + 2 * DAY)
     said = " ".join(r.getMessage() for r in caplog.records if "journal" in r.getMessage())
     assert "4 added, 6 on the device, 3 not whole" in said
+    # Numbers and times only: no file name, date, sport or place.
+    import re
+
     assert ".fit" not in said and str(UNIT_ID) not in said
+    assert not re.search(r"\d{4}-\d{2}-\d{2}|running|52\.|21\.", said)
+
+
+def test_the_device_report_holds_nothing_of_it(tmp_path, backups):
+    from openexpress import activity_journal as journal
+    from openexpress import report
+
+    found = on_device(tmp_path / "device", dict(THREE))
+    journal.add(found.device, found.storage, backups, now=SEEN)
+    text = report.build(found.device, found.storage, logged_in=True)
+    assert "journal" not in text.casefold()
+    assert "2004-11" not in text and "a.fit" not in text
 
 
 def test_the_next_reading_reads_only_what_is_new(tmp_path, backups):

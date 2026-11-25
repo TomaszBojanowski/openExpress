@@ -14,7 +14,7 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import forget, known_devices, service  # noqa: E402
+from openexpress import activity_journal, forget, known_devices, service  # noqa: E402
 from openexpress.gui.window_tasks import Answer, confirm  # noqa: E402
 from openexpress.i18n import _, ngettext  # noqa: E402
 
@@ -57,6 +57,13 @@ class ForgetDevice:
                  "again whether to upload everything or new data only.")
         if kept.pending:
             body += "\n\n" + str(forget.PendingFiles(kept.pending))
+        journal = activity_journal.count(activity_journal.path(unit))
+        if journal:
+            # TRANSLATORS: added to the question before a device is forgotten: its activity
+            # journal (Preferences: "Activity Journal") goes with it
+            body += "\n\n" + ngettext("Its activity journal, {count} activity, is deleted too.",
+                                      "Its activity journal, {count} activities, is deleted "
+                                      "too.", journal).format(count=journal)
         # What is ticked (data, no widget) goes with the ticks and the answer; the window
         # holds the question while it is open (keep_as): a handler that held the question or
         # a tick would keep them after it closed (confirm says why the ticks are data).

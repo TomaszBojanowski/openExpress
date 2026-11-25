@@ -9,6 +9,8 @@ import pytest
 from conftest import DEVICE_XML
 from fakes import device_session, fit_activity, fit_time, window
 
+pytestmark = pytest.mark.journal_answer
+
 UNIT = 1234567890  # the unit ID of DEVICE_XML
 
 
@@ -96,10 +98,9 @@ def test_it_starts_once_the_diagnostics_are_read(opened, monkeypatch, in_the_win
 
     answer(True)
     started = []
-    monkeypatch.setattr(device_page, "read_journal", lambda win: started.append(win.session))
+    in_the_window("read_journal", lambda win: started.append(win.session))
     monkeypatch.setattr(diagnostics, "at_open", lambda device, storage: None)
-    in_the_window("status_changed", lambda win: None)
-    in_the_window("show_satellite", lambda win: None)
+    in_the_window("status_row", lambda win, group=None: None)
     background = []
     win = window(session=opened.session,
                  in_background=lambda fn, done, failed=None: background.append((fn, done)))

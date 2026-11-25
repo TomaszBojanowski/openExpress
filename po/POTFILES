@@ -23,6 +23,7 @@ openexpress/forget.py
 openexpress/freeing.py
 openexpress/gpx.py
 openexpress/gui/account_readings.py
+openexpress/gui/activities_journal.py
 openexpress/gui/activities_page.py
 openexpress/gui/activity_map.py
 openexpress/gui/activity_page.py

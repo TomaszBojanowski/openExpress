@@ -13,6 +13,8 @@ import pytest
 from conftest import DEVICE_XML
 from fakes import fit_activity, fit_time
 
+pytestmark = pytest.mark.journal_answer
+
 UNIT = 1234567890  # the unit ID of DEVICE_XML
 
 

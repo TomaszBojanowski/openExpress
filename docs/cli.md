@@ -125,7 +125,7 @@ as GPX 1.1 files.
 `openexpress activities journal [--all] [--delete] [--apply]` shows the activity journal of the
 connected device: what this computer keeps of each of its activities, so that the Activities page
 can show them after the device deleted their files (an Edge 1050 keeps about 200 and deletes the
-oldest). See [Activities](privacy.md#activities) for what it holds.
+oldest). See [The activity journal](privacy.md#the-activity-journal) for what it holds.
 
 - It is kept only after your yes: the card on the Activities page, the switch **Keep an Activity
   Journal** in Preferences or `openexpress setup --activity-journal on` (`off` stops it; what it

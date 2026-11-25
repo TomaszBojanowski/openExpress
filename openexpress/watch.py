@@ -143,7 +143,7 @@ class Watcher(Gio.Application):
         return None
 
     def _sync(self):
-        s = None
+        s = synced = None
 
         def name() -> str:
             """The device's name for a notification, until it is known a generic one."""
@@ -185,12 +185,11 @@ class Watcher(Gio.Application):
                 summary = service.run_sync(s, progress=nothing)
             finally:
                 self._session = None
-            # After the sync: the device's activity journal, when it is kept.
-            activity_journal.at_connection(s.device, s.storage, s.ownership_error)
             # The words of the row under "Last Sync", as last_sync.describe tells them.
             body = last_sync.describe(summary.record(s.device.unit_id)).notification
             # TRANSLATORS: title of a notification of the background sync, over what it did
             GLib.idle_add(self.notify, _("{device} synced").format(device=name()), body)
+            synced = s
         except service.SyncBusy:
             log.info("A sync is running in another process")
         except SeveralDevices:
@@ -207,6 +206,19 @@ class Watcher(Gio.Application):
         except Exception as e:
             log.exception("Sync failed")
             GLib.idle_add(self.notify, _("{device} not synced").format(device=name()), str(e))
+        if synced is not None:
+            self._journal(synced)
+
+    @staticmethod
+    def _journal(s) -> None:
+        """After a background sync, once it is told: the device's activity journal, when it is
+        kept (activity_journal.at_connection). A device that stops responding meanwhile ends
+        it with one line of the log: the sync is done and said."""
+        try:
+            activity_journal.at_connection(s.device, s.storage,
+                                           getattr(s, "ownership_error", None))
+        except DeviceNotResponding:
+            log.info("activity journal: the device stopped responding")
 
 
 def main() -> int:

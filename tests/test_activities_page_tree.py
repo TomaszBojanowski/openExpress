@@ -18,7 +18,7 @@ import pytest
 from conftest import DEVICE_XML
 from fakes import FIT_EPOCH, fit_activity, page_window, window_methods
 
-pytestmark = pytest.mark.needs_display
+pytestmark = [pytest.mark.needs_display, pytest.mark.journal_answer]
 
 PATTERN = Path(__file__).parent / "data" / "activities_page_tree.json"
 WRITE = "OPENEXPRESS_WRITE_PAGE_TREE"
@@ -151,9 +151,9 @@ def draw(state: str, folder: Path, backups: Path, monkeypatch):
     if state == "drive":
         win.session.mass_storage = True
     if state == "other-account":
-        from openexpress.connect import OwnershipError
+        from openexpress.connect import NotAccountDevice
 
-        win.session.ownership_error = OwnershipError("made up: on another account")
+        win.session.ownership_error = NotAccountDevice("made up: on another account")
     if state == "logged-out":
         win.session.logged_in = False
     if state == "error":
@@ -174,29 +174,97 @@ def in_warsaw(monkeypatch):
     time.tzset()
 
 
-@pytest.fixture
-def drawn(tmp_path, backups, monkeypatch, in_warsaw):
+def answer(value) -> None:
+    """The answer to the activity journal as settings.json keeps it (None: not answered)."""
+    from openexpress.settings import Settings
+
+    s = Settings.load()
+    s.activity_journal = value
+    s.save()
+
+
+def draw_all(folder: Path, backups: Path, monkeypatch) -> dict:
     """Every state of the page drawn: {state: its tree}."""
+    import shutil
+
     found = {}
     for state in STATES:
-        _win, section = draw(state, tmp_path / state, backups, monkeypatch)
+        _win, section = draw(state, folder / state, backups, monkeypatch)
         found[state] = page_tree(section)
         if state in ("rows", "only-in-backups"):
-            import shutil
-
             shutil.rmtree(backups)
     return found
 
 
-def test_each_state_of_the_page_is_the_pattern(drawn):
+def test_each_state_of_the_page_is_the_pattern(tmp_path, backups, monkeypatch, in_warsaw):
+    """After the yes the page is the page as it was (on another account with its line at the
+    bottom, below)."""
     if os.environ.get(WRITE):
+        drawn = draw_all(tmp_path, backups, monkeypatch)
         PATTERN.write_text(json.dumps(drawn, indent=1, ensure_ascii=False) + "\n",
                            encoding="utf-8")
         pytest.fail(f"pattern written ({WRITE}), nothing compared")
+    answer(True)
+    drawn = draw_all(tmp_path, backups, monkeypatch)
     pattern = json.loads(PATTERN.read_text(encoding="utf-8"))
     assert sorted(pattern) == sorted(STATES)
     for state in STATES:
+        if state == "other-account":
+            continue
         assert drawn[state] == pattern[state], state
+
+
+def texts(tree: dict) -> list[str]:
+    """Every text of a tree, in order."""
+    found = [tree[k] for k in ("title", "description", "label", "subtitle")
+             if isinstance(tree.get(k), str) and tree[k]]
+    if tree["type"] == "GtkButton":
+        return found  # its label once, not again as the label inside it
+    for child in tree.get("children", ()):
+        found += texts(child)
+    return found
+
+
+CARD = ["Keep an Activity Journal?",
+        ("openExpress can keep a summary and the shape of each activity on this computer, so "
+         "that the Activities page shows your weeks and your year even after the device "
+         "deletes old files. Nothing is sent anywhere. You can turn it off or delete it in "
+         "Preferences."), "Not Now", "Keep a Journal"]
+LINE = ["An activity journal shows your weeks and your year", "Preferences"]
+OTHER_ACCOUNT = [("The activity journal is not kept for a device on another Garmin Connect "
+                  "account")]
+SHOWN_AS_BEFORE = ("loading", "error", "keeps-none")  # no content: nothing added
+
+
+@pytest.mark.parametrize("value", [None, False, True])
+def test_the_journal_adds_its_card_or_its_line_and_nothing_else(tmp_path, backups, monkeypatch,
+                                                                in_warsaw, value):
+    """Not answered: the card on top of the page (not for a device that keeps no activities
+    nor one on another account); no: the line at the very bottom; yes: the page as it was, a
+    device on another account with its own line at the very bottom. Each state's page is
+    otherwise the pattern: types, texts, CSS classes and order."""
+    answer(value)
+    drawn = draw_all(tmp_path, backups, monkeypatch)
+    pattern = json.loads(PATTERN.read_text(encoding="utf-8"))
+    for state in STATES:
+        tree, before = drawn[state], pattern[state]
+        if state in SHOWN_AS_BEFORE or (state == "other-account" and value is None):
+            assert tree == before, state
+            continue
+        groups = tree["groups"]
+        rest = {k: v for k, v in tree.items() if k != "groups"}
+        assert rest == {k: v for k, v in before.items() if k != "groups"}, state
+        if value is None:
+            assert texts(groups[0]) == CARD, state
+            assert groups[1:] == before["groups"], state
+        elif value is False:
+            assert groups[:-1] == before["groups"], state
+            assert texts(groups[-1]) == LINE, state
+        elif state == "other-account":
+            assert groups[:-1] == before["groups"], state
+            assert texts(groups[-1]) == OTHER_ACCOUNT, state
+        else:
+            assert groups == before["groups"], state
 
 
 def test_the_pattern_shows_what_each_state_is():
