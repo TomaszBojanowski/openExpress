@@ -6558,7 +6558,7 @@ msgstr ""
 "openExpress może przechowywać na tym komputerze podsumowanie i kształt "
 "każdej aktywności, aby strona Aktywności pokazywała Twoje tygodnie i Twój "
 "rok także po usunięciu starych plików przez urządzenie. Nic nie jest nigdzie "
-"wysyłane. Możesz go wyłączyć albo usunąć w Preferencjach."
+"wysyłane. Dziennik możesz wyłączyć albo usunąć w Preferencjach."
 
 #. TRANSLATORS: button of the card about the activity journal: the no
 #: openexpress/gui/activities_journal.py
