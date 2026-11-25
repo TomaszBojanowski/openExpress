@@ -239,8 +239,8 @@ def test_the_question_counts_activities_not_lines(in_the_window):
     button = delete_button(group)
     assert button.get_sensitive()
     button.emit("clicked")
-    assert asked == ["The journal of 3 activities is deleted from this computer. Activities "
-                     "the devices no longer keep cannot be read again."]
+    assert asked == [("The journal of 3 activities is deleted from this computer. Activities "
+                      "the devices no longer keep cannot be read again.")]
 
 
 def test_forget_device_counts_activities_not_lines(asked):
