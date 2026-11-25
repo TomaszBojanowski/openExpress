@@ -416,3 +416,61 @@ def test_the_records_are_left_out_of_the_text_of_the_data():
     are not printed with it."""
     data = fit.activity_data(run())
     assert data.samples and "Sample(" not in repr(data) and "latitude" not in repr(data)
+
+
+# What the activity journal keeps of a file besides its page: the model that made it (with the
+# time it was made: the same activity read again), the sub-sport, the device's time zone at
+# the time and the units it shows. Field numbers from the published FIT profile: file_id
+# manufacturer 1 and product 2; session sub_sport 6; activity timestamp 253 and
+# local_timestamp 5; user_profile elev_setting 6, speed_setting 13, dist_setting 14.
+MADE_BY = (FitDefinition(0, 0, ((0, 0x00), (1, 0x84), (2, 0x84), (4, 0x86))),
+           FitData(0, (4, 1, 4532, START)))
+ACTIVITY = FitDefinition(4, 34, ((253, 0x86), (5, 0x86)))
+USER_PROFILE = FitDefinition(5, 3, ((6, 0x00), (13, 0x00), (14, 0x00)))
+TRAIL = 3  # the sub_sport "trail"
+
+
+def journal_run(*, activity=(START + 10, START + 10 + 3600), profile=(1, 0, 1),
+                sub_sports=(TRAIL,)) -> bytes:
+    sessions = [FitData(2, (START, 1, sub, 4000, 4000, 1000, 2, 2500, 2500, 141, 145, 1))
+                for sub in sub_sports]
+    found = [*MADE_BY, USER_PROFILE, FitData(5, profile), RECORD,
+             *[record(s, s * 2.5) for s in range(4)], SESSION, *sessions]
+    if activity is not None:
+        found += [ACTIVITY, FitData(4, activity)]
+    return fit_file(*found)
+
+
+def test_what_the_journal_keeps_besides_the_page():
+    data = fit.activity_data(journal_run())
+    assert (data.created, data.product) == (UNIX, 4532)
+    assert data.sub_sport == TRAIL
+    assert data.utc_offset == 3600  # the device's clock an hour ahead of UTC
+    assert data.units == fit.Units(distance="statute", elevation="statute", speed="metric")
+
+
+def test_what_a_file_does_not_say_is_none():
+    data = fit.activity_data(run())  # no product, activity or user_profile; sub_sport generic
+    assert (data.created, data.product, data.utc_offset, data.units) == (UNIX, None, None, None)
+    assert data.sub_sport == 0
+    data = fit.activity_data(journal_run(profile=(None, None, None), activity=None))
+    assert (data.units, data.utc_offset) == (None, None)
+
+
+def test_several_sessions_of_different_sub_sports_have_none():
+    assert fit.activity_data(journal_run(sub_sports=(TRAIL, TRAIL))).sub_sport == TRAIL
+    assert fit.activity_data(journal_run(sub_sports=(TRAIL, 0))).sub_sport is None
+
+
+@pytest.mark.parametrize("offset,kept", [(-12 * 3600, True), (14 * 3600, True),
+                                          (-12 * 3600 - 60, False), (14 * 3600 + 60, False)])
+def test_an_offset_no_time_zone_has_is_none(offset, kept):
+    """Time zones are UTC-12 to UTC+14: anything further is a clock set wrong, not a zone."""
+    data = fit.activity_data(journal_run(activity=(START, START + offset)))
+    assert data.utc_offset == (offset if kept else None)
+
+
+def test_an_offset_is_rounded_to_the_minute():
+    """local_timestamp and timestamp may be a second apart (written one after the other)."""
+    data = fit.activity_data(journal_run(activity=(START + 10, START + 10 + 7201)))
+    assert data.utc_offset == 7200

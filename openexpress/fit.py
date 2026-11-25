@@ -17,12 +17,14 @@ from openexpress.i18n import _
 FIT_EPOCH_OFFSET = 631065600  # 1989-12-31T00:00:00Z as Unix time
 
 _MESG_FILE_ID = 0
+_FIELD_PRODUCT = 2  # the model that made the file (garmin_product when Garmin made it)
 _FIELD_TIME_CREATED = 4
 # FIT profile: session (one part of an activity; a multisport activity has one per sport)
 _MESG_SESSION = 18
 _SESSION_START_TIME = 2
 _SESSION_START_LAT, _SESSION_START_LONG = 3, 4  # semicircles
 _SESSION_SPORT = 5
+_SESSION_SUB_SPORT = 6
 _SESSION_TIMER_TIME = 8  # milliseconds, pauses left out
 _SESSION_DISTANCE = 9  # centimetres
 _SESSION_ASCENT = 22  # metres
@@ -30,6 +32,15 @@ _SESSION_ASCENT = 22  # metres
 _MESG_RECORD = 20
 _RECORD_LAT, _RECORD_LONG = 0, 1  # semicircles
 _RECORD_ALTITUDE, _RECORD_ENHANCED_ALTITUDE = 2, 78  # metres: value / 5 - 500
+# FIT profile: activity (one for the whole file: its time in UTC and on the device's clock)
+_MESG_ACTIVITY = 34
+_ACTIVITY_LOCAL_TIMESTAMP = 5  # local_date_time
+# FIT profile: user_profile, of it only the units the device shows (display_measure)
+_MESG_USER_PROFILE = 3
+_PROFILE_ELEV_SETTING, _PROFILE_SPEED_SETTING, _PROFILE_DIST_SETTING = 6, 13, 14
+_DISPLAY_MEASURES = {0: "metric", 1: "statute", 2: "nautical"}
+# The time zones there are: UTC-12 to UTC+14.
+_UTC_OFFSETS = range(-12 * 3600, 14 * 3600 + 1)
 # FIT profile: the sport "multisport"
 SPORT_MULTISPORT = 18
 # The field number of a message's time (date_time) in every message of the FIT profile.
@@ -646,6 +657,16 @@ class HeartRateZones:
 
 
 @dataclass(frozen=True)
+class Units:
+    """The units a device shows, as its user_profile says (FIT display_measure: "metric",
+    "statute", "nautical"); None: not said."""
+
+    distance: str | None = None
+    elevation: str | None = None
+    speed: str | None = None
+
+
+@dataclass(frozen=True)
 class ActivityData:
     """What an activity file holds for its page (activity_data): how the file is, what its
     sessions say together, its records and its laps. None: not said."""
@@ -683,6 +704,11 @@ class ActivityData:
     max_respiration: float | None = None
     active_time: float | None = None  # seconds
     rest_time: float | None = None  # seconds: the rest sets of a strength workout
+    created: int | None = None  # file_id's time_created (a Unix time)
+    product: int | None = None  # file_id's product: the model that made the file
+    sub_sport: int | None = None  # the FIT sub_sport its sessions share
+    utc_offset: int | None = None  # seconds the device's clock was ahead of UTC
+    units: Units | None = None  # what its device showed
 
 
 def _scaled(value: Value, scale: int) -> float | None:
@@ -888,11 +914,16 @@ def activity_data(data: bytes) -> ActivityData:
     sessions: list[dict[int, Value]] = []
     zones: list[dict[int, Value]] = []
     sets: list[dict[int, Value]] = []
+    first: dict[int, dict[int, Value]] = {}  # the first file_id, activity and user_profile
     try:
         for num, values in iter_messages(data, wanted=(_MESG_RECORD, _MESG_LAP, _MESG_SESSION,
-                                                       _MESG_TIME_IN_ZONE, _MESG_SET),
+                                                       _MESG_TIME_IN_ZONE, _MESG_SET,
+                                                       _MESG_FILE_ID, _MESG_ACTIVITY,
+                                                       _MESG_USER_PROFILE),
                                          arrays=(_MESG_TIME_IN_ZONE,)):
-            if num == _MESG_RECORD:
+            if num in (_MESG_FILE_ID, _MESG_ACTIVITY, _MESG_USER_PROFILE):
+                first.setdefault(num, values)
+            elif num == _MESG_RECORD:
                 sample = _sample(values)
                 if sample is not None:
                     samples.append(sample)
@@ -908,8 +939,44 @@ def activity_data(data: bytes) -> ActivityData:
         if state is FileState.WHOLE:
             state = FileState.DAMAGED
     together = {**_sessions_together(sessions), **_temperatures(samples)}
+    file_id = first.get(_MESG_FILE_ID, {})
     return ActivityData(state, samples=tuple(samples), laps=tuple(laps), zones=_zones(zones),
-                        rest_time=_rest_time(sets), **together)
+                        rest_time=_rest_time(sets), created=_unix_time(
+                            file_id.get(_FIELD_TIME_CREATED)),
+                        product=_whole_number(file_id.get(_FIELD_PRODUCT)),
+                        sub_sport=_sub_sport(sessions),
+                        utc_offset=_utc_offset(first.get(_MESG_ACTIVITY)),
+                        units=_units(first.get(_MESG_USER_PROFILE)), **together)
+
+
+def _sub_sport(sessions: list[dict[int, Value]]) -> int | None:
+    """The sub-sport the sessions share; None when they have several or none gives one."""
+    found = {_whole_number(s.get(_SESSION_SUB_SPORT)) for s in sessions} - {None}
+    return found.pop() if len(found) == 1 else None
+
+
+def _utc_offset(activity: dict[int, Value] | None) -> int | None:
+    """How far the device's clock was ahead of UTC when it wrote the activity message (its
+    local_timestamp less its timestamp, to the minute); None when not said, or further than
+    any time zone (a clock set wrong)."""
+    if activity is None:
+        return None
+    local = _whole_number(activity.get(_ACTIVITY_LOCAL_TIMESTAMP))
+    utc = _whole_number(activity.get(FIELD_TIMESTAMP))
+    if local is None or utc is None:
+        return None
+    offset = round((local - utc) / 60) * 60
+    return offset if offset in _UTC_OFFSETS else None
+
+
+def _units(profile: dict[int, Value] | None) -> Units | None:
+    """The units of the user_profile; None when it says none."""
+    if profile is None:
+        return None
+    units = Units(*(_DISPLAY_MEASURES.get(_whole_number(profile.get(number)))
+                    for number in (_PROFILE_DIST_SETTING, _PROFILE_ELEV_SETTING,
+                                   _PROFILE_SPEED_SETTING)))
+    return None if units == Units() else units
 
 
 # FIT profile: workout (sport, num_valid_steps, wkt_name), course (sport, name) and schedule
