@@ -1,7 +1,9 @@
 """The widget tree of the Activities page in each of its states (types, texts, CSS classes,
 order), against a pattern the page drew before the activity journal existed
 (tests/data/activities_page_tree.json). Whatever the journal adds to the page is checked
-against this pattern: nothing of the page as it was may change.
+against this pattern: nothing of the page as it was may change. Drawn a second time in the
+window it was drawn in (plugged in again, Try Again, the answer changed, another device, more
+rows shown), the page is the page a fresh window draws.
 Made-up files only; a folder stands for the device. To draw the pattern again (only on the
 commit it comes from, e.g. after an update of libadwaita changed its inner widgets):
 OPENEXPRESS_WRITE_PAGE_TREE=1 python3 -m pytest -q -p no:cacheprovider tests/test_activities_page_tree.py
@@ -16,7 +18,7 @@ from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML
-from fakes import FIT_EPOCH, fit_activity, page_window, window_methods
+from fakes import FIT_EPOCH, descendants, fit_activity, page_window, window_methods
 
 pytestmark = [pytest.mark.needs_display, pytest.mark.journal_answer]
 
@@ -85,15 +87,20 @@ def page_tree(section) -> dict:
 
 def write_device(folder: Path, files: dict[str, bytes], xml: str = DEVICE_XML):
     """A folder as a device with these activity files, the newest last: its session."""
-    from openexpress.device.storage import LocalStorage
-    from openexpress.device.xmldevice import parse
-
     activity = folder / "GARMIN" / "Activity"
     activity.mkdir(parents=True)
     (folder / "GARMIN" / "GarminDevice.xml").write_text(xml)
     for n, (name, data) in enumerate(files.items()):
         (activity / name).write_bytes(data)
         os.utime(activity / name, (1_000 + n, 1_000 + n))
+    return session_of(folder)
+
+
+def session_of(folder: Path):
+    """The session of a folder written as a device (write_device)."""
+    from openexpress.device.storage import LocalStorage
+    from openexpress.device.xmldevice import parse
+
     storage = LocalStorage(folder)
     return types.SimpleNamespace(device=parse(storage.read("GARMIN/GarminDevice.xml")),
                                  storage=storage, logged_in=True, ownership_error=None,
@@ -125,6 +132,7 @@ A_WEEK = {
     "2026-10-28-07-00-00.fit": run(28, cut=40),
     "2026-10-29-07-00-00.fit": run(29),
 }
+MORE = {f"2026-09-{n:02}-07-00-00.fit": run(1) for n in range(1, 32)}  # a page and one more
 IN_A_BACKUP = {"2025-09-14-09-00-00.fit": fit_activity(unix(2025, 9, 14, 9, 0) - FIT_EPOCH,
                                                        sport=2, records=2, position=WARSAW),
                "2026-10-24-07-00-00.fit": run(24)}
@@ -141,8 +149,7 @@ def draw(state: str, folder: Path, backups: Path, monkeypatch):
         win.session = write_device(folder, A_WEEK)
         section.show("loading")
         return win, section
-    files = {"none": {}, "only-in-backups": {},
-             "more": {f"2026-09-{n:02}-07-00-00.fit": run(1) for n in range(1, 32)}}
+    files = {"none": {}, "only-in-backups": {}, "more": MORE}
     xml = (DEVICE_XML.replace("<Name>FIT_TYPE_4</Name>", "<Name>FIT_TYPE_999</Name>")
            if state == "keeps-none" else DEVICE_XML)
     win.session = write_device(folder, files.get(state, A_WEEK), xml)
@@ -283,3 +290,113 @@ def test_the_pattern_shows_what_each_state_is():
     assert "No Activities" in json.dumps(pattern["none"], ensure_ascii=False)
     # The page is the same over USB as a drive, off the account and logged out (no backups).
     assert pattern["drive"] == pattern["other-account"] == pattern["logged-out"]
+
+
+# --- drawn again in one window ---------------------------------------------------------------
+
+def page_of(session):
+    """A fresh window with the Activities page of `session`, drawn: the stand-in and the page."""
+    win, section = page_window("activities")
+    window_methods(win, [*PAGE_METHODS, "_clear_device_pages"])
+    win.progress = lambda _step: None
+    win._update_banner = win._update_actions = lambda: None
+    win.session = session
+    win.load_activities()
+    return win, section
+
+
+def click(section, words: str) -> None:
+    from gi.repository import Gtk
+
+    (found,) = [w for g in section.groups for w in descendants(g)
+                if isinstance(w, Gtk.Button) and w.get_label() == words]
+    found.emit("clicked")
+
+
+def says(section, words: str) -> bool:
+    return words in json.dumps(page_tree(section), ensure_ascii=False)
+
+
+@pytest.mark.parametrize("value", [None, False, True])
+def test_each_state_drawn_again_in_its_window_is_the_same(tmp_path, backups, monkeypatch,
+                                                         in_warsaw, value):
+    """Each state drawn a second time in the same window (plugged in again, Try Again, the page
+    chosen again): the same tree. The reading itself ("loading") is never drawn twice."""
+    import shutil
+
+    answer(value)
+    for state in STATES:
+        win, section = draw(state, tmp_path / state, backups, monkeypatch)
+        first = page_tree(section)
+        if state != "loading":
+            win.load_activities()
+        assert page_tree(section) == first, state
+        if state in ("rows", "only-in-backups"):
+            shutil.rmtree(backups)
+
+
+@pytest.mark.parametrize("value", [None, False, True])
+def test_a_short_list_then_more_than_a_page(tmp_path, monkeypatch, in_warsaw, value):
+    """A week of activities, then more than a page of them on the same device (Refresh): the
+    page a fresh window draws, with its Show N More."""
+    answer(value)
+    folder = tmp_path / "device"
+    win, section = page_of(write_device(folder, A_WEEK))
+    for n, (name, data) in enumerate(MORE.items()):
+        (folder / "GARMIN" / "Activity" / name).write_bytes(data)
+        os.utime(folder / "GARMIN" / "Activity" / name, (2_000 + n, 2_000 + n))
+    win.load_activities()
+    _fresh, fresh = page_of(session_of(folder))
+    assert page_tree(section) == page_tree(fresh)
+    assert says(section, "Show 7 More")
+
+
+@pytest.mark.parametrize("value", [None, False, True])
+def test_one_device_then_another_in_one_window(tmp_path, monkeypatch, in_warsaw, value):
+    """A watch with more than a page of activities, unplugged, then a bike computer that is a
+    USB drive, also with more than a page: its page is the one a fresh window draws."""
+    answer(value)
+    win, section = page_of(write_device(tmp_path / "watch", MORE))
+    edge = write_device(tmp_path / "edge", {**A_WEEK, **MORE})
+    edge.mass_storage = True
+    win.session = edge
+    win._clear_device_pages()  # what the window does for the device plugged in now
+    win.load_activities()
+    again = session_of(tmp_path / "edge")
+    again.mass_storage = True
+    _fresh, fresh = page_of(again)
+    assert page_tree(section) == page_tree(fresh)
+    assert says(section, "Show 7 More")
+
+
+def test_the_answer_changed_with_the_page_shown(tmp_path, backups, monkeypatch, in_warsaw):
+    """No, then yes, then no again, with the page of each state shown (the preferences' switch
+    and the card draw it again so): after each the page a fresh window draws."""
+    import shutil
+
+    from openexpress.gui.activities_journal import journal_changed
+
+    for state in STATES:
+        answer(False)
+        shutil.rmtree(backups, ignore_errors=True)
+        win, section = draw(state, tmp_path / state / "first", backups, monkeypatch)
+        for value in (True, False):
+            answer(value)
+            journal_changed(win)
+            shutil.rmtree(backups, ignore_errors=True)
+            _fresh, fresh = draw(state, tmp_path / state / str(value), backups, monkeypatch)
+            assert page_tree(section) == page_tree(fresh), (state, value)
+
+
+@pytest.mark.parametrize("value", [None, False, True])
+def test_show_more_clicked_then_drawn_again(tmp_path, monkeypatch, in_warsaw, value):
+    """Show N More clicked, then the page drawn again (plugged in again, Try Again): as many
+    rows as were shown, the button for the rest and the line where they were."""
+    answer(value)
+    many = {f"2026-08-{n % 28 + 1:02}-{n // 28:02}-00-00.fit": run(1) for n in range(61)}
+    win, section = page_of(write_device(tmp_path / "device", many))
+    click(section, "Show 30 More")
+    shown = page_tree(section)
+    assert says(section, "Show 1 More")
+    win.load_activities()
+    assert page_tree(section) == shown
