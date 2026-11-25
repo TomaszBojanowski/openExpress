@@ -1685,10 +1685,23 @@ def cmd_sync(args) -> int:
             _print_sync_steps(done, dev.unit_id)
         raise
     code = _print_sync_result(summary, dev.unit_id)
+    _journal_after_sync(args, session)
     # A drive the sync wrote to is ejected, so that the watch takes the files.
     if st.mass_storage and summary.wrote_to_device and not _eject_drive(st, files=True):
         return 1  # the cable must stay in
     return code
+
+
+def _journal_after_sync(args, session) -> None:
+    """After `sync --apply`: the device's activity journal brought up to date, when it is kept
+    (activity_journal.at_connection); a folder given by --path is no connection, as for the
+    device log."""
+    from openexpress import activity_journal
+
+    if args.path:
+        return
+    activity_journal.at_connection(session.device, session.storage,
+                                   getattr(session, "ownership_error", None))
 
 
 def _print_sync_plan(plan, client, drive: bool, makers) -> None:

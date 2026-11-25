@@ -46,6 +46,30 @@ def path(unit_id: int, test_drive: bool = False) -> Path:
     return records_dir(unit_id, test_drive) / NAME
 
 
+def answered() -> bool | None:
+    """The user's answer as settings.json keeps it: True the yes, False the no, None not
+    answered yet (also when the settings cannot be read)."""
+    from openexpress.settings import Settings, SetupError
+
+    try:
+        return Settings.load().activity_journal
+    except (OSError, SetupError):
+        return None
+
+
+def kept() -> bool:
+    """Whether journals are kept: only after the yes."""
+    return answered() is True
+
+
+def on_another_account(ownership_error) -> bool:
+    """Whether the device is known to be on another Garmin Connect account than the one
+    logged in. Logged out, or the account's list not read: not known, so no."""
+    from openexpress.connect import NotAccountDevice
+
+    return isinstance(ownership_error, NotAccountDevice)
+
+
 # --- an activity's line ------------------------------------------------------------------------
 
 def shape(samples) -> dict | None:
@@ -179,11 +203,15 @@ def entry(data: fit.ActivityData, name: str, size: int, source: str,
 
 
 def connection(now: datetime, on_device: int, oldest: int | None,
-               newest: int | None) -> dict:
+               newest: int | None, conn: str | None = None) -> dict:
     """The line of a connection: how many activities the device held, the start of its oldest
-    and newest the journal knows."""
-    return {"v": VERSION, "kind": "connection", "at": now.astimezone().isoformat(
+    and newest the journal knows; `conn`: what tells this connection from the next one
+    (history.connection_key), so that it has one line whoever reads it."""
+    line = {"v": VERSION, "kind": "connection", "at": now.astimezone().isoformat(
         timespec="seconds"), "on_device": on_device, "oldest": oldest, "newest": newest}
+    if conn is not None:
+        line["conn"] = conn
+    return line
 
 
 # --- the file ------------------------------------------------------------------------------
@@ -207,7 +235,8 @@ def valid(raw: str) -> dict | None:
         return None
     if item.get("kind") == "connection":
         ok = (isinstance(item.get("at"), str) and _count(item.get("on_device"))
-              and _time(item.get("oldest")) and _time(item.get("newest")))
+              and _time(item.get("oldest")) and _time(item.get("newest"))
+              and isinstance(item.get("conn", ""), str))
     elif item.get("kind") == "activity":
         file = item.get("file")
         ok = (isinstance(item.get("key"), str) and isinstance(file, dict)
@@ -348,14 +377,40 @@ class Added:
     seconds: float = 0.0
 
 
+def at_connection(device, storage, ownership_error=None, backups: Path | None = None,
+                  now: datetime | None = None) -> Added | None:
+    """The journal of a device just connected brought up to date (add), when it is kept: after
+    the yes (settings.json), for a device that keeps activities, not on another Garmin Connect
+    account (ownership_error, as the session found it). Otherwise None: nothing read, nothing
+    written. The journal is a side line: a failure is one line of the program's log, never an
+    error of what connected the device (a device that stopped responding still says so)."""
+    from openexpress import activities, history
+    from openexpress.device.storage import DeviceNotResponding
+
+    if not kept() or on_another_account(ownership_error) or not activities.keeps_activities(
+            device):
+        return None
+    try:
+        return add(device, storage, backups if backups is not None else
+                   paths.default_backup_dir(), now=now,
+                   test_drive=bool(getattr(storage, "test_drive", False)), keep_going=kept,
+                   conn=history.connection_key(device, storage))
+    except DeviceNotResponding:
+        raise
+    except Exception as e:  # noqa: BLE001 - a side line: never a failed connection
+        log.info("activity journal: not written (%s)", type(e).__name__)
+        return None
+
+
 def add(device, storage, backups: Path | None, *, now: datetime | None = None,
         test_drive: bool = False, keep_going: Callable[[], bool] = lambda: True,
-        read_file: Callable | None = None) -> Added:
+        read_file: Callable | None = None, conn: str | None = None) -> Added:
     """The activity files of `device` (on `storage`, and of its backups in `backups`) that the
     journal does not have yet read and added, each line written as soon as it is read (a
-    device unplugged meanwhile loses nothing written), then the line of this connection. Stops
-    between two files when `keep_going()` says no (the journal turned off). An error of the
-    device passes on (DeviceError). One line of the program's log: numbers and times only."""
+    device unplugged meanwhile loses nothing written), then the line of this connection
+    (`conn`: none when its last line is of the same connection already). Stops between two
+    files when `keep_going()` says no (the journal turned off). An error of the device passes
+    on (DeviceError). One line of the program's log: numbers and times only."""
     from openexpress import activities
     from openexpress.device import whole_reads
 
@@ -398,8 +453,9 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
         did.added += 1
     starts = [known[(a.name.casefold(), a.size)]["start"] for a in found.listing
               if a.source is activities.Source.DEVICE and (a.name.casefold(), a.size) in known]
-    _append(where, connection(now, did.on_device, min(starts, default=None),
-                              max(starts, default=None)))
+    if conn is None or not journal.connections or journal.connections[-1].get("conn") != conn:
+        _append(where, connection(now, did.on_device, min(starts, default=None),
+                                  max(starts, default=None), conn))
     did.seconds = time.monotonic() - started
     log.info("activity journal: %d added, %d on the device, %d not whole, %.1f s (%s read)",
              did.added, did.on_device, did.not_whole, did.seconds, applog.size(size))

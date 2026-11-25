@@ -17,7 +17,7 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import history, last_sync, service  # noqa: E402
+from openexpress import activity_journal, history, last_sync, service  # noqa: E402
 from openexpress.background import watch_id  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
@@ -185,6 +185,8 @@ class Watcher(Gio.Application):
                 summary = service.run_sync(s, progress=nothing)
             finally:
                 self._session = None
+            # After the sync: the device's activity journal, when it is kept.
+            activity_journal.at_connection(s.device, s.storage, s.ownership_error)
             # The words of the row under "Last Sync", as last_sync.describe tells them.
             body = last_sync.describe(summary.record(s.device.unit_id)).notification
             # TRANSLATORS: title of a notification of the background sync, over what it did
