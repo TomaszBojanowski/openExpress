@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 00:02+0100\n"
-"PO-Revision-Date: 2026-11-24 19:08+0000\n"
+"POT-Creation-Date: 2026-11-25 00:09+0100\n"
+"PO-Revision-Date: 2026-11-25 14:55+0000\n"
 "Last-Translator: prajzner <prajzner@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/openexpress/"
 "openexpress/cs/>\n"
@@ -12136,7 +12136,7 @@ msgstr "aktualizace není nabízena v zemi vašeho účtu"
 #: openexpress/maps.py
 #, python-brace-format
 msgid "newer than version {version} Garmin offers"
-msgstr ""
+msgstr "novější než verze {version} nabízená Garminem"
 
 #. TRANSLATORS: map status (Garmin does not offer it in the account's country)
 #: openexpress/maps.py
@@ -12369,6 +12369,9 @@ msgid ""
 "version {version} Garmin offers. Installing it would replace the newer "
 "version with the older one."
 msgstr ""
+"Mapu „{name}“ nelze nainstalovat, protože zařízení obsahuje novější verzi, "
+"než je verze {version} nabízená Garminem. Instalace by nahradila novější "
+"verzi mapy starší."
 
 #: openexpress/maps.py
 #, python-brace-format
