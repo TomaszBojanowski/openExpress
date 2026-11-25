@@ -459,6 +459,11 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
         if line is None:
             did.not_whole += 1
             continue
+        if not keep_going():  # turned off while this file was read: not written
+            log.info("activity journal: stopped after %d added (%.1f s)", did.added,
+                     time.monotonic() - started)
+            did.seconds = time.monotonic() - started
+            return did
         if _deleted_meanwhile(where, existed or did.added > 0, did, started):
             return did
         _append(where, line)

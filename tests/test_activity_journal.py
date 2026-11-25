@@ -269,7 +269,9 @@ def test_turned_off_meanwhile_it_stops_and_keeps_what_was_written(tmp_path, back
     from openexpress import activity_journal as journal
 
     found = on_device(tmp_path / "device", dict(THREE))
-    answers = iter([True, False])
+    # Asked before each file is read and again before it is written: the first read and
+    # written, the second read while it was turned off, so not written.
+    answers = iter([True, True, True, False])
     did = journal.add(found.device, found.storage, backups, now=SEEN,
                       keep_going=lambda: next(answers))
     assert did.added == 1

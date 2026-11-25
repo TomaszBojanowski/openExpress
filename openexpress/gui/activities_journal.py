@@ -26,13 +26,14 @@ from openexpress.i18n import _  # noqa: E402
 log = logging.getLogger(__name__)
 
 
-def read_journal(win) -> None:
+def read_journal(win, again: bool = False) -> None:
     """The open device's activity journal brought up to date in the background, once a session
     (after its diagnostics are read: device_page.read_diagnostics), when it is kept: after the
     user's yes, never for a device on another Garmin Connect account. Before the yes and after
-    a no nothing starts. The page does not change with it."""
+    a no nothing starts. `again`: also when it was read this session (the yes given again in
+    the preferences: what a reading turned off left out). The page does not change with it."""
     s = win.session
-    if s is None or not activity_journal.kept() or s.journal_read:
+    if s is None or not activity_journal.kept() or (s.journal_read and not again):
         return
     if activity_journal.on_another_account(s.ownership_error):
         return

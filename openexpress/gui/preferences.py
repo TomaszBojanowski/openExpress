@@ -22,7 +22,7 @@ from gi.repository import Adw, GLib, Gtk  # noqa: E402 - imports must follow gi.
 from openexpress import activity_journal, cache, diagnostics, i18n, paths, service  # noqa: E402
 from openexpress.auth import sso, store  # noqa: E402
 from openexpress.gui import activity_map  # noqa: E402
-from openexpress.gui.activities_journal import journal_changed  # noqa: E402
+from openexpress.gui.activities_journal import journal_changed, read_journal  # noqa: E402
 from openexpress.gui.connected import open_address  # noqa: E402
 from openexpress.gui.gui_settings import update_gui_settings  # noqa: E402
 from openexpress.gui.navigation import Cause  # noqa: E402
@@ -88,7 +88,8 @@ def journal_group(win) -> Adw.PreferencesGroup:
     as `setup --activity-journal`; off until answered) and the deletion of every device's
     journal, after a question. A change that cannot be saved puts the switch back and says why
     (switch_saved); turned off, a toast says what it holds stays. The Activities page shown is
-    drawn again as the answer has it (its card, its line)."""
+    drawn again as the answer has it (its card, its line); turned on with a device open, that
+    device is read at once (read_journal), as after the card's yes."""
     # TRANSLATORS: group in the preferences: what openExpress keeps of each activity on this
     # computer, so that the Activities page can show it after the device deleted its file
     g = Adw.PreferencesGroup(title=_("Activity Journal"))
@@ -113,6 +114,8 @@ def journal_group(win) -> Adw.PreferencesGroup:
             win.toast(_("Activity journal turned off; what it holds stays until you delete it"),
                       on_preferences=True)
         journal_changed(win)
+        if on:  # the device open now is read at once, as after the card's yes
+            read_journal(win, again=True)
 
     sw.connect("notify::active", toggled)
     g.add(sw)
