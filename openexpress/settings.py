@@ -70,6 +70,9 @@ class Settings:
     # A copy of the device's diagnostic files at each connection (diagnostics.py); off
     # unless chosen, and nothing of it is ever sent.
     diagnostics_copy: bool = False
+    # The activity journal (activity_journal.py): None until the user answers (the field is not
+    # written then), True is the yes to it, False the no.
+    activity_journal: bool | None = None
 
     def __post_init__(self) -> None:
         self._extra: dict = {}
@@ -142,6 +145,8 @@ class Settings:
         data.update(asdict(self))
         if not self.chosen_locale:
             del data["chosen_locale"]  # no choice: the system decides at every start
+        if self.activity_journal is None:
+            del data["activity_journal"]  # not answered: the question is still open
         paths.write_private(
             path,
             json.dumps(data, indent=2),

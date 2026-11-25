@@ -229,7 +229,11 @@ def cmd_setup(args) -> int:
         settings.chosen_locale = args.locale
     if args.diagnostics_copy:
         settings.diagnostics_copy = args.diagnostics_copy == "on"
+    if args.activity_journal:
+        settings.activity_journal = args.activity_journal == "on"
     settings.save()  # keeps the keys of the others, ui_language among them
+    if args.activity_journal:
+        log.info("activity journal: %s", args.activity_journal)
     if args.ui_language:
         ui_language = "" if args.ui_language == "system" else args.ui_language
         i18n.save_ui_language(ui_language)
@@ -245,6 +249,9 @@ def cmd_setup(args) -> int:
             else _("system language")))
     if args.diagnostics_copy:
         print(_diagnostics_copy_text(settings.diagnostics_copy))
+    if args.activity_journal:
+        print(_("Activity journal: on") if settings.activity_journal
+              else _("Activity journal: off"))
     return 0
 
 
@@ -824,11 +831,16 @@ def cmd_activities(args) -> int:
     each, the device's before those only in a backup; nothing is written."""
     from openexpress import activities
 
+    journal = args.activities_cmd == "journal"
+    if journal and args.journal_all:
+        return _journal_command(args, None, None)
     st, dev = open_device(args)
     # TRANSLATORS: first line of `openexpress activities` and `sync`: {device} the device's name,
     # {version} its software version
     print(_("{device}, software {version}").format(
         device=dev.description, version=dev.software_version_str))
+    if journal:
+        return _journal_command(args, dev, st)
     exporting = args.activities_cmd == "export"
     if not activities.keeps_activities(dev):
         print(_("This device keeps no activities."))
@@ -856,6 +868,95 @@ def cmd_activities(args) -> int:
     if only_in_backups:
         words.append(_("Only in backups: {count}.").format(count=only_in_backups))
     print("\n" + " ".join(words))
+    return 0
+
+
+def _journal_lines(found) -> list[str]:
+    """What a journal (activity_journal.Journal) holds, in words: how many activities since
+    when and its size, then its gaps."""
+    from openexpress import i18n
+
+    count, oldest = len(found.activities), found.oldest()
+    if oldest is None:
+        # TRANSLATORS: `openexpress activities journal`: a journal of a device that has no
+        # activity in it yet
+        lines = [_("No activities yet")]
+    else:
+        # TRANSLATORS: `openexpress activities journal`: {date} the start of its oldest activity
+        lines = [ngettext("{count} activity since {date}", "{count} activities since {date}",
+                          count).format(count=count, date=time.strftime(
+                              _("%Y-%m-%d"), time.localtime(oldest)))]
+    lines[0] += " · " + i18n.human_size(found.size)
+    gaps = found.gaps()
+    if not gaps:
+        # TRANSLATORS: `openexpress activities journal`: no span whose activities the device
+        # may have deleted before the journal read them
+        lines.append(_("No gaps"))
+    for start, end in gaps:
+        # TRANSLATORS: `openexpress activities journal`: a span whose activities the device may
+        # have deleted before the journal read them
+        lines.append(_("Not known: {start} to {end}").format(
+            start=time.strftime(_("%Y-%m-%d"), time.localtime(start)),
+            end=time.strftime(_("%Y-%m-%d"), time.localtime(end))))
+    return lines
+
+
+def _journal_command(args, dev, st) -> int:
+    """`activities journal`: the journal of the connected device (`dev` on `st`), or with --all
+    every journal on this computer; --delete deletes it (a dry run without --apply). Nothing
+    is added to a journal here."""
+    from openexpress import activity_journal, known_devices
+
+    if args.journal_all:
+        found = activity_journal.journals()
+        known = known_devices.load()
+
+        def name(where) -> str:
+            folder = where.parent.parent if where.parent.name == "test-drive" else where.parent
+            entry = known.get(int(folder.name)) if folder.name.isdigit() else None
+            # TRANSLATORS: `openexpress activities journal --all`: the journal of a device that
+            # this installation no longer remembers
+            return entry.shown_name() if entry else _("A device not remembered")
+    else:
+        where = activity_journal.path(dev.unit_id, getattr(st, "test_drive", False))
+        found = [where] if where.is_file() else []
+
+        def name(_where) -> str:
+            return dev.description
+    if not found:
+        print(_("No activity journal on this computer.") if args.journal_all
+              else _("No activity journal of this device."))
+        return 0
+    if args.delete:
+        count = sum(activity_journal.count(p) for p in found)
+        if not args.apply:
+            print(ngettext("Would delete every activity journal on this computer: {count} "
+                           "activity.", "Would delete every activity journal on this computer: "
+                           "{count} activities.", count).format(count=count)
+                  if args.journal_all else
+                  ngettext("Would delete the activity journal of {device}: {count} activity.",
+                           "Would delete the activity journal of {device}: {count} activities.",
+                           count).format(device=dev.description, count=count))
+            print(_("Dry run: nothing was deleted. Add --apply to delete it."))
+            return 0
+        count = activity_journal.delete(found)
+        print(ngettext("Deleted every activity journal on this computer: {count} activity.",
+                       "Deleted every activity journal on this computer: {count} activities.",
+                       count).format(count=count)
+              if args.journal_all else
+              ngettext("Deleted the activity journal of {device}: {count} activity.",
+                       "Deleted the activity journal of {device}: {count} activities.",
+                       count).format(device=dev.description, count=count))
+        return 0
+    for where in found:
+        lines = _journal_lines(activity_journal.read(where))
+        if args.journal_all:
+            print(f"{name(where)}: {lines[0]}")
+            for line in lines[1:]:
+                print(f"  {line}")
+        else:
+            for line in lines:
+                print(line)
     return 0
 
 
@@ -3747,6 +3848,11 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("--diagnostics-copy", choices=("on", "off"),
                    help=_("copy the device's diagnostic files to this computer at each "
                           "connection in the window (never sent)"))
+    # TRANSLATORS: help of `openexpress setup --activity-journal on|off`; "on" is the user's yes
+    s.add_argument("--activity-journal", choices=("on", "off"),
+                   help=_("keep an activity journal: a summary and the shape of each activity "
+                          "stay on this computer, also after the device deletes its file "
+                          "(\"on\" is your yes to it; nothing is sent)"))
     s.set_defaults(func=cmd_setup, _parser=s)
 
     s = sub.add_parser("report", help=_("device report for GitHub, without serial numbers"))
@@ -3788,6 +3894,15 @@ def build_parser() -> argparse.ArgumentParser:
                    help=_("folder for the GPX files (default: {path})").format(
                        path=paths.shown_path(paths.default_gpx_dir())))
     m.add_argument("--backups", dest="export_backups", metavar="DIR", help=backups_help)
+    # TRANSLATORS: help of `openexpress activities journal`: what the program keeps of the
+    # activities of the device (Preferences: "Activity Journal")
+    j = asub.add_parser("journal", help=_("the activity journal of the connected device: how "
+                                          "many activities, since when, the gaps, its size"))
+    j.add_argument("--all", dest="journal_all", action="store_true",
+                   help=_("every activity journal on this computer"))
+    j.add_argument("--delete", action="store_true",
+                   help=_("delete the activity journal (with --all: every one)"))
+    j.add_argument("--apply", action="store_true", help=_("with --delete: delete it"))
     m.add_argument("--apply", action="store_true", help=_("write the GPX files"))
     s.set_defaults(func=cmd_activities)
 
