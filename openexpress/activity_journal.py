@@ -402,6 +402,17 @@ def at_connection(device, storage, ownership_error=None, backups: Path | None = 
         return None
 
 
+def _deleted_meanwhile(where: Path, was_there: bool, did: Added, started: float) -> bool:
+    """Whether the journal was deleted while it was being read into (Delete the Activity
+    Journal, Forget Device): then the reading stops, and the journal is not made again."""
+    if not was_there or where.exists():
+        return False
+    did.seconds = time.monotonic() - started
+    log.info("activity journal: deleted meanwhile, stopped after %d added (%.1f s)", did.added,
+             did.seconds)
+    return True
+
+
 def add(device, storage, backups: Path | None, *, now: datetime | None = None,
         test_drive: bool = False, keep_going: Callable[[], bool] = lambda: True,
         read_file: Callable | None = None, conn: str | None = None) -> Added:
@@ -418,6 +429,7 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
     now = now or datetime.now()
     where = path(device.unit_id, test_drive)
     journal = read(where)
+    existed = where.exists()
     known = journal.files
     found = activities.DeviceActivities(device, storage, backups)
     found.list_files()
@@ -447,12 +459,16 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
         if line is None:
             did.not_whole += 1
             continue
+        if _deleted_meanwhile(where, existed or did.added > 0, did, started):
+            return did
         _append(where, line)
         known[(a.name.casefold(), a.size)] = line
         journal.activities[line["key"]] = line
         did.added += 1
     starts = [known[(a.name.casefold(), a.size)]["start"] for a in found.listing
               if a.source is activities.Source.DEVICE and (a.name.casefold(), a.size) in known]
+    if _deleted_meanwhile(where, existed or did.added > 0, did, started):
+        return did
     if conn is None or not journal.connections or journal.connections[-1].get("conn") != conn:
         _append(where, connection(now, did.on_device, min(starts, default=None),
                                   max(starts, default=None), conn))

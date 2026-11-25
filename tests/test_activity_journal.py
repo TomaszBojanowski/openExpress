@@ -277,6 +277,22 @@ def test_turned_off_meanwhile_it_stops_and_keeps_what_was_written(tmp_path, back
     assert len(kept.activities) == 1 and kept.connections == []
 
 
+def test_deleted_meanwhile_the_reading_stops_and_writes_nothing_more(tmp_path, backups):
+    """Delete the Activity Journal while the first filling runs: the reading stops at the next
+    file; the journal is not made again with the rest."""
+    from openexpress import activity_journal as journal
+
+    found = on_device(tmp_path / "device", dict(THREE))
+    reads, read_file = counted_reads(found)
+
+    def deleting(a):
+        if len(reads) == 1:
+            journal.delete([journal.path(UNIT_ID)])
+        return read_file(a)
+    did = journal.add(found.device, found.storage, backups, now=SEEN, read_file=deleting)
+    assert did.added == 1 and not journal.path(UNIT_ID).exists()
+
+
 def test_a_device_that_stops_answering_keeps_what_was_written(tmp_path, backups):
     from openexpress import activity_journal as journal
     from openexpress.device.storage import DeviceError
