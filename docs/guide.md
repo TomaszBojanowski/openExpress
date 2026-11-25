@@ -268,7 +268,9 @@ is only marked.
 
 Under the device's free space, **Maps use** is what the files of its maps take there, a file
 several maps use counted once; while a folder of them cannot be read, the size is left out. A map
-with an update names the version offered and what the update downloads.
+with an update names the version offered and what the update downloads. A map that is newer on the
+device than the version Garmin offers says so, and `openexpress maps install` does not replace it with
+the older one.
 
 On a car navigator that keeps its maps in the folder it hides from the file manager
 (`.System/Map`), the Maps page shows them as read over that direct USB connection (see
