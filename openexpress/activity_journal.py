@@ -311,27 +311,70 @@ def read(where: Path) -> Journal:
     return found
 
 
-def _append(where: Path, line: dict) -> None:
+@dataclass
+class _Written:
+    """What a journal holds, as one reading of it last looked under the lock: the keys of its
+    activities, the connection of its last connection line, and how far the file was read."""
+
+    offset: int = 0
+    keys: set[str] = field(default_factory=set)
+    conn: str | None = None
+
+    @classmethod
+    def of(cls, journal: Journal) -> _Written:
+        last = journal.connections[-1].get("conn") if journal.connections else None
+        return cls(journal.size, set(journal.activities), last)
+
+    def take(self, item: dict) -> None:
+        if item["kind"] == "activity":
+            self.keys.add(item["key"])
+        else:
+            self.conn = item.get("conn")
+
+
+def _append(where: Path, line: dict, written: _Written) -> bool:
     """One line added at the end of the journal (made 0600 when it is new), under the lock of
-    the device records (Forget Device takes it too)."""
+    the device records (Forget Device takes it too), unless it is there already: under the same
+    lock, what others added since this reading last looked (the window and a background sync
+    of one connection) is read first, and an activity of a key written, or the line of the
+    connection written last, is not written again. True when it was written."""
     from openexpress.history import records_locked
 
-    text = json.dumps(line, ensure_ascii=False, sort_keys=True) + "\n"
     with records_locked():
+        last = b"\n"
         try:
             with open(where, "rb") as f:
-                f.seek(0, os.SEEK_END)
-                if f.tell():
-                    f.seek(-1, os.SEEK_END)
-                    if f.read(1) != b"\n":
-                        text = "\n" + text  # a write cut short: its piece a line of its own
+                size = os.fstat(f.fileno()).st_size
+                if size < written.offset:  # made anew meanwhile: all of it is new
+                    written.offset, written.keys, written.conn = 0, set(), None
+                f.seek(written.offset)
+                new = f.read()
+                if size:
+                    f.seek(size - 1)
+                    last = f.read(1)
         except FileNotFoundError:
-            pass
+            size, new = 0, b""
+            written.offset, written.keys, written.conn = 0, set(), None
+        for _raw, item in _lines(new):
+            if item is not None:
+                written.take(item)
+        written.offset = size
+        if line["kind"] == "activity" and line["key"] in written.keys:
+            return False
+        if line["kind"] == "connection" and line.get("conn") is not None \
+                and line["conn"] == written.conn:
+            return False
+        text = json.dumps(line, ensure_ascii=False, sort_keys=True) + "\n"
+        if last != b"\n":
+            text = "\n" + text  # a write cut short: its piece a line of its own
         paths.make_dir(where.parent)
         fd = os.open(where, os.O_WRONLY | os.O_CREAT | os.O_APPEND, 0o600)
         with os.fdopen(fd, "a", encoding="utf-8") as f:
             os.fchmod(fd, 0o600)
             f.write(text)
+        written.offset = size + len(text.encode("utf-8"))
+        written.take(line)
+    return True
 
 
 def journals() -> list[Path]:
@@ -369,12 +412,14 @@ def delete(where: list[Path]) -> int:
 @dataclass
 class Added:
     """What a reading at a connection did: activities added, files on the device, files not
-    whole (still being written, damaged, no FIT file), and how long it took."""
+    whole (still being written, damaged, no FIT file), activities another reading of the
+    journal wrote first, and how long it took."""
 
     added: int = 0
     on_device: int = 0
     not_whole: int = 0
     seconds: float = 0.0
+    written_elsewhere: int = 0
 
 
 def at_connection(device, storage, ownership_error=None, backups: Path | None = None,
@@ -430,6 +475,7 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
     where = path(device.unit_id, test_drive)
     journal = read(where)
     existed = where.exists()
+    written, wrote = _Written.of(journal), False
     known = journal.files
     found = activities.DeviceActivities(device, storage, backups)
     found.list_files()
@@ -464,19 +510,22 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
                      time.monotonic() - started)
             did.seconds = time.monotonic() - started
             return did
-        if _deleted_meanwhile(where, existed or did.added > 0, did, started):
+        if _deleted_meanwhile(where, existed or wrote, did, started):
             return did
-        _append(where, line)
+        if _append(where, line, written):
+            did.added += 1
+            wrote = True
+        else:
+            did.written_elsewhere += 1  # by another reading of this journal meanwhile
         known[(a.name.casefold(), a.size)] = line
         journal.activities[line["key"]] = line
-        did.added += 1
     starts = [known[(a.name.casefold(), a.size)]["start"] for a in found.listing
               if a.source is activities.Source.DEVICE and (a.name.casefold(), a.size) in known]
-    if _deleted_meanwhile(where, existed or did.added > 0, did, started):
+    if _deleted_meanwhile(where, existed or wrote, did, started):
         return did
     if conn is None or not journal.connections or journal.connections[-1].get("conn") != conn:
         _append(where, connection(now, did.on_device, min(starts, default=None),
-                                  max(starts, default=None), conn))
+                                  max(starts, default=None), conn), written)
     did.seconds = time.monotonic() - started
     log.info("activity journal: %d added, %d on the device, %d not whole, %.1f s (%s read)",
              did.added, did.on_device, did.not_whole, did.seconds, applog.size(size))

@@ -255,13 +255,16 @@ def test_the_next_reading_reads_only_what_is_new(tmp_path, backups):
 
 
 def test_the_same_activity_found_again_is_one(tmp_path, backups):
-    """The same file under another name (copied back, renamed): one activity."""
+    """The same file under another name (copied back, renamed): one activity, one line; the
+    second key is not written again."""
     from openexpress import activity_journal as journal
 
     found = on_device(tmp_path / "device", {"a.fit": THREE["a.fit"],
                                             "copy.fit": THREE["a.fit"]})
     did = journal.add(found.device, found.storage, backups, now=SEEN)
-    assert did.added == 2
+    assert (did.added, did.written_elsewhere) == (1, 1)
+    lines = [json.loads(line) for line in journal.path(UNIT_ID).read_text().splitlines()]
+    assert sum(1 for line in lines if line["kind"] == "activity") == 1
     assert len(journal.read(journal.path(UNIT_ID)).activities) == 1
 
 
@@ -367,3 +370,51 @@ def test_deleted_one_or_all(tmp_path, backups):
     assert not journal.path(UNIT_ID).exists() and journal.path(UNIT_ID, True).exists()
     assert journal.delete(journal.journals()) == 3
     assert journal.journals() == []
+
+
+def test_two_readings_of_one_journal_in_one_process_write_nothing_twice(tmp_path, backups):
+    """Turned off and on again while a reading still runs: the second reading waits for the
+    first, then reads only what is not written yet."""
+    import threading
+    import time
+
+    from openexpress import activity_journal as journal
+
+    found = on_device(tmp_path / "device", dict(THREE))
+
+    def slow(a):
+        time.sleep(0.05)
+        return found.storage.read_at(a.path)
+    readings = [threading.Thread(target=journal.add, args=(found.device, found.storage, backups),
+                                 kwargs={"now": SEEN, "read_file": slow}) for _ in range(2)]
+    for r in readings:
+        r.start()
+        time.sleep(0.01)
+    for r in readings:
+        r.join()
+    lines = [json.loads(line) for line in journal.path(UNIT_ID).read_text().splitlines()]
+    keys = [line["key"] for line in lines if line["kind"] == "activity"]
+    assert len(keys) == 3 and len(set(keys)) == 3
+
+
+def test_the_window_and_a_background_sync_of_one_connection_write_one_line(tmp_path, backups):
+    """Another reading (the background sync, after the window began) writes the files first:
+    this one finds their keys under the lock and writes nothing twice, not even the line of
+    the connection."""
+    from openexpress import activity_journal as journal
+
+    found = on_device(tmp_path / "device", dict(THREE))
+    other = []
+
+    def meanwhile(a):
+        if not other:
+            other.append(journal.add(found.device, found.storage, backups, now=SEEN,
+                                     conn="one connection"))
+        return found.storage.read_at(a.path)
+    did = journal.add(found.device, found.storage, backups, now=SEEN, read_file=meanwhile,
+                      conn="one connection")
+    lines = [json.loads(line) for line in journal.path(UNIT_ID).read_text().splitlines()]
+    keys = [line["key"] for line in lines if line["kind"] == "activity"]
+    assert other[0].added == 3 and did.added == 0
+    assert len(keys) == 3 and len(set(keys)) == 3
+    assert sum(1 for line in lines if line["kind"] == "connection") == 1

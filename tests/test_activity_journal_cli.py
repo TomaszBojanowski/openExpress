@@ -136,3 +136,17 @@ def test_delete_every_journal(capsys, device):
     code, lines = run(capsys, "activities", "journal", "--delete", "--all", "--apply")
     assert code == 0 and activity_journal.journals() == []
     assert "Deleted every activity journal on this computer: 3 activities." in lines
+
+
+def test_the_command_counts_activities_not_lines(capsys, device):
+    """A journal an older write left with each line twice: 3 activities, not 6."""
+    where = journal_of(device)
+    lines = where.read_text().splitlines()
+    activity = [line for line in lines if '"kind": "activity"' in line]
+    where.write_text("\n".join(lines + activity) + "\n")
+    _code, out = run(capsys, "--path", str(device), "activities", "journal")
+    assert any("3 activities since 2026-10-28" in line for line in out)
+    _code, out = run(capsys, "activities", "journal", "--all")
+    assert any("3 activities since 2026-10-28" in line for line in out)
+    _code, out = run(capsys, "--path", str(device), "activities", "journal", "--delete")
+    assert "Would delete the activity journal of Test watch: 3 activities." in out

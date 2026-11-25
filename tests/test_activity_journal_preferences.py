@@ -32,17 +32,19 @@ def answer_saved():
     return json.loads(paths.settings_file().read_text()).get("activity_journal", "none")
 
 
-def journal_with(unit: int, count: int) -> None:
-    """A journal of `unit` with `count` made-up activities."""
+def journal_with(unit: int, count: int, twice: bool = False) -> None:
+    """A journal of `unit` with `count` made-up activities; `twice`: each line written twice,
+    as an older version could write it."""
     from openexpress import activity_journal
 
     where = activity_journal.path(unit)
     where.parent.mkdir(parents=True, exist_ok=True)
     with where.open("a") as f:
         for n in range(count):
-            f.write(json.dumps({"v": 1, "kind": "activity", "key": f"{n}-1",
-                                "file": {"name": f"{n}.fit", "size": 1}, "from": "device",
-                                "start": 1_800_000_000 + n}) + "\n")
+            line = json.dumps({"v": 1, "kind": "activity", "key": f"{n}-1",
+                               "file": {"name": f"{n}.fit", "size": 1}, "from": "device",
+                               "start": 1_800_000_000 + n}) + "\n"
+            f.write(line * (2 if twice else 1))
 
 
 def the_group(**changes):
@@ -223,3 +225,33 @@ def test_forget_device_without_a_journal_says_nothing_of_it(asked):
     forget_window(asked).ask_forget()
     (d,) = asked
     assert "activity journal" not in d.get_body()
+
+
+# --- the counts are of activities (keys), not of lines ---------------------------------------
+
+def test_the_question_counts_activities_not_lines(in_the_window):
+    """A journal an older write left with each line twice: the question counts 3, not 6."""
+    journal_with(UNIT, 3, twice=True)
+    asked = []
+    in_the_window("confirm", lambda parent, name, heading, body, *answers, **kw:
+                  asked.append(body))
+    _win, group = the_group()
+    button = delete_button(group)
+    assert button.get_sensitive()
+    button.emit("clicked")
+    assert asked == ["The journal of 3 activities is deleted from this computer. Activities "
+                     "the devices no longer keep cannot be read again."]
+
+
+def test_forget_device_counts_activities_not_lines(asked):
+    journal_with(UNIT, 3, twice=True)
+    forget_window(asked).ask_forget()
+    (d,) = asked
+    assert d.get_body().endswith("\n\nIts activity journal, 3 activities, is deleted too.")
+
+
+def test_deleting_counts_activities_not_lines():
+    from openexpress import activity_journal
+
+    journal_with(UNIT, 3, twice=True)
+    assert activity_journal.delete(activity_journal.journals()) == 3
