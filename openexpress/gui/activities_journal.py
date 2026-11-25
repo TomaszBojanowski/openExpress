@@ -81,7 +81,7 @@ def card(win, sec) -> None:
     # start, as the words above them.
     buttons = wrapping_row([later, keep], 12)
     buttons.set_halign(Gtk.Align.START)
-    if hasattr(buttons, "set_align"):  # Adw.WrapBox: its lines at the start too
+    if hasattr(buttons, "set_align"):  # the wrapping box: its lines at the start too
         buttons.set_align(0.0)
     box.append(buttons)
     frame = Gtk.Box()
