@@ -10,6 +10,7 @@ from typing import NamedTuple
 
 from openexpress import known_devices, last_sync, service, sync
 from openexpress.i18n import (
+    N_,
     _,
     caption,
     decimal,
@@ -504,6 +505,219 @@ def stalled_text(names: list[str | None]) -> str:
     return ngettext("The device stopped responding. Unplug it and plug it in again.",
                     "The devices stopped responding. Unplug them and plug them in again.",
                     count)
+
+
+# --- the Activities page since the connection before this one (since_last.py) ----------------
+
+# The days of the week as datetime.weekday() counts them, each a whole sentence: in some
+# languages the name changes with the words before it.
+_SINCE_DAY = (
+    # TRANSLATORS: under the heading of the Activities page: the activities since the device's
+    # connection before this one, on a Monday of the last six days
+    N_("Since Monday"),
+    # TRANSLATORS: the same, on a Tuesday of the last six days
+    N_("Since Tuesday"),
+    # TRANSLATORS: the same, on a Wednesday of the last six days
+    N_("Since Wednesday"),
+    # TRANSLATORS: the same, on a Thursday of the last six days
+    N_("Since Thursday"),
+    # TRANSLATORS: the same, on a Friday of the last six days
+    N_("Since Friday"),
+    # TRANSLATORS: the same, on a Saturday of the last six days
+    N_("Since Saturday"),
+    # TRANSLATORS: the same, on a Sunday of the last six days
+    N_("Since Sunday"),
+)
+SINCE_DAYS = 6  # back to here, the day's name; before, its date
+
+
+def since_text(since: float, now: datetime | None = None) -> str:
+    """Since when the Activities page counts new activities: the day of the week of the
+    connection before this one, from today to six days back ("Since Thursday", today's own name
+    for one earlier today); its date in digits before that ("Since 2026-11-12")."""
+    day = datetime.fromtimestamp(since)
+    back = ((now or datetime.now()).date() - day.date()).days
+    if 0 <= back <= SINCE_DAYS:
+        return _(_SINCE_DAY[day.weekday()])
+    # TRANSLATORS: under the heading of the Activities page: the activities since the device's
+    # connection before this one, more than six days ago; {date} in digits, e.g. 2026-11-12
+    return _("Since {date}").format(date=day.strftime(_("%Y-%m-%d")))
+
+
+def new_activities_text(count: int) -> str:
+    """The heading of the Activities page: how many activities are new since the connection
+    before this one ("3 new activities"); "No new activities" for none."""
+    if not count:
+        # TRANSLATORS: heading of the Activities page when none started since the device's
+        # connection before this one
+        return _("No new activities")
+    # TRANSLATORS: heading of the Activities page: the activities started since the device's
+    # connection before this one
+    return ngettext("{count} new activity", "{count} new activities", count).format(count=count)
+
+
+def latest_text() -> str:
+    # TRANSLATORS: above the tiles of the newest activities on the Activities page, when none is
+    # new
+    return _("Latest")
+
+
+def journal_started_text() -> str:
+    # TRANSLATORS: heading of the Activities page after the activity journal read a device for
+    # the first time (no connection of it before)
+    return _("Activity journal started")
+
+
+def journal_read_text(count: int, oldest: float) -> str:
+    """Under "Activity journal started": how many activities the first reading took, from the
+    day of the oldest."""
+    date = datetime.fromtimestamp(oldest).strftime(_("%Y-%m-%d"))
+    # TRANSLATORS: under "Activity journal started"; {date} in digits, e.g. 2024-11-03
+    return ngettext("{count} activity read from this device, from {date}",
+                    "{count} activities read from this device, from {date}",
+                    count).format(count=count, date=date)
+
+
+def reading_journal_text() -> str:
+    # TRANSLATORS: the Activities page while the activity journal reads the device's activities
+    return _("Reading the activities of this device…")
+
+
+def gap_text() -> str:
+    # TRANSLATORS: under the heading of the Activities page, when the device deleted activities
+    # the journal had not read yet (too many between two connections, or the journal was off)
+    return _("Some older activities left the device before openExpress could record them")
+
+
+def earlier_text(count: int) -> str:
+    # TRANSLATORS: at the bottom of the Activities page, beside Show All: the activities still
+    # on the device that are not new
+    return ngettext("{count} earlier activity on this device",
+                    "{count} earlier activities on this device", count).format(count=count)
+
+
+def upload_state_text(state: str) -> str:
+    """The upload state of a tile: "uploaded" (the sync's record has the file), "waiting"
+    (kept to upload again)."""
+    if state == "uploaded":
+        # TRANSLATORS: on the tile of an activity: openExpress uploaded it to Garmin Connect
+        return pgettext("upload state", "Uploaded")
+    # TRANSLATORS: on the tile of an activity: its upload to Garmin Connect failed and is tried
+    # again at the next sync
+    return pgettext("upload state", "Not uploaded yet")
+
+
+def since_distance(metres: float, miles: bool) -> tuple[str, str]:
+    """A distance of the page since the last connection, as a template and its number: one
+    decimal, in kilometres or in miles ("{distance} km", "53.0")."""
+    if miles:
+        # TRANSLATORS: a distance in miles on the Activities page ("33.0 mi")
+        return _("{value} mi"), decimal(f"{metres / 1609.344:.1f}")
+    return _("{distance} km"), decimal(f"{metres / 1000:.1f}")
+
+
+def since_height(metres: float, feet: bool) -> tuple[str, str]:
+    """An ascent of the page since the last connection, as a template and its number: whole
+    metres or feet ("{metres} m", "893")."""
+    if feet:
+        # TRANSLATORS: an ascent in feet on the Activities page ("2930 ft")
+        return _("{value} ft"), whole(round(metres / 0.3048))
+    return _("{metres} m"), whole(round(metres))
+
+
+def since_time(seconds: float) -> tuple[str, dict[str, str]]:
+    """A time of the page since the last connection, as a template and its numbers, in the
+    words of an activity's row ("{hours} h {minutes} min")."""
+    total = max(0, round(seconds))
+    hours, minutes = divmod(total // 60, 60)
+    if hours:
+        return _("{hours} h {minutes} min"), {"hours": whole(hours),
+                                                         "minutes": f"{minutes:02}"}
+    return _("{minutes} min"), {"minutes": str(minutes)}
+
+
+def filled(template: str, values: dict[str, str]) -> str:
+    """A template of since_distance, since_height or since_time with its numbers."""
+    return template.format(**values)
+
+
+def hours_and_minutes(seconds: float) -> str:
+    """A time on a tile, the same in every language: "2:51", "0:38"."""
+    total = max(0, round(seconds)) // 60
+    return f"{total // 60}:{total % 60:02}"
+
+
+def _whole(text: str) -> str:
+    """A number and its unit kept on one line (a hard space between them)."""
+    return text.replace(" ", "\u00a0")
+
+
+def tile_caption(activity: dict, units) -> str:
+    """The numbers of a tile: its distance, time and ascent ("21.3 km · 2:51 · 640 m"), each
+    left out when the activity has none (a workout without a distance, a swim in a pool
+    without an ascent)."""
+    parts = []
+    if activity.get("distance"):
+        template, number = since_distance(activity["distance"], units.miles)
+        parts.append(_whole(template.format(distance=number, value=number)))
+    time = activity.get("timer_time")
+    if time is None:
+        time = activity.get("elapsed_time")
+    if time:
+        parts.append(hours_and_minutes(time))
+    if activity.get("ascent"):
+        template, number = since_height(activity["ascent"], units.feet)
+        parts.append(_whole(template.format(metres=number, value=number)))
+    return caption(*parts)
+
+
+def tile_day(day: datetime) -> str:
+    """The day of a tile, in digits ("2026-11-21"), as the program writes dates."""
+    return day.strftime(_("%Y-%m-%d"))
+
+
+def trivia_lead(kind: str, metres: float, units) -> str:
+    """The first sentence of the trivia: how high the new activities climbed, or how far they
+    went ("893 m climbed.")."""
+    if kind == "climbed":
+        template, number = since_height(metres, units.feet)
+        amount = _whole(template.format(metres=number, value=number))
+        # TRANSLATORS: the trivia of the Activities page, first sentence; {climbed}: the ascent
+        # of the new activities ("893 m climbed.")
+        return _("{climbed} climbed.").format(climbed=amount)
+    template, number = since_distance(metres, units.miles)
+    amount = _whole(template.format(distance=number, value=number))
+    # TRANSLATORS: the trivia of the Activities page, first sentence; {distance}: the distance of
+    # the new activities ("53.0 km covered.")
+    return _("{distance} covered.").format(distance=amount)
+
+
+def trivia_object(thing: str, times: float) -> str:
+    """The second sentence of the trivia: the well-known height or length and how many times
+    it is; {times} always with one decimal ("That is the Eiffel Tower 2.7 times.")."""
+    sentences = {
+        # TRANSLATORS: the trivia of the Activities page after "893 m climbed."; {times} is always
+        # a number with one decimal, e.g. 2.7 (also the sentences of the other heights and
+        # lengths)
+        "statue-of-liberty": N_("That is the Statue of Liberty {times} times."),
+        "great-pyramid": N_("That is the Great Pyramid of Giza {times} times."),
+        "eiffel-tower": N_("That is the Eiffel Tower {times} times."),
+        "empire-state-building": N_("That is the Empire State Building {times} times."),
+        "burj-khalifa": N_("That is the Burj Khalifa {times} times."),
+        "table-mountain": N_("That is Table Mountain {times} times."),
+        "mont-blanc": N_("That is Mont Blanc {times} times."),
+        "kilimanjaro": N_("That is Kilimanjaro {times} times."),
+        "everest": N_("That is Mount Everest {times} times."),
+        # TRANSLATORS: the edge of space: the Kármán line, 100 km up
+        "edge-of-space": N_("That is the edge of space {times} times."),
+        "marathon": N_("That is a marathon {times} times."),
+        "panama-canal": N_("That is the Panama Canal {times} times."),
+        "grand-canyon": N_("That is the Grand Canyon {times} times."),
+        "rhine": N_("That is the Rhine {times} times."),
+        "danube": N_("That is the Danube {times} times."),
+        "equator": N_("That is the equator {times} times."),
+    }
+    return _(sentences[thing]).format(times=decimal(f"{times:.1f}"))
 
 
 # --- the page of an activity -------------------------------------------------------------------

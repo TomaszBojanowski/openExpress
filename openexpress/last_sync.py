@@ -38,6 +38,18 @@ class Told:
     counts: str
     steps: tuple[tuple[str, bool], ...]
     errors: tuple[str, ...]
+    uploaded: int = 0  # the files it uploaded
+
+    def uploaded_text(self, now: datetime | None = None) -> str | None:
+        """When it uploaded to Garmin Connect, told against now ("uploaded to Garmin Connect 5
+        min ago"), for the Activities page; None when it uploaded nothing (also uploads
+        skipped or not allowed) or something went wrong."""
+        if not self.uploaded or self.errors:
+            return None
+        when = i18n.relative_time(datetime.fromtimestamp(self.when), now or datetime.now())
+        # TRANSLATORS: under the heading of the Activities page, after "Since Thursday"; {when}:
+        # "5 min ago", "yesterday, 23:41", "3 days ago"
+        return _("uploaded to Garmin Connect {when}").format(when=when)
 
     @property
     def details(self) -> list[tuple[str, bool]]:
@@ -84,6 +96,8 @@ def describe(record: dict) -> Told:
     """A record of a sync in words, in the language of the moment (steps kept as numbers are
     put into words now; those of older versions stay in the words they were written in)."""
     lines = [line for line in record.get("lines") or [] if not _says_nothing(line)]
+    uploaded = record.get("uploaded")
     return Told(when=record.get("time", time.time()), counts=service.describe_counts(record),
                 steps=tuple(service.describe_steps(lines)),
-                errors=tuple(record.get("errors") or []))
+                errors=tuple(record.get("errors") or []),
+                uploaded=uploaded if isinstance(uploaded, int) else 0)

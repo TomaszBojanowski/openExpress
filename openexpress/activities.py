@@ -106,6 +106,29 @@ def sport_name(sport: int | None) -> str:
     return names.get(sport) or pgettext("sport", "Sport {number}").format(number=sport)
 
 
+def kind_name(sport: int | None, sub_sport: int | None) -> str:
+    """The name of an activity with its sub sport of the FIT profile, when the program has one
+    for that sport ("Trail running"); else its sport's (sport_name)."""
+    names = {
+        # TRANSLATORS: kinds of a sport, by the sub sport of the FIT profile
+        (1, 1): pgettext("sport", "Treadmill running"),
+        (1, 3): pgettext("sport", "Trail running"),
+        (1, 4): pgettext("sport", "Track running"),
+        (2, 6): pgettext("sport", "Indoor cycling"),
+        (2, 7): pgettext("sport", "Road cycling"),
+        (2, 8): pgettext("sport", "Mountain biking"),
+        (2, 46): pgettext("sport", "Gravel cycling"),
+        (5, 17): pgettext("sport", "Pool swimming"),
+        (5, 18): pgettext("sport", "Open water swimming"),
+        (4, 14): pgettext("sport", "Indoor rowing"),
+        (15, 14): pgettext("sport", "Indoor rowing"),
+        (4, 20): pgettext("sport", "Strength training"),
+        (10, 20): pgettext("sport", "Strength training"),
+        (10, 26): pgettext("sport", "Cardio training"),
+    }
+    return names.get((sport, sub_sport)) or sport_name(sport)
+
+
 def export_name(summary: fit.ActivitySummary, activity: Activity) -> str:
     """The name of an activity's GPX file without its extension, "YYYY-MM-DD HH.MM Sport": its
     start in local time (else when its file was made, else the name of that file)."""
