@@ -396,112 +396,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -1058,112 +1034,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -2271,112 +2223,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -3464,112 +3392,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -4615,112 +4519,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">40.0</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">40.0</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">4:00</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">4:00</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">160</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">160</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">8</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">8</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -5570,112 +5450,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -6477,112 +6333,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -7428,112 +7260,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -8379,112 +8187,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">13.2</span> mi"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">13.2</span> mi"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2:51</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2:51</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2100</span> ft"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2100</span> ft"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }
@@ -9001,112 +8785,88 @@
           ],
           "children": [
            {
-            "type": "GtkFlowBox",
+            "type": "GtkBox",
             "css": [
              "horizontal"
             ],
             "children": [
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Distance"
-                 }
-                ]
+                "label": "Distance"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Time"
-                 }
-                ]
+                "label": "Time"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Total Ascent"
-                 }
-                ]
+                "label": "Total Ascent"
                }
               ]
              },
              {
-              "type": "GtkFlowBoxChild",
-              "css": [],
+              "type": "GtkBox",
+              "css": [
+               "vertical"
+              ],
               "children": [
                {
-                "type": "GtkBox",
+                "type": "GtkLabel",
+                "css": [],
+                "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
+               },
+               {
+                "type": "GtkLabel",
                 "css": [
-                 "vertical"
+                 "dim-label"
                 ],
-                "children": [
-                 {
-                  "type": "GtkLabel",
-                  "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "Activities"
-                 }
-                ]
+                "label": "Activities"
                }
               ]
              }

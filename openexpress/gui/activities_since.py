@@ -216,28 +216,103 @@ def _number(markup: str, name: str) -> Gtk.Widget:
     return box
 
 
+class _NumbersLayout(Gtk.LayoutManager):
+    """The four numbers of the card: all four on one line when they fit side by side at their
+    natural width, else two lines of two in two columns (never three and one). Each column
+    gets its natural width when the line has room for it, the rest in equal parts; else what
+    it needs at least (its words wrap), the rest in equal parts."""
+
+    __gtype_name__ = "OpenExpressNumbersLayout"
+
+    @staticmethod
+    def _cells(widget) -> list:
+        return [c for c in _children(widget) if c.should_layout()]
+
+    @staticmethod
+    def _columns(cells, width: int) -> list[list]:
+        """The cells of each column: four columns of one, or two of two."""
+        one_line = width < 0 or sum(c.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+                                    for c in cells) <= width
+        return [[c] for c in cells] if one_line else [cells[0::2], cells[1::2]]
+
+    @staticmethod
+    def _widths(columns, width: int) -> list[int]:
+        def need(column, natural: bool) -> int:
+            return max(c.measure(Gtk.Orientation.HORIZONTAL, -1)[1 if natural else 0]
+                       for c in column)
+
+        base = [need(c, True) for c in columns]
+        if sum(base) > width:
+            base = [need(c, False) for c in columns]
+        spare = max(0, width - sum(base)) // len(columns)
+        return [b + spare for b in base]
+
+    def do_get_request_mode(self, widget):
+        return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+    def do_measure(self, widget, orientation, for_size):
+        cells = self._cells(widget)
+        if not cells:
+            return 0, 0, -1, -1
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            least = sum(max(c.measure(orientation, -1)[0] for c in column)
+                        for column in (cells[0::2], cells[1::2]) if column)
+            return least, sum(c.measure(orientation, -1)[1] for c in cells), -1, -1
+        tall = self._heights(cells, for_size)
+        return sum(tall), sum(tall), -1, -1
+
+    def _heights(self, cells, width: int) -> list[int]:
+        """The height of each line of cells at `width`."""
+        columns = self._columns(cells, width)
+        widths = self._widths(columns, width) if width >= 0 else [-1] * len(columns)
+        lines = max(len(c) for c in columns)
+        return [max(column[n].measure(Gtk.Orientation.VERTICAL, w)[1]
+                    for column, w in zip(columns, widths, strict=True) if n < len(column))
+                for n in range(lines)]
+
+    def do_allocate(self, widget, width, height, baseline):
+        cells = self._cells(widget)
+        if not cells:
+            return
+        columns = self._columns(cells, width)
+        widths = self._widths(columns, width)
+        tall = self._heights(cells, width)
+        x = 0
+        for column, w in zip(columns, widths, strict=True):
+            y = 0
+            for n, cell in enumerate(column):
+                cell.size_allocate(_rectangle(x, y, w, tall[n]), -1)
+                y += tall[n]
+            x += w
+
+
+def _rectangle(x: int, y: int, width: int, height: int):
+    from gi.repository import Gdk
+
+    found = Gdk.Rectangle()
+    found.x, found.y, found.width, found.height = x, y, width, height
+    return found
+
+
 def _numbers(sec, view) -> None:
-    """The card of the new activities' numbers: distance, time, ascent and how many (four in a
-    row, two by two in a narrow window)."""
+    """The card of the new activities' numbers: distance, time, ascent and how many; four on
+    a line, or two by two when they do not fit (_NumbersLayout)."""
     t = since_last.totals(view.new)
-    flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=2,
-                       max_children_per_line=4)
+    grid = Gtk.Box(hexpand=True)
+    grid.set_layout_manager(_NumbersLayout())
     template, number = words.since_distance(t.distance, view.units.miles)
-    flow.append(_number(_markup(template, {"distance": number, "value": number}),
+    grid.append(_number(_markup(template, {"distance": number, "value": number}),
                         pgettext("activity tile", "Distance")))
-    flow.append(_number(_markup("{time}", {"time": words.hours_and_minutes(t.time)}),
+    grid.append(_number(_markup("{time}", {"time": words.hours_and_minutes(t.time)}),
                         pgettext("activity tile", "Time")))
     template, number = words.since_height(t.ascent, view.units.feet)
-    flow.append(_number(_markup(template, {"metres": number, "value": number}),
+    grid.append(_number(_markup(template, {"metres": number, "value": number}),
                         pgettext("activity tile", "Total Ascent")))
-    flow.append(_number(_markup("{count}", {"count": str(t.count)}),
+    grid.append(_number(_markup("{count}", {"count": str(t.count)}),
                         pgettext("tab", "Activities")))
-    for child in _children(flow):
-        child.set_focusable(False)
     card = Gtk.Box()
     card.add_css_class("card")
-    flow.set_hexpand(True)
-    card.append(flow)
+    card.append(grid)
     sec.group().add(card)
 
 

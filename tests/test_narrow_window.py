@@ -829,20 +829,17 @@ def test_what_is_new_in_a_wide_window_four_numbers_and_three_tiles_a_line(narrow
     win.navigation.push(win.device_view)
     win.select_section(key)
     _iterate(0.2)
-    flows = [w for g in win.sections[key].groups for w in descendants(g)
-             if isinstance(w, Gtk.FlowBox)]
-    numbers, tiles = flows
-
-    def lines(flow) -> list[int]:
-        ys = []
-        child = flow.get_first_child()
-        while child is not None:
-            ys.append(child.compute_bounds(flow)[1].get_y())
-            child = child.get_next_sibling()
-        return ys
-
-    assert len(set(lines(numbers))) == 1
-    assert len(set(lines(tiles)[:3])) == 1
+    card = win.sections[key].groups[1]
+    named = [w for w in descendants(card) if isinstance(w, Gtk.Label)
+             and w.has_css_class("dim-label")]
+    assert len({round(w.compute_bounds(card)[1].get_y()) for w in named}) == 1
+    (tiles,) = [w for g in win.sections[key].groups for w in descendants(g)
+                if isinstance(w, Gtk.FlowBox)]
+    ys, child = [], tiles.get_first_child()
+    while child is not None:
+        ys.append(child.compute_bounds(tiles)[1].get_y())
+        child = child.get_next_sibling()
+    assert len(set(ys[:3])) == 1
     labels = [w.get_label() for g in win.sections[key].groups for w in descendants(g)
               if isinstance(w, Gtk.Label)]
     assert any("6\u00a0min" in label for label in labels)
@@ -892,6 +889,50 @@ def test_a_tile_s_day_stands_by_the_first_line_of_its_title(narrow_window, clock
             line = top.get_height() / lines
             assert top.get_y() <= middle < top.get_y() + 0.75 * line
     assert two_lines
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_card_of_numbers_is_four_in_a_row_or_two_by_two(narrow_window, clock, language):
+    """The four numbers of the new activities: all four on one line, or two lines of two;
+    never three and one, at the narrowest width and at the widths between."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    seen = {}
+    for width in (360, 480, 560, 640, 700, 760, 820, 880, 940, 1000, 1100, 1300):
+        win = narrow_window(language, width=width)
+        key = _fill(win, "activities")
+        _journal_of(win.session.device.unit_id, datetime(2026, 10, 15, 9, 0))
+        win.session.journal_done = True
+        win.activities.storage = win.session.storage
+        win.sections[key].clear()
+        win.sections[key].loaded = True
+        MainWindow.show_activities(win, win.activities)
+        win.navigation.set_animate_transitions(False)
+        win.navigation.push(win.device_view)
+        win.select_section(key)
+        _iterate(0.3)
+        card = win.sections[key].groups[1]
+        assert card.get_width() > 0
+        cells = [w for w in descendants(card) if isinstance(w, Gtk.Label)
+                 and w.has_css_class("dim-label")]
+        rows = {}
+        for named in cells:
+            y = round(named.compute_bounds(card)[1].get_y())
+            rows[y] = rows.get(y, 0) + 1
+        seen[width] = sorted(rows.values())
+        win.destroy()
+    assert all(counts in ([4], [2, 2]) for counts in seen.values()), seen
+    assert seen[360] == [2, 2]
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])
