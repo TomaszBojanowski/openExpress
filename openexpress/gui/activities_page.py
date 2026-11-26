@@ -2,9 +2,12 @@
 the newest 30 first and 30 more at a time on request (activities.py lists and reads them; the
 words of a row are in gui/words.py). Nothing is written to the device; the button of a row
 exports its activity as a GPX file where the user chooses, and a row opens the page of its
-activity (gui/activity_page.py).
-Has: the activities of the open device (activities) and the groups of the page that grow as
-more are read (activities_list, activities_more).
+activity (gui/activity_page.py). While the activity journal is kept the page shows what is new
+since the connection before this one instead (gui/activities_since.py), and this list on the
+page its Show All pushes.
+Has: the activities of the open device (activities), the page their list is drawn on
+(activities_sheet: the section, or the page of Show All) and its groups that grow as more are
+read (activities_list, activities_more).
 ActivitiesPage is a mixin of MainWindow (gui/app.py), without __init__ of its own; what it uses
 of the window (session, run_task, progress, sections, …) is the window's."""
 from __future__ import annotations
@@ -21,9 +24,11 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follo
 from openexpress import applog, paths  # noqa: E402
 from openexpress.activities import Source  # noqa: E402
 from openexpress.errors import UserFacingError  # noqa: E402
+from openexpress.gui import activities_since  # noqa: E402
 from openexpress.gui.activities_journal import card as journal_card  # noqa: E402
 from openexpress.gui.activities_journal import line as journal_line  # noqa: E402
 from openexpress.gui.activities_journal import line_last as journal_line_last  # noqa: E402
+from openexpress.gui.window_tasks import still_in_window  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     activities_count_text,
     activity_caption,
@@ -37,11 +42,18 @@ log = logging.getLogger(__name__)
 PAGE_ICON = f"{paths.APP_ID}-activities-symbolic"  # a runner
 
 
-def _read(found, count: int, progress):
+def list_read(found, count: int, progress):
     """In the task's thread: the activity files listed again and the newest `count` read (what
     was read before is kept and not read again)."""
     found.list_files()
     found.read_next(count, progress)
+    return found
+
+
+def _listed(found):
+    """In the task's thread: the activity files listed again, none read (the page of what is
+    new reads the journal instead)."""
+    found.list_files()
     return found
 
 
@@ -157,7 +169,7 @@ def _saved(win, file_name: str, size: int) -> None:
     win.toast(_("Saved as {name}").format(name=file_name))
 
 
-def _no_activities(sec) -> None:
+def no_activities(sec) -> None:
     """The page without any activity: the page's icon and why, in its content."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=8, halign=Gtk.Align.CENTER,
                   margin_top=24, margin_bottom=24)
@@ -185,10 +197,15 @@ class ActivitiesPage:
         found = self.activities
         if found is None or found.storage is not s.storage:
             found = activities.DeviceActivities(s.device, s.storage, paths.default_backup_dir())
+        if activities_since.shown(self):
+            # What is new comes from the journal: the device's files only listed.
+            self._load("activities", _("Reading Activities…"), lambda: _listed(found),
+                       self.show_activities, on_error=lambda e: _not_listed(self, found, e))
+            return
         # Read again (Refresh): as many as were shown, what was read before kept.
         count = max(activities.PAGE, len(found.read))
         self._load("activities", _("Reading Activities…"),
-                   lambda: _read(found, count, self.progress), self.show_activities)
+                   lambda: list_read(found, count, self.progress), self.show_activities)
 
     def show_activities(self, found) -> None:
         """The rows of the activities read (`found`: activities.DeviceActivities), the button
@@ -200,18 +217,46 @@ class ActivitiesPage:
         # The groups of the drawing before are gone (the section cleared): none of them is
         # pointed at any more, so that nothing below moves or removes one of them.
         self.activities_list = self.activities_more = self.activities_note = None
+        self.activities_sheet = self.activities_progress = None
+        if activities_since.shown(self):
+            activities_since.show(self, sec, found)
+            return
         journal_card(self, sec)  # until the activity journal is answered: on top
         if not found.listing:
-            _no_activities(sec)
+            no_activities(sec)
             journal_line(self, sec)
             return
-        self.activities_list = sec.group(description=GLib.markup_escape_text(
-            activities_count_text(len(found.listing), found.only_in_backups)))
-        for read in found.read:
-            self.activities_list.add(activity_row(self, read))
-        _show_more_button(self, found)
+        show_list(self, sec, found)
         journal_line(self, sec)  # at the very bottom
-        log.info("activities page: %d shown, %d more to read", len(found.read), found.left)
+
+
+def _not_listed(win, found, error) -> None:
+    """The device's files could not be listed while the journal is kept: what is new from the
+    journal all the same, with why on top and Try Again (the page as it was says only why)."""
+    from openexpress.applog import error_text
+
+    if win.session is None:
+        return
+    win.activities = found
+    sec = win.sections["activities"]
+    sec.clear()
+    win._action_buttons = still_in_window(win._action_buttons)
+    win.activities_list = win.activities_more = win.activities_note = None
+    win.activities_sheet = win.activities_progress = None
+    activities_since.show(win, sec, found, error=error_text(error))
+    sec.show("content")
+
+
+def show_list(win, sheet, found) -> None:
+    """The rows of the activities read (`found`), with how many there are on top and the
+    button for more when some are left, on `sheet` (the section, or the page of Show All)."""
+    win.activities_sheet = sheet
+    win.activities_list = sheet.group(description=GLib.markup_escape_text(
+        activities_count_text(len(found.listing), found.only_in_backups)))
+    for read in found.read:
+        win.activities_list.add(activity_row(win, read))
+    _show_more_button(win, found)
+    log.info("activities page: %d shown, %d more to read", len(found.read), found.left)
 
 
 def _show_more_button(win, found) -> None:
@@ -219,10 +264,10 @@ def _show_more_button(win, found) -> None:
     before it goes)."""
     from openexpress import activities
 
-    sec = win.sections["activities"]
+    sheet = win.activities_sheet
     if win.activities_more is not None:
-        sec.page.remove(win.activities_more)
-        sec.groups.remove(win.activities_more)
+        sheet.page.remove(win.activities_more)
+        sheet.groups.remove(win.activities_more)
         win.activities_more = None
     if not found.left:
         return
@@ -231,7 +276,7 @@ def _show_more_button(win, found) -> None:
     button = win._button(ngettext("Show {count} More", "Show {count} More", count).format(
         count=count), lambda clicked: _read_more(win, clicked), style="pill", with_button=True)
     button.set_halign(Gtk.Align.CENTER)
-    win.activities_more = sec.group()
+    win.activities_more = sheet.group()
     win.activities_more.add(button)
     journal_line_last(win)
 

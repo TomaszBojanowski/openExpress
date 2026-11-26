@@ -1,9 +1,11 @@
 """The activity journal in the window (activity_journal.py keeps it): brought up to date in the
-background once a device is opened; on the Activities page, its card until it is answered (on
-top of the page) and its line at the very bottom (after a no, or for a device on another
-account after the yes). Nothing else of the page changes with it.
+background once a device is opened, its progress told to the page; on the Activities page, its
+card until it is answered (on top of the page) and its line at the very bottom (after a no, or
+for a device on another account after the yes). After the yes the page shows what is new
+(gui/activities_since.py), drawn again once the journal's reading is done.
 Has: the line at the bottom of the Activities page (activities_note); whether the open
-device's journal was read is in its session (DeviceSession.journal_read)."""
+device's journal was read, is done and how far it got are in its session
+(DeviceSession.journal_read, journal_done, journal_progress)."""
 from __future__ import annotations
 
 import logging
@@ -13,7 +15,7 @@ import gi
 gi.require_version("Gtk", "4.0")
 gi.require_version("Adw", "1")
 
-from gi.repository import Gtk  # noqa: E402 - imports must follow gi.require_version
+from gi.repository import GLib, Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress import activity_journal  # noqa: E402
 from openexpress.gui.window_tasks import (  # noqa: E402
@@ -31,18 +33,38 @@ def read_journal(win, again: bool = False) -> None:
     (after its diagnostics are read: device_page.read_diagnostics), when it is kept: after the
     user's yes, never for a device on another Garmin Connect account. Before the yes and after
     a no nothing starts. `again`: also when it was read this session (the yes given again in
-    the preferences: what a reading turned off left out). The page does not change with it."""
+    the preferences: what a reading turned off left out). The Activities page shows its
+    progress, and is drawn again once it is done (also when it failed)."""
+    from openexpress.gui import activities_since
+
     s = win.session
     if s is None or not activity_journal.kept() or (s.journal_read and not again):
         return
     if activity_journal.on_another_account(s.ownership_error):
         return
     s.journal_read = True
+    s.journal_done, s.journal_progress = False, None
+    if again:
+        journal_changed(win)  # its progress shown
+
+    def told(done: int, of: int) -> None:  # in the reading's thread
+        GLib.idle_add(lambda: (shown(done, of), False)[1])
+
+    def shown(done: int, of: int) -> None:
+        if win.session is s and not s.journal_done:
+            s.journal_progress = (done, of)
+            activities_since.progress(win, done, of)
 
     def work():
-        return activity_journal.at_connection(s.device, s.storage, s.ownership_error)
+        return activity_journal.at_connection(s.device, s.storage, s.ownership_error,
+                                              progress=told)
 
-    win.in_background(work, lambda _did: None, lambda _error: None)
+    def finished(_did_or_error) -> None:
+        s.journal_done = True
+        if win.session is s:
+            journal_changed(win)
+
+    win.in_background(work, finished, finished)
 
 
 def _another_account(win) -> bool:
@@ -153,11 +175,24 @@ def answer(win, yes: bool) -> None:
 
 
 def journal_changed(win) -> None:
-    """The Activities page drawn again as the journal's answer has it now (its card, its
-    line), when it shows the activities of the open device; nothing is read again."""
+    """The Activities page drawn again as the journal's answer has it now (its card, its line,
+    or what is new), when it shows the activities of the open device; nothing is read again,
+    but the first activities of the page as it was when what is new was shown before (it read
+    none of them), and the whole page when its reading had failed."""
+    from openexpress import activities
+    from openexpress.gui import activities_since
+
     found, sec = win.activities, (win.sections or {}).get("activities")
-    if (win.session is None or found is None or sec is None or not sec.loaded
-            or found.storage is not win.session.storage):
+    if win.session is None or sec is None:
+        return
+    if not sec.loaded and sec.stack.get_visible_child_name() in ("error", "content"):
+        win.load_activities()  # its reading failed: read again, as a fresh window would
+        return
+    if found is None or not sec.loaded or found.storage is not win.session.storage:
+        return
+    if not activities_since.shown(win) and len(found.read) < min(activities.PAGE,
+                                                                 len(found.listing)):
+        win.load_activities()
         return
     sec.clear()
     win._action_buttons = still_in_window(win._action_buttons)

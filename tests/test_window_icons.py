@@ -16,8 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 SMALL = ["watch-small", "cycling-computer-small", "handheld-small", "bike-accessory-small",
          "device-small"]
+SPORTS = ["activity-sport-cycling", "activity-sport-water", "activity-sport-winter",
+          "activity-sport-training", "activity-sport-others"]
 OWN = [*SMALL, "activities", "courses", "activity-distance", "activity-time", "activity-speed",
-       "activity-heart-rate", "activity-calories", "activity-elevation"]
+       "activity-heart-rate", "activity-calories", "activity-elevation", *SPORTS]
 
 
 def own(name: str) -> str:
@@ -72,3 +74,14 @@ def test_the_pages_without_activities_take_their_side_panel_icon():
     from openexpress.gui import activities_page, activity_page
 
     assert activities_page.PAGE_ICON == activity_page.PAGE_ICON == own("activities")
+
+
+def test_each_group_of_sports_has_its_symbol():
+    """A tile of the Activities page without a track shows its sport's symbol: one of the
+    program's own for each group, the page's runner for those on foot."""
+    from openexpress.gui import activities_since, sports
+
+    assert sorted(activities_since.SYMBOLS) == sorted(sports.COLOURS)
+    assert activities_since.SYMBOLS["foot"] == own("activities")
+    assert sorted(v for k, v in activities_since.SYMBOLS.items() if k != "foot") == sorted(
+        own(name) for name in SPORTS)

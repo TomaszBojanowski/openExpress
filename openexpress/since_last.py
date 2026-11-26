@@ -17,7 +17,7 @@ from datetime import UTC, datetime
 
 NEW_TILES = 6  # the new activities with a tile of their own, newest first
 LATEST = 3  # the activities with a tile when none is new, or the journal has just started
-STATUTE = 1  # display_measure of the FIT profile: 0 metric, 1 statute, 2 nautical
+STATUTE = "statute"  # the device's units as the journal keeps them (fit.Units)
 
 # The heights and lengths the trivia measures against, in metres, smallest first; their words
 # are in gui/words.py (trivia_object). Checked against public sources.
@@ -71,6 +71,9 @@ class Since:
     units: Units = Units()
     uploaded: frozenset[str] = frozenset()  # file names (casefold) the sync's record has
     waiting: frozenset[str] = frozenset()  # file names (casefold) kept to upload again
+    # Activities may have left the device unread since the connection before this one: its
+    # oldest is newer than the newest the journal knew (activity_journal.Journal.gaps).
+    gap: bool = False
 
     @property
     def started(self) -> bool:
@@ -174,6 +177,10 @@ def since_last(journal, conn: str | None, log_lines: list[dict],
         view.new = [a for a in activities if a["start"] > before]
     if not view.new:
         view.latest = activities[:LATEST]
+    now = next((c for c in reversed(journal.connections)
+                if conn is not None and c.get("conn") == conn), None)
+    if now is not None and now.get("oldest") is not None:
+        view.gap = any(end == now["oldest"] for _start, end in journal.gaps())
     new_files = {a["file"]["name"].casefold() for a in view.new}
     if on_device is not None:
         view.earlier = len({name for name in on_device if name not in new_files})

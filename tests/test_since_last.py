@@ -33,7 +33,8 @@ def activity(name: str, start: datetime, **fields) -> dict:
             "file": {"name": name, "size": 1000}, "from": "device", "seen": at(NOW),
             "start": int(start.timestamp()), "utc_offset": None, "sport": 1, "sub_sport": None,
             "timer_time": 3600.0, "elapsed_time": 3700.0, "distance": 10_000.0, "ascent": 100,
-            "units": {"distance": 0, "elevation": 0, "speed": 0}, "shape": None,
+            "units": {"distance": "metric", "elevation": "metric", "speed": "metric"},
+            "shape": None,
             "has_track": False}
     line.update(fields)
     return line
@@ -124,10 +125,28 @@ def test_earlier_counts_only_the_files_on_the_device():
     assert unknown.earlier == 0
 
 
+def test_a_gap_at_this_connection():
+    """The device's oldest now is newer than the newest the journal knew: activities may have
+    left it unread since the connection before this one. A gap of an earlier connection is not
+    this one's."""
+    def line(when, conn, oldest, newest):
+        found = connection(when, conn)
+        found.update(oldest=oldest, newest=newest)
+        return found
+
+    gap = journal_of(A_WEEK, [line(MONDAY, "b", 100, 200), line(NOW, "now", 300, 400)])
+    assert since_last.since_last(gap, "now", [], None).gap
+    kept = journal_of(A_WEEK, [line(MONDAY, "b", 100, 200), line(NOW, "now", 150, 400)])
+    assert not since_last.since_last(kept, "now", [], None).gap
+    before = journal_of(A_WEEK, [line(MONDAY, "a", 100, 200), line(MONDAY, "b", 300, 400),
+                                 line(NOW, "now", 350, 500)])
+    assert not since_last.since_last(before, "now", [], None).gap
+
+
 # --- units, totals, trivia -------------------------------------------------------------------
 
 def test_the_units_of_the_newest_that_says_them():
-    statute = {"distance": 1, "elevation": 1, "speed": 1}
+    statute = {"distance": "statute", "elevation": "statute", "speed": "statute"}
     found = [activity("a.fit", MONDAY, units=statute),
              activity("b.fit", NOW, units=None)]
     assert since_last.units_of(found) == since_last.Units(miles=True, feet=True)

@@ -26,6 +26,7 @@ from openexpress.activities import Source  # noqa: E402
 from openexpress.errors import UserFacingError  # noqa: E402
 from openexpress.gui import activity_map  # noqa: E402
 from openexpress.gui.activities_page import PAGE_ICON, export_button  # noqa: E402
+from openexpress.gui.activities_since import ALL_TAG  # noqa: E402
 from openexpress.gui.activity_chart import ActivityChart, chart_series, moving_time  # noqa: E402
 from openexpress.gui.activity_details import DetailsList  # noqa: E402
 from openexpress.gui.activity_effect import EffectList, has_effect  # noqa: E402
@@ -122,11 +123,11 @@ def _cursor_moved(chart, at: float) -> None:
 
 
 def leave(win) -> None:
-    """Back to the device view when an activity's page is shown: the pages of the device are
-    drawn anew, or Refresh or Sync is asked from the keyboard (the bar of their task is in the
-    device view)."""
+    """Back to the device view when an activity's page is shown, or the list Show All pushed
+    (gui/activities_since.py): the pages of the device are drawn anew, or Refresh or Sync is
+    asked from the keyboard (the bar of their task is in the device view)."""
     page = activity_map.visible_page(win)
-    if page is not None and page.get_tag() == TAG:
+    if page is not None and page.get_tag() in (TAG, ALL_TAG):
         log.info("activity page: closed with the device view")
         win.navigation.pop_to_page(win.device_view)
 

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 23:59+0100\n"
+"POT-Creation-Date: 2026-11-26 08:15+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -266,8 +266,9 @@ msgid ""
 "end."
 msgstr ""
 
-#: openexpress/auth/sso.py openexpress/gui/device_page.py
-#: openexpress/gui/netstatus_view.py openexpress/gui/updates_page.py
+#: openexpress/auth/sso.py openexpress/gui/activities_since.py
+#: openexpress/gui/device_page.py openexpress/gui/netstatus_view.py
+#: openexpress/gui/updates_page.py
 #, python-brace-format
 msgid "Try Again"
 msgstr ""
@@ -6042,10 +6043,11 @@ msgstr ""
 msgid "No GPS positions in this activity"
 msgstr ""
 
-#: openexpress/gui/activities_page.py openexpress/gui/activity_page.py
-#: openexpress/gui/app.py openexpress/gui/apps_page.py
-#: openexpress/gui/detection.py openexpress/gui/device_page.py
-#: openexpress/gui/preferences.py openexpress/gui/window_tasks.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
+#: openexpress/gui/activity_page.py openexpress/gui/app.py
+#: openexpress/gui/apps_page.py openexpress/gui/detection.py
+#: openexpress/gui/device_page.py openexpress/gui/preferences.py
+#: openexpress/gui/window_tasks.py
 #, python-brace-format
 msgid "Another operation is in progress"
 msgstr ""
@@ -6099,7 +6101,8 @@ msgstr ""
 msgid "This device does not keep activities"
 msgstr ""
 
-#: openexpress/gui/activities_page.py openexpress/gui/app.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
+#: openexpress/gui/app.py
 #, ignore-reused, python-brace-format
 msgid "Reading Activities…"
 msgstr ""
@@ -6116,6 +6119,38 @@ msgstr[1] ""
 #: openexpress/gui/activities_page.py
 #, python-brace-format
 msgid "Activities Not Read"
+msgstr ""
+
+#. TRANSLATORS: the names of the tiles on top of the page of an activity
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Distance"
+msgstr ""
+
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Time"
+msgstr ""
+
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Total Ascent"
+msgstr ""
+
+#. TRANSLATORS: tab title
+#: openexpress/gui/activities_since.py openexpress/gui/app.py
+#, python-brace-format
+msgctxt "tab"
+msgid "Activities"
+msgstr ""
+
+#. TRANSLATORS: shows every crash and update on the page Device Status
+#: openexpress/gui/activities_since.py openexpress/gui/status_page.py
+#, python-brace-format
+msgid "Show All"
 msgstr ""
 
 #. TRANSLATORS: attribution of the map data on the activity map; keep © and the name
@@ -6358,13 +6393,6 @@ msgstr ""
 #: openexpress/gui/app.py openexpress/gui/music_page.py
 #, python-brace-format
 msgid "Reading Music on the Device…"
-msgstr ""
-
-#. TRANSLATORS: tab title
-#: openexpress/gui/app.py
-#, python-brace-format
-msgctxt "tab"
-msgid "Activities"
 msgstr ""
 
 #. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
@@ -9222,12 +9250,6 @@ msgstr ""
 msgid "No Crashes or Updates Yet"
 msgstr ""
 
-#. TRANSLATORS: shows every crash and update on the page Device Status
-#: openexpress/gui/status_page.py
-#, python-brace-format
-msgid "Show All"
-msgstr ""
-
 #. TRANSLATORS: group of the page Device Status: files the device no longer needs, each
 #. with a button that removes it
 #: openexpress/gui/status_page.py
@@ -10704,19 +10726,6 @@ msgstr ""
 msgid "{calories} kcal"
 msgstr ""
 
-#. TRANSLATORS: the names of the tiles on top of the page of an activity
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Distance"
-msgstr ""
-
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Time"
-msgstr ""
-
 #: openexpress/gui/words.py
 #, python-brace-format
 msgctxt "activity tile"
@@ -10745,12 +10754,6 @@ msgstr ""
 #, python-brace-format
 msgctxt "activity tile"
 msgid "Calories"
-msgstr ""
-
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Total Ascent"
 msgstr ""
 
 #. TRANSLATORS: the closed row of the details at the end of the page of an activity

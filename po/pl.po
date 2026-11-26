@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 23:59+0100\n"
+"POT-Creation-Date: 2026-11-26 08:15+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -268,8 +268,9 @@ msgstr ""
 "w terminalu, zaloguj się w przeglądarce, a potem wklej adres, który "
 "przeglądarka pokaże na końcu."
 
-#: openexpress/auth/sso.py openexpress/gui/device_page.py
-#: openexpress/gui/netstatus_view.py openexpress/gui/updates_page.py
+#: openexpress/auth/sso.py openexpress/gui/activities_since.py
+#: openexpress/gui/device_page.py openexpress/gui/netstatus_view.py
+#: openexpress/gui/updates_page.py
 #, python-brace-format
 msgid "Try Again"
 msgstr "Spróbuj ponownie"
@@ -6686,10 +6687,11 @@ msgstr "Eksportuj do GPX…"
 msgid "No GPS positions in this activity"
 msgstr "Ta aktywność nie ma pozycji GPS"
 
-#: openexpress/gui/activities_page.py openexpress/gui/activity_page.py
-#: openexpress/gui/app.py openexpress/gui/apps_page.py
-#: openexpress/gui/detection.py openexpress/gui/device_page.py
-#: openexpress/gui/preferences.py openexpress/gui/window_tasks.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
+#: openexpress/gui/activity_page.py openexpress/gui/app.py
+#: openexpress/gui/apps_page.py openexpress/gui/detection.py
+#: openexpress/gui/device_page.py openexpress/gui/preferences.py
+#: openexpress/gui/window_tasks.py
 #, python-brace-format
 msgid "Another operation is in progress"
 msgstr "Trwa inna operacja"
@@ -6743,7 +6745,8 @@ msgstr "Nie ma ich ani na urządzeniu, ani w jego kopiach zapasowych"
 msgid "This device does not keep activities"
 msgstr "To urządzenie nie przechowuje aktywności"
 
-#: openexpress/gui/activities_page.py openexpress/gui/app.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
+#: openexpress/gui/app.py
 #, ignore-reused, python-brace-format
 msgid "Reading Activities…"
 msgstr "Odczyt aktywności…"
@@ -6762,6 +6765,38 @@ msgstr[2] "Pokaż {count} więcej"
 #, python-brace-format
 msgid "Activities Not Read"
 msgstr "Nie odczytano aktywności"
+
+#. TRANSLATORS: the names of the tiles on top of the page of an activity
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Distance"
+msgstr "Dystans"
+
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Time"
+msgstr "Czas"
+
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Total Ascent"
+msgstr "Całkowity wznios"
+
+#. TRANSLATORS: tab title
+#: openexpress/gui/activities_since.py openexpress/gui/app.py
+#, python-brace-format
+msgctxt "tab"
+msgid "Activities"
+msgstr "Aktywności"
+
+#. TRANSLATORS: shows every crash and update on the page Device Status
+#: openexpress/gui/activities_since.py openexpress/gui/status_page.py
+#, python-brace-format
+msgid "Show All"
+msgstr "Pokaż wszystko"
 
 #. TRANSLATORS: attribution of the map data on the activity map; keep © and the name
 #. OpenStreetMap
@@ -7022,13 +7057,6 @@ msgstr "Muzyka"
 #, python-brace-format
 msgid "Reading Music on the Device…"
 msgstr "Odczytywanie muzyki na urządzeniu…"
-
-#. TRANSLATORS: tab title
-#: openexpress/gui/app.py
-#, python-brace-format
-msgctxt "tab"
-msgid "Activities"
-msgstr "Aktywności"
 
 #. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
 #: openexpress/gui/app.py openexpress/gui/device_page.py
@@ -10074,12 +10102,6 @@ msgstr "Widać tylko awarie zapisane na tym komputerze"
 msgid "No Crashes or Updates Yet"
 msgstr "Jeszcze bez awarii i aktualizacji"
 
-#. TRANSLATORS: shows every crash and update on the page Device Status
-#: openexpress/gui/status_page.py
-#, python-brace-format
-msgid "Show All"
-msgstr "Pokaż wszystko"
-
 #. TRANSLATORS: group of the page Device Status: files the device no longer needs, each
 #. with a button that removes it
 #: openexpress/gui/status_page.py
@@ -11504,7 +11526,9 @@ msgstr "Odczyt aktywności tego urządzenia…"
 #, python-brace-format
 msgid ""
 "Some older activities left the device before openExpress could record them"
-msgstr "Część starszych aktywności zniknęła z urządzenia, zanim openExpress zdążył je zapisać"
+msgstr ""
+"Część starszych aktywności zniknęła z urządzenia, zanim openExpress zdążył "
+"je zapisać"
 
 #. TRANSLATORS: at the bottom of the Activities page, beside Show All: the activities still
 #. on the device that are not new
@@ -11684,19 +11708,6 @@ msgstr "{rate} bpm"
 msgid "{calories} kcal"
 msgstr "{calories} kcal"
 
-#. TRANSLATORS: the names of the tiles on top of the page of an activity
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Distance"
-msgstr "Dystans"
-
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Time"
-msgstr "Czas"
-
 #: openexpress/gui/words.py
 #, python-brace-format
 msgctxt "activity tile"
@@ -11726,12 +11737,6 @@ msgstr "Maksymalne tętno"
 msgctxt "activity tile"
 msgid "Calories"
 msgstr "Suma kalorii"
-
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Total Ascent"
-msgstr "Całkowity wznios"
 
 #. TRANSLATORS: the closed row of the details at the end of the page of an activity
 #: openexpress/gui/words.py
