@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.10.4\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 22:16+0100\n"
+"POT-Creation-Date: 2026-11-26 22:19+0100\n"
 "PO-Revision-Date: 2026-11-24 07:05+0000\n"
 "Last-Translator: Alex Giroux <alexgiroux1@users.noreply.hosted.weblate.org>\n"
 "Language-Team: French <https://hosted.weblate.org/projects/openexpress/"
@@ -158,6 +158,92 @@ msgctxt "sport"
 msgid "Sport {number}"
 msgstr "Sport {number}"
 
+#. TRANSLATORS: kinds of a sport, by the sub sport of the FIT profile
+#: openexpress/activities.py
+#, fuzzy, python-brace-format
+#| msgctxt "sport"
+#| msgid "Training"
+msgctxt "sport"
+msgid "Treadmill running"
+msgstr "Entraînement"
+
+#: openexpress/activities.py
+#, fuzzy, python-brace-format
+#| msgctxt "sport"
+#| msgid "Training"
+msgctxt "sport"
+msgid "Trail running"
+msgstr "Entraînement"
+
+#: openexpress/activities.py
+#, fuzzy, python-brace-format
+#| msgctxt "sport"
+#| msgid "Training"
+msgctxt "sport"
+msgid "Track running"
+msgstr "Entraînement"
+
+#: openexpress/activities.py
+#, python-brace-format
+msgctxt "sport"
+msgid "Indoor cycling"
+msgstr ""
+
+#: openexpress/activities.py
+#, fuzzy, python-brace-format
+#| msgctxt "sport"
+#| msgid "Cycling"
+msgctxt "sport"
+msgid "Road cycling"
+msgstr "Vélo"
+
+#: openexpress/activities.py
+#, fuzzy, python-brace-format
+#| msgctxt "sport"
+#| msgid "Mountaineering"
+msgctxt "sport"
+msgid "Mountain biking"
+msgstr "Alpinisme"
+
+#: openexpress/activities.py
+#, python-brace-format
+msgctxt "sport"
+msgid "Gravel cycling"
+msgstr ""
+
+#: openexpress/activities.py
+#, fuzzy, python-brace-format
+#| msgctxt "sport"
+#| msgid "Swimming"
+msgctxt "sport"
+msgid "Pool swimming"
+msgstr "Natation"
+
+#: openexpress/activities.py
+#, python-brace-format
+msgctxt "sport"
+msgid "Open water swimming"
+msgstr ""
+
+#: openexpress/activities.py
+#, python-brace-format
+msgctxt "sport"
+msgid "Indoor rowing"
+msgstr ""
+
+#: openexpress/activities.py
+#, python-brace-format
+msgctxt "sport"
+msgid "Strength training"
+msgstr ""
+
+#: openexpress/activities.py
+#, fuzzy, python-brace-format
+#| msgid "Maintaining"
+msgctxt "sport"
+msgid "Cardio training"
+msgstr "Maintien"
+
 #. TRANSLATORS: a step of a long task: the activity files read ("… · 2 of 30")
 #: openexpress/activities.py
 #, python-brace-format
@@ -197,8 +283,9 @@ msgstr ""
 "commande dans un terminal, connectez-vous via votre navigateur web, puis "
 "collez l’adresse qui s’affiche dans le navigateur."
 
-#: openexpress/auth/sso.py openexpress/gui/device_page.py
-#: openexpress/gui/netstatus_view.py openexpress/gui/updates_page.py
+#: openexpress/auth/sso.py openexpress/gui/activities_since.py
+#: openexpress/gui/device_page.py openexpress/gui/netstatus_view.py
+#: openexpress/gui/updates_page.py
 #, python-brace-format
 msgid "Try Again"
 msgstr "Essayer à nouveau"
@@ -6642,10 +6729,11 @@ msgstr "Exporter en GPX…"
 msgid "No GPS positions in this activity"
 msgstr "Aucune position GPS dans cette activité"
 
-#: openexpress/gui/activities_page.py openexpress/gui/activity_page.py
-#: openexpress/gui/app.py openexpress/gui/apps_page.py
-#: openexpress/gui/detection.py openexpress/gui/device_page.py
-#: openexpress/gui/preferences.py openexpress/gui/window_tasks.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
+#: openexpress/gui/activity_page.py openexpress/gui/app.py
+#: openexpress/gui/apps_page.py openexpress/gui/detection.py
+#: openexpress/gui/device_page.py openexpress/gui/preferences.py
+#: openexpress/gui/window_tasks.py
 #, python-brace-format
 msgid "Another operation is in progress"
 msgstr "Une autre opération est en cours"
@@ -6700,7 +6788,8 @@ msgstr "Il n’y en a pas sur l’appareil ni dans ses sauvegardes"
 msgid "This device does not keep activities"
 msgstr "Cet appareil ne conserve pas les activités"
 
-#: openexpress/gui/activities_page.py openexpress/gui/app.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
+#: openexpress/gui/app.py
 #, python-brace-format
 msgid "Reading Activities…"
 msgstr "Activités de lecture…"
@@ -6714,10 +6803,42 @@ msgstr[0] "Afficher {count} plus"
 msgstr[1] "Afficher {count} plus"
 
 #. TRANSLATORS: heading of the error when more activities could not be read
-#: openexpress/gui/activities_page.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
 #, python-brace-format
 msgid "Activities Not Read"
 msgstr "Activités non lues"
+
+#. TRANSLATORS: the names of the tiles on top of the page of an activity
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Distance"
+msgstr "Distance"
+
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Time"
+msgstr "Heure"
+
+#: openexpress/gui/activities_since.py openexpress/gui/words.py
+#, python-brace-format
+msgctxt "activity tile"
+msgid "Total Ascent"
+msgstr "Ascension Totale"
+
+#. TRANSLATORS: tab title
+#: openexpress/gui/activities_since.py openexpress/gui/app.py
+#, python-brace-format
+msgctxt "tab"
+msgid "Activities"
+msgstr "Activités"
+
+#. TRANSLATORS: shows every crash and update on the page Device Status
+#: openexpress/gui/activities_since.py openexpress/gui/status_page.py
+#, python-brace-format
+msgid "Show All"
+msgstr "Afficher tout"
 
 #. TRANSLATORS: attribution of the map data on the activity map; keep © and the name
 #. OpenStreetMap
@@ -6984,13 +7105,6 @@ msgstr "Musique"
 #, python-brace-format
 msgid "Reading Music on the Device…"
 msgstr "Lecture de musique sur l’appareil…"
-
-#. TRANSLATORS: tab title
-#: openexpress/gui/app.py
-#, python-brace-format
-msgctxt "tab"
-msgid "Activities"
-msgstr "Activités"
 
 #. TRANSLATORS: tab title: crashes, storage and diagnostic files of the device
 #: openexpress/gui/app.py openexpress/gui/device_page.py
@@ -9607,7 +9721,9 @@ msgstr[1] "{count} de nouvelles activités depuis {when}"
 
 #. TRANSLATORS: tooltip of the chip "To sync" when no last sync is known: activities on
 #. the device not uploaded yet
-#: openexpress/gui/start.py
+#. TRANSLATORS: heading of the Activities page: the activities started since the device's
+#. connection before this one
+#: openexpress/gui/start.py openexpress/gui/words.py
 #, python-brace-format
 msgid "{count} new activity"
 msgid_plural "{count} new activities"
@@ -10028,12 +10144,6 @@ msgstr "Seuls les crashs enregistrés sur cet ordinateur sont affichés"
 #, python-brace-format
 msgid "No Crashes or Updates Yet"
 msgstr "Pas de plantage ni de mise à jour pour l’instant"
-
-#. TRANSLATORS: shows every crash and update on the page Device Status
-#: openexpress/gui/status_page.py
-#, python-brace-format
-msgid "Show All"
-msgstr "Afficher tout"
 
 #. TRANSLATORS: group of the page Device Status: files the device no longer needs, each
 #. with a button that removes it
@@ -11339,11 +11449,268 @@ msgstr[0] "L’appareil a cessé de répondre. Débranchez-le et rebranchez-le."
 msgstr[1] ""
 "Les appareils ont cessé de répondre. Débranchez-les et rebranchez-les."
 
+#. TRANSLATORS: under the heading of the Activities page: the activities since the device's
+#. connection before this one, on a Monday two to six days back
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since Monday"
+msgstr ""
+
+#. TRANSLATORS: the same, on a Tuesday two to six days back
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since Tuesday"
+msgstr ""
+
+#. TRANSLATORS: the same, on a Wednesday two to six days back
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since Wednesday"
+msgstr ""
+
+#. TRANSLATORS: the same, on a Thursday two to six days back
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since Thursday"
+msgstr ""
+
+#. TRANSLATORS: the same, on a Friday two to six days back
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since Friday"
+msgstr ""
+
+#. TRANSLATORS: the same, on a Saturday two to six days back
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since Saturday"
+msgstr ""
+
+#. TRANSLATORS: the same, on a Sunday two to six days back
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since Sunday"
+msgstr ""
+
+#. TRANSLATORS: under the heading of the Activities page: the activities since the device's
+#. connection before this one, earlier today
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since today"
+msgstr ""
+
+#. TRANSLATORS: the same, the connection before this one yesterday
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since yesterday"
+msgstr ""
+
+#. TRANSLATORS: under the heading of the Activities page: the activities since the device's
+#. connection before this one, more than six days ago; {date} in digits, e.g. 2026-11-12
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "created {date}"
+msgid "Since {date}"
+msgstr "créé {date}"
+
+#. TRANSLATORS: heading of the Activities page when none started since the device's
+#. connection before this one
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "No Activities"
+msgid "No new activities"
+msgstr "Aucune activité"
+
+#. TRANSLATORS: above the tiles of the newest activities on the Activities page, when none is
+#. new
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "Later"
+msgid "Latest"
+msgstr "Plus tard"
+
+#. TRANSLATORS: heading of the Activities page after the activity journal read a device for
+#. the first time (no connection of it before)
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "Activity Not Read"
+msgid "Activity journal started"
+msgstr "Activité non lue"
+
+#. TRANSLATORS: under "Activity journal started"; {date} in digits, e.g. 2024-11-03
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "{count} new activity since {when}"
+#| msgid_plural "{count} new activities since {when}"
+msgid "{count} activity read from this device, from {date}"
+msgid_plural "{count} activities read from this device, from {date}"
+msgstr[0] "{count} nouvelle activité depuis {when}"
+msgstr[1] "{count} de nouvelles activités depuis {when}"
+
+#. TRANSLATORS: the Activities page while the activity journal reads the device's activities
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "Reading the Copies of the App List…"
+msgid "Reading the activities of this device…"
+msgstr "Lecture des copies de la liste des applications…"
+
+#. TRANSLATORS: under the heading of the Activities page, when the device deleted activities
+#. the journal had not read yet (too many between two connections, or the journal was off)
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid ""
+"Some older activities left the device before openExpress could record them"
+msgstr ""
+
+#. TRANSLATORS: at the bottom of the Activities page, beside Show All: the activities still
+#. on the device that are not new
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "{count} not on the device"
+msgid "{count} earlier activity on this device"
+msgid_plural "{count} earlier activities on this device"
+msgstr[0] "{count} pas sur l’appareil"
+msgstr[1] "{count} pas sur l’appareil"
+
+#. TRANSLATORS: on the tile of an activity: openExpress uploaded it to Garmin Connect
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "Upload"
+msgctxt "upload state"
+msgid "Uploaded"
+msgstr "Téléverser"
+
+#. TRANSLATORS: on the tile of an activity: its upload to Garmin Connect failed and is tried
+#. again at the next sync
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "none uploaded"
+msgctxt "upload state"
+msgid "Not uploaded yet"
+msgstr "aucun envoyé"
+
+#. TRANSLATORS: a distance in miles on the Activities page ("33.0 mi")
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{value} mi"
+msgstr ""
+
 #. TRANSLATORS: a distance in kilometres on the page of an activity ("10.24 km")
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "{distance} km"
 msgstr "{distance} km"
+
+#. TRANSLATORS: an ascent in feet on the Activities page ("2930 ft")
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{value} ft"
+msgstr ""
+
+#. TRANSLATORS: a distance or an ascent in whole metres on the page of an activity
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{metres} m"
+msgstr "{metres} m"
+
+#. TRANSLATORS: the trivia of the Activities page, first sentence; {climbed}: the ascent
+#. of the new activities ("893 m climbed.")
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{climbed} climbed."
+msgstr ""
+
+#. TRANSLATORS: the trivia of the Activities page, first sentence; {distance}: the distance of
+#. the new activities ("53.0 km covered.")
+#: openexpress/gui/words.py
+#, fuzzy, python-brace-format
+#| msgid "{distance} km"
+msgid "{distance} covered."
+msgstr "{distance} km"
+
+#. TRANSLATORS: the trivia of the Activities page after "893 m climbed."; {times} is always
+#. a number with one decimal, e.g. 2.7 (also the sentences of the other heights and
+#. lengths)
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Statue of Liberty {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Great Pyramid of Giza {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Eiffel Tower {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Empire State Building {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Burj Khalifa {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is Table Mountain {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is Mont Blanc {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is Kilimanjaro {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is Mount Everest {times} times."
+msgstr ""
+
+#. TRANSLATORS: the edge of space: the Kármán line, 100 km up
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the edge of space {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is a marathon {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Panama Canal {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Grand Canyon {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Rhine {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the Danube {times} times."
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "That is the equator {times} times."
+msgstr ""
 
 #. TRANSLATORS: a pace, the time a kilometre takes ("5:10 /km")
 #: openexpress/gui/words.py
@@ -11363,12 +11730,6 @@ msgstr "{pace} /100 m"
 msgid "{speed} km/h"
 msgstr "{speed} km/h"
 
-#. TRANSLATORS: a distance or an ascent in whole metres on the page of an activity
-#: openexpress/gui/words.py
-#, python-brace-format
-msgid "{metres} m"
-msgstr "{metres} m"
-
 #. TRANSLATORS: a heart rate in beats a minute ("148 bpm"), in Garmin Connect's unit
 #. (Polish keeps "bpm")
 #: openexpress/gui/words.py
@@ -11381,19 +11742,6 @@ msgstr "{rate} bpm"
 #, python-brace-format
 msgid "{calories} kcal"
 msgstr "{calories} kcal"
-
-#. TRANSLATORS: the names of the tiles on top of the page of an activity
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Distance"
-msgstr "Distance"
-
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Time"
-msgstr "Heure"
 
 #: openexpress/gui/words.py
 #, python-brace-format
@@ -11424,12 +11772,6 @@ msgstr "Fréquence cardiaque maximale"
 msgctxt "activity tile"
 msgid "Calories"
 msgstr "Calories"
-
-#: openexpress/gui/words.py
-#, python-brace-format
-msgctxt "activity tile"
-msgid "Total Ascent"
-msgstr "Ascension Totale"
 
 #. TRANSLATORS: the closed row of the details at the end of the page of an activity
 #: openexpress/gui/words.py
@@ -12378,6 +12720,14 @@ msgstr "L’installateur ne contient pas le package MSI attendu."
 #, python-brace-format
 msgid "No new data to upload"
 msgstr "Pas de nouvelles données à télécharger"
+
+#. TRANSLATORS: under the heading of the Activities page, after "Since Thursday"; {when}:
+#. "5 min ago", "yesterday, 23:41", "3 days ago"
+#: openexpress/last_sync.py
+#, fuzzy, python-brace-format
+#| msgid "Queued in Garmin Connect"
+msgid "uploaded to Garmin Connect {when}"
+msgstr "Mis en file d’attente dans Garmin Connect"
 
 #. TRANSLATORS: in the notification after a sync in the background; {errors}: up to three
 #. errors, separated by "; "
