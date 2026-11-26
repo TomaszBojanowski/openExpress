@@ -752,3 +752,23 @@ def test_after_a_sync_only_the_page_of_what_is_new_is_drawn_again(tmp_path, valu
     before = list(section.groups)
     synced(win)
     assert (list(section.groups) == before) is (value is not True)
+
+
+def test_a_listing_that_fails_with_an_empty_journal_says_only_why(tmp_path, monkeypatch):
+    """The device's files not listed and nothing in the journal yet: why, and Try Again; no
+    heading without numbers."""
+    from openexpress.device.storage import DeviceError
+
+    answer(True)
+    win, section = page_window("activities")
+    window_methods(win, PAGE_METHODS)
+    win.progress = lambda _step: None
+    win.session = write_device(tmp_path / "device", A_WEEK)
+    win.session.journal_done = True
+
+    def broken(*args, **kwargs):
+        raise DeviceError("made up: the device stopped answering")
+    monkeypatch.setattr(win.session.storage, "walk_files", broken)
+    win.load_activities()
+    said = texts({"type": "page", "children": page_tree(section)["groups"]})
+    assert said == ["made up: the device stopped answering", "Try Again"]

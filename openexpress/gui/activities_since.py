@@ -96,7 +96,9 @@ def show(win, sec, found, error: str | None = None) -> None:
     listed = error is None and found is not None and bool(found.listing)
     if error is not None:
         _error(win, sec, error)
-    if view.count == 0 and not listed and error is None:
+        if view.count == 0:
+            return  # nothing to show beneath why
+    if view.count == 0 and not listed:
         from openexpress.gui.activities_page import no_activities  # it imports this module
 
         no_activities(sec)
