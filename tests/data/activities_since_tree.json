@@ -578,93 +578,6 @@
           "hidden": true
          },
          {
-          "type": "GtkBox",
-          "css": [
-           "horizontal",
-           "oe-trivia"
-          ],
-          "children": [
-           {
-            "type": "GtkImage",
-            "css": [],
-            "icon": "io.github.tomaszbojanowski.OpenExpress-activity-elevation-symbolic"
-           },
-           {
-            "type": "GtkLabel",
-            "css": [],
-            "label": "<b>100 m climbed.</b> That is the Statue of Liberty 1.0 times."
-           }
-          ]
-         }
-        ]
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "type": "AdwPreferencesGroup",
-    "css": [],
-    "title": "",
-    "description": "",
-    "children": [
-     {
-      "type": "GtkBox",
-      "css": [
-       "vertical"
-      ],
-      "children": [
-       {
-        "type": "GtkBox",
-        "css": [
-         "header",
-         "horizontal"
-        ],
-        "hidden": true,
-        "children": [
-         {
-          "type": "GtkBox",
-          "css": [
-           "labels",
-           "vertical"
-          ],
-          "children": [
-           {
-            "type": "GtkLabel",
-            "css": [
-             "h4",
-             "heading"
-            ],
-            "hidden": true,
-            "label": ""
-           },
-           {
-            "type": "GtkLabel",
-            "css": [
-             "body",
-             "dimmed"
-            ],
-            "hidden": true,
-            "label": ""
-           }
-          ]
-         }
-        ]
-       },
-       {
-        "type": "GtkBox",
-        "css": [
-         "vertical"
-        ],
-        "children": [
-         {
-          "type": "GtkListBox",
-          "css": [
-           "boxed-list"
-          ],
-          "hidden": true
-         },
-         {
           "type": "GtkFlowBox",
           "css": [
            "horizontal"
@@ -1255,93 +1168,6 @@
               ]
              }
             ]
-           }
-          ]
-         }
-        ]
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "type": "AdwPreferencesGroup",
-    "css": [],
-    "title": "",
-    "description": "",
-    "children": [
-     {
-      "type": "GtkBox",
-      "css": [
-       "vertical"
-      ],
-      "children": [
-       {
-        "type": "GtkBox",
-        "css": [
-         "header",
-         "horizontal"
-        ],
-        "hidden": true,
-        "children": [
-         {
-          "type": "GtkBox",
-          "css": [
-           "labels",
-           "vertical"
-          ],
-          "children": [
-           {
-            "type": "GtkLabel",
-            "css": [
-             "h4",
-             "heading"
-            ],
-            "hidden": true,
-            "label": ""
-           },
-           {
-            "type": "GtkLabel",
-            "css": [
-             "body",
-             "dimmed"
-            ],
-            "hidden": true,
-            "label": ""
-           }
-          ]
-         }
-        ]
-       },
-       {
-        "type": "GtkBox",
-        "css": [
-         "vertical"
-        ],
-        "children": [
-         {
-          "type": "GtkListBox",
-          "css": [
-           "boxed-list"
-          ],
-          "hidden": true
-         },
-         {
-          "type": "GtkBox",
-          "css": [
-           "horizontal",
-           "oe-trivia"
-          ],
-          "children": [
-           {
-            "type": "GtkImage",
-            "css": [],
-            "icon": "io.github.tomaszbojanowski.OpenExpress-activity-elevation-symbolic"
-           },
-           {
-            "type": "GtkLabel",
-            "css": [],
-            "label": "<b>100 m climbed.</b> That is the Statue of Liberty 1.0 times."
            }
           ]
          }
@@ -2627,93 +2453,6 @@
           "hidden": true
          },
          {
-          "type": "GtkBox",
-          "css": [
-           "horizontal",
-           "oe-trivia"
-          ],
-          "children": [
-           {
-            "type": "GtkImage",
-            "css": [],
-            "icon": "io.github.tomaszbojanowski.OpenExpress-activity-elevation-symbolic"
-           },
-           {
-            "type": "GtkLabel",
-            "css": [],
-            "label": "<b>100 m climbed.</b> That is the Statue of Liberty 1.0 times."
-           }
-          ]
-         }
-        ]
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "type": "AdwPreferencesGroup",
-    "css": [],
-    "title": "",
-    "description": "",
-    "children": [
-     {
-      "type": "GtkBox",
-      "css": [
-       "vertical"
-      ],
-      "children": [
-       {
-        "type": "GtkBox",
-        "css": [
-         "header",
-         "horizontal"
-        ],
-        "hidden": true,
-        "children": [
-         {
-          "type": "GtkBox",
-          "css": [
-           "labels",
-           "vertical"
-          ],
-          "children": [
-           {
-            "type": "GtkLabel",
-            "css": [
-             "h4",
-             "heading"
-            ],
-            "hidden": true,
-            "label": ""
-           },
-           {
-            "type": "GtkLabel",
-            "css": [
-             "body",
-             "dimmed"
-            ],
-            "hidden": true,
-            "label": ""
-           }
-          ]
-         }
-        ]
-       },
-       {
-        "type": "GtkBox",
-        "css": [
-         "vertical"
-        ],
-        "children": [
-         {
-          "type": "GtkListBox",
-          "css": [
-           "boxed-list"
-          ],
-          "hidden": true
-         },
-         {
           "type": "GtkFlowBox",
           "css": [
            "horizontal"
@@ -3835,93 +3574,6 @@
               ]
              }
             ]
-           }
-          ]
-         }
-        ]
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "type": "AdwPreferencesGroup",
-    "css": [],
-    "title": "",
-    "description": "",
-    "children": [
-     {
-      "type": "GtkBox",
-      "css": [
-       "vertical"
-      ],
-      "children": [
-       {
-        "type": "GtkBox",
-        "css": [
-         "header",
-         "horizontal"
-        ],
-        "hidden": true,
-        "children": [
-         {
-          "type": "GtkBox",
-          "css": [
-           "labels",
-           "vertical"
-          ],
-          "children": [
-           {
-            "type": "GtkLabel",
-            "css": [
-             "h4",
-             "heading"
-            ],
-            "hidden": true,
-            "label": ""
-           },
-           {
-            "type": "GtkLabel",
-            "css": [
-             "body",
-             "dimmed"
-            ],
-            "hidden": true,
-            "label": ""
-           }
-          ]
-         }
-        ]
-       },
-       {
-        "type": "GtkBox",
-        "css": [
-         "vertical"
-        ],
-        "children": [
-         {
-          "type": "GtkListBox",
-          "css": [
-           "boxed-list"
-          ],
-          "hidden": true
-         },
-         {
-          "type": "GtkBox",
-          "css": [
-           "horizontal",
-           "oe-trivia"
-          ],
-          "children": [
-           {
-            "type": "GtkImage",
-            "css": [],
-            "icon": "io.github.tomaszbojanowski.OpenExpress-activity-elevation-symbolic"
-           },
-           {
-            "type": "GtkLabel",
-            "css": [],
-            "label": "<b>100 m climbed.</b> That is the Statue of Liberty 1.0 times."
            }
           ]
          }
@@ -5159,7 +4811,7 @@
            {
             "type": "GtkLabel",
             "css": [],
-            "label": "<b>160 m climbed.</b> That is the Great Pyramid of Giza 1.1 times."
+            "label": "<b>160 m climbed.</b> That is the Statue of Liberty 1.7 times."
            }
           ]
          }
@@ -6114,7 +5766,7 @@
            {
             "type": "GtkLabel",
             "css": [],
-            "label": "<b>893 m climbed.</b> That is the Burj Khalifa 1.0 times."
+            "label": "<b>893 m climbed.</b> That is the Empire State Building 2.0 times."
            }
           ]
          }
@@ -7021,7 +6673,7 @@
            {
             "type": "GtkLabel",
             "css": [],
-            "label": "<b>893 m climbed.</b> That is the Burj Khalifa 1.0 times."
+            "label": "<b>893 m climbed.</b> That is the Empire State Building 2.0 times."
            }
           ]
          }
@@ -7972,7 +7624,7 @@
            {
             "type": "GtkLabel",
             "css": [],
-            "label": "<b>893 m climbed.</b> That is the Burj Khalifa 1.0 times."
+            "label": "<b>893 m climbed.</b> That is the Empire State Building 2.0 times."
            }
           ]
          }
@@ -8923,7 +8575,7 @@
            {
             "type": "GtkLabel",
             "css": [],
-            "label": "<b>2100 ft climbed.</b> That is the Empire State Building 1.4 times."
+            "label": "<b>2100 ft climbed.</b> That is the Eiffel Tower 1.9 times."
            }
           ]
          }
@@ -9459,93 +9111,6 @@
               ]
              }
             ]
-           }
-          ]
-         }
-        ]
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "type": "AdwPreferencesGroup",
-    "css": [],
-    "title": "",
-    "description": "",
-    "children": [
-     {
-      "type": "GtkBox",
-      "css": [
-       "vertical"
-      ],
-      "children": [
-       {
-        "type": "GtkBox",
-        "css": [
-         "header",
-         "horizontal"
-        ],
-        "hidden": true,
-        "children": [
-         {
-          "type": "GtkBox",
-          "css": [
-           "labels",
-           "vertical"
-          ],
-          "children": [
-           {
-            "type": "GtkLabel",
-            "css": [
-             "h4",
-             "heading"
-            ],
-            "hidden": true,
-            "label": ""
-           },
-           {
-            "type": "GtkLabel",
-            "css": [
-             "body",
-             "dimmed"
-            ],
-            "hidden": true,
-            "label": ""
-           }
-          ]
-         }
-        ]
-       },
-       {
-        "type": "GtkBox",
-        "css": [
-         "vertical"
-        ],
-        "children": [
-         {
-          "type": "GtkListBox",
-          "css": [
-           "boxed-list"
-          ],
-          "hidden": true
-         },
-         {
-          "type": "GtkBox",
-          "css": [
-           "horizontal",
-           "oe-trivia"
-          ],
-          "children": [
-           {
-            "type": "GtkImage",
-            "css": [],
-            "icon": "io.github.tomaszbojanowski.OpenExpress-activity-elevation-symbolic"
-           },
-           {
-            "type": "GtkLabel",
-            "css": [],
-            "label": "<b>100 m climbed.</b> That is the Statue of Liberty 1.0 times."
            }
           ]
          }

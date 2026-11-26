@@ -162,18 +162,26 @@ def test_the_totals():
 
 
 @pytest.mark.parametrize(("ascent", "distance", "said"), [
-    (893, 53_000.0, ("climbed", "burj-khalifa", 1.0)),
-    (700, 53_000.0, ("climbed", "empire-state-building", 1.5)),
-    (827, 0.0, ("climbed", "empire-state-building", 1.8)),
-    (93, 0.0, ("climbed", "statue-of-liberty", 1.0)),
-    (8849, 0.0, ("climbed", "everest", 1.0)),
-    (92, 50_000.0, ("distance", "marathon", 1.1)),
+    (893, 53_000.0, ("climbed", "empire-state-building", 2.0)),
+    (495, 0.0, ("climbed", "eiffel-tower", 1.5)),  # the Eiffel Tower 1.50 times
+    (491.7, 0.0, ("climbed", "great-pyramid", 3.5)),  # the Eiffel Tower 1.49 times: not it
+    (13_273.5, 0.0, ("climbed", "everest", 1.5)),
+    (13_000, 0.0, ("climbed", "kilimanjaro", 2.2)),
+    (150_000, 0.0, ("climbed", "edge-of-space", 1.5)),
+    (149_000, 0.0, ("climbed", "everest", 16.8)),
+    (139.5, 0.0, ("climbed", "statue-of-liberty", 1.5)),
+    (103, 0.0, ("climbed", "statue-of-liberty", 1.1)),  # the smallest: 1.1 times is enough
+    (102, 50_000.0, ("distance", "marathon", 1.1)),  # below 1.1 statues: the distance
+    (0, 63_292.5, ("distance", "marathon", 1.5)),
+    (0, 123_000.0, ("distance", "panama-canal", 1.5)),
+    (0, 122_900.0, ("distance", "marathon", 2.9)),  # the Panama Canal 1.49 times: not it
     (0, 100_000_000.0, ("distance", "equator", 2.4)),
-    (92, 42_194.0, None),
+    (102, 46_000.0, None),  # both below 1.1 times the smallest: no bar
 ])
 def test_the_trivia(ascent, distance, said):
-    """The largest not larger than the ascent, one decimal rounded down; the distance when the
-    ascent is less than the smallest height; nothing when both are."""
+    """The largest that fits the ascent at least 1.5 times (the smallest at least 1.1 times),
+    one decimal rounded down; the distance when the ascent does not fit the smallest so; no
+    bar when neither does."""
     found = since_last.trivia([activity("a.fit", NOW, ascent=ascent, distance=distance)])
     assert (None if found is None else (found.kind, found.thing, found.times)) == said
 

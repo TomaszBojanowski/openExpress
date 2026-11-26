@@ -27,6 +27,8 @@ HEIGHTS = (("statue-of-liberty", 93.0), ("great-pyramid", 138.5), ("eiffel-tower
            ("everest", 8849.0), ("edge-of-space", 100_000.0))
 LENGTHS = (("marathon", 42_195.0), ("panama-canal", 82_000.0), ("grand-canyon", 446_000.0),
            ("rhine", 1_233_000.0), ("danube", 2_857_000.0), ("equator", 40_075_000.0))
+FITS = 1.5  # the trivia's object fits the result at least this many times
+FITS_SMALLEST = 1.1  # the smallest of a list at least this many
 
 
 @dataclass(frozen=True)
@@ -137,9 +139,11 @@ def totals(activities: list[dict]) -> Totals:
 
 
 def _measured(metres: float, things) -> tuple[str, float] | None:
-    """The largest of `things` not larger than `metres`, and how many times it is (one decimal,
-    rounded down: never more than it is); None below the smallest."""
-    fitting = [(name, size) for name, size in things if size <= metres]
+    """The largest of `things` that fits in `metres` at least FITS times (the smallest at least
+    FITS_SMALLEST times), and how many times it is (one decimal, rounded down: never more than
+    it is); None when not even the smallest fits so."""
+    fitting = [(name, size) for n, (name, size) in enumerate(things)
+               if metres >= size * (FITS_SMALLEST if n == 0 else FITS) - 1e-9]
     if not fitting:
         return None
     name, size = fitting[-1]
@@ -147,9 +151,9 @@ def _measured(metres: float, things) -> tuple[str, float] | None:
 
 
 def trivia(activities: list[dict]) -> Trivia | None:
-    """How high the activities climbed against a height; when that is less than the smallest,
-    how far they went against a length; None when both are below the smallest. The same
-    numbers give the same words (no chance)."""
+    """How high the activities climbed against a height (_measured); when not even the smallest
+    fits, how far they went against a length; None when neither does. The same numbers give
+    the same words (no chance)."""
     t = totals(activities)
     found = _measured(t.ascent, HEIGHTS)
     if found is not None:
