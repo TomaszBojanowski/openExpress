@@ -85,3 +85,30 @@ def test_each_group_of_sports_has_its_symbol():
     assert activities_since.SYMBOLS["foot"] == own("activities")
     assert sorted(v for k, v in activities_since.SYMBOLS.items() if k != "foot") == sorted(
         own(name) for name in SPORTS)
+
+
+def _drawing(name):
+    import xml.etree.ElementTree as ET
+
+    return ET.parse(ROOT / "packaging" / "icons" / f"{name}.svg").getroot()
+
+
+def test_the_bike_is_lines_of_one_width_and_two_rings():
+    """Two wheels as rings with room inside (never a solid spot at 16 px), the frame, saddle and
+    handlebar as strokes: every line of one width, nothing filled."""
+    root = _drawing("activity-sport-cycling")
+    shapes = [e for e in root.iter() if e is not root]
+    circles = [e for e in shapes if e.tag.endswith("circle")]
+    assert len(circles) == 2
+    widths = {float(e.get("stroke-width", root.get("stroke-width"))) for e in shapes}
+    assert len(widths) == 1
+    (width,) = widths
+    assert all(float(c.get("r")) - width / 2 >= 1.75 for c in circles)
+    assert not any(e.get("fill") not in (None, "none") for e in shapes)
+
+
+def test_the_snowflake_has_branches_on_its_arms():
+    """Three lines through the middle and short branches on each of their six arms."""
+    root = _drawing("activity-sport-winter")
+    lines = [e for e in root.iter() if e.tag.endswith("path")]
+    assert len(lines) == 3 + 6 * 2
