@@ -21,6 +21,9 @@ from gi.repository import Adw, Gio, GLib, Gtk  # noqa: E402 - imports must follo
 from openexpress import applog, paths  # noqa: E402
 from openexpress.activities import Source  # noqa: E402
 from openexpress.errors import UserFacingError  # noqa: E402
+from openexpress.gui.activities_journal import card as journal_card  # noqa: E402
+from openexpress.gui.activities_journal import line as journal_line  # noqa: E402
+from openexpress.gui.activities_journal import line_last as journal_line_last  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     activities_count_text,
     activity_caption,
@@ -194,15 +197,20 @@ class ActivitiesPage:
             return
         self.activities = found
         sec = self.sections["activities"]
-        self.activities_list = self.activities_more = None
+        # The groups of the drawing before are gone (the section cleared): none of them is
+        # pointed at any more, so that nothing below moves or removes one of them.
+        self.activities_list = self.activities_more = self.activities_note = None
+        journal_card(self, sec)  # until the activity journal is answered: on top
         if not found.listing:
             _no_activities(sec)
+            journal_line(self, sec)
             return
         self.activities_list = sec.group(description=GLib.markup_escape_text(
             activities_count_text(len(found.listing), found.only_in_backups)))
         for read in found.read:
             self.activities_list.add(activity_row(self, read))
         _show_more_button(self, found)
+        journal_line(self, sec)  # at the very bottom
         log.info("activities page: %d shown, %d more to read", len(found.read), found.left)
 
 
@@ -225,6 +233,7 @@ def _show_more_button(win, found) -> None:
     button.set_halign(Gtk.Align.CENTER)
     win.activities_more = sec.group()
     win.activities_more.add(button)
+    journal_line_last(win)
 
 
 def _read_more(win, button: Gtk.Button) -> None:

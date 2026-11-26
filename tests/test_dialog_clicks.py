@@ -582,6 +582,14 @@ def _cache_clear(ctx):
     ask_to_clear(win, "Clear the Downloaded Maps?", "They take 1 GB.", ["maps"])
 
 
+def _journal_delete(ctx):
+    from openexpress import activity_journal
+    from openexpress.gui.preferences import ask_to_delete_the_journal
+
+    ctx.monkeypatch.setattr(activity_journal, "delete", _note(ctx, "journal deleted"))
+    ask_to_delete_the_journal(_escape_window(ctx, _journal_delete=None))
+
+
 def _update_install(ctx):
     from openexpress.gui.app import MainWindow
 
@@ -752,7 +760,7 @@ OPENERS = {
     "course-add": _course_add, "course-remove": _course_remove,
     "own-map-remove": _own_map_remove, "map-install": _map_install, "map-remove": _map_remove,
     "music-copy": _music_copy, "playlist-add": _playlist_add, "music-remove": _music_remove,
-    "cache-clear": _cache_clear,
+    "cache-clear": _cache_clear, "activity-journal-delete": _journal_delete,
     "update-install": _update_install, "update-install-all": _update_install_all,
     "eject-ask": _eject_ask, "ejected": _ejected,
     "eject-retry": _eject_retry, "error": _error, "report": _report,

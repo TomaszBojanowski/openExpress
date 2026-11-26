@@ -11,13 +11,14 @@ the two are separate installations, see
 | `openexpress files [--type FIT_TYPE_4] [--limit N]` | files on the device by data type from `GarminDevice.xml`; with `--type` (or `openexpress -v files`) each file, `--limit N` only the last N |
 | `openexpress activities [--limit N \| --all] [--backups DIR]` | the activities of the connected device and of its backups, the newest first ([details](#activities)) |
 | `openexpress activities export NAME… [--dest DIR] [--backups DIR] [--apply]` | write activities as GPX 1.1 files, by default to `Garmin/GPX` in your Documents folder ([details](#activities-export)) |
+| `openexpress activities journal [--all] [--delete] [--apply]` | the activity journal of the connected device, or with `--all` of every device: how many activities, since when, the gaps, its size; `--delete` deletes it ([details](#activities-journal)) |
 | `openexpress fit inspect FILE` | what a FIT file on this computer holds and whether it is whole ([details](#fit-inspect)) |
 | `openexpress report [--log]` | device report for GitHub, without serial numbers, Unit IDs or e-mail, with the device's last crashes (date, software version, error number) and its memory dumps; when no device can be opened, a report of what is connected over USB and of the system (exit code 0); `--log` prints the last 200 lines of the [log](troubleshooting.md#log-file) instead, filtered, for the form's “Log” field |
 | `openexpress diagnostics [--crash-logs] [--dumps] [--free-space] [--apply]` | what the device logged as errors, the crashes that restarted it, its memory dumps and its log of connections; copies its diagnostic files, or frees up space on it ([details](#diagnostics)) |
 | `openexpress status [--online]` | the sign-in, the Garmin devices connected (name, USB mode, whether they are on the account), the last sync of each with the activities it has to upload now, what the window's last check of its updates found, and for a device with satellite data (experimental) whether they are on and when they were last written; `--online` also asks Garmin Connect and Garmin's update server, or uses their answers from a moment ago ([How long Garmin's answers are kept](privacy.md#how-long-garmins-answers-are-kept)); without it nothing is asked of a server |
 | `openexpress devices [--forget N] [--discard-pending] [--backups] [--apply]` | the devices this installation has seen; `--forget N` forgets device number N of the list and what this installation keeps of it, as **Forget Device** does ([what that is](guide.md#the-start-page-and-the-device-page)); files not uploaded yet go only with `--discard-pending`, its backups only with `--backups`; a connected device is not forgotten |
 | `openexpress setup --from-installer GarminExpress.exe` | one-time setup from the Garmin Express installer for Windows (only read, nothing installed); instead of it `--from-dll Networking.dll [--utilities-dll Utilities.dll]` or `--key KEY --secret SECRET` |
-| `openexpress setup [--ui-language en\|cs\|de\|fr\|pl\|system] [--diagnostics-copy on\|off] [--locale LOCALE] [--environment production\|china]` | settings: the program's language, the copy of the device's diagnostic files, the language to request from Garmin's servers (by default the program's), Garmin's servers; without options it shows the servers and that language |
+| `openexpress setup [--ui-language en\|cs\|de\|fr\|pl\|system] [--diagnostics-copy on\|off] [--activity-journal on\|off] [--locale LOCALE] [--environment production\|china]` | settings: the program's language, the copy of the device's diagnostic files, the [activity journal](#activities-journal) (`on` is your yes to it), the language to request from Garmin's servers (by default the program's), Garmin's servers; without options it shows the servers and that language |
 | `openexpress login [--manual]` | sign in on the Garmin SSO page (WebKitGTK window) |
 | `openexpress whoami [--check]`, `logout` | account (its name masked: a user name as `t…b`, an e-mail address as `t…@e…`, as in every command's output), sign out (removes the local token) |
 | `openexpress upload-config [--json]` | what data is uploaded for this device and where (Garmin server) |
@@ -118,6 +119,25 @@ as GPX 1.1 files.
 - Nothing is written unless every activity named can be: an activity without GPS positions, one
   the device was still writing, a name not found or a file that is already there makes the
   command stop with exit code 1 and say which.
+
+### activities journal
+
+`openexpress activities journal [--all] [--delete] [--apply]` shows the activity journal of the
+connected device: what this computer keeps of each of its activities, so that the Activities page
+can show them after the device deleted their files (an Edge 1050 keeps about 200 and deletes the
+oldest). See [The activity journal](privacy.md#the-activity-journal) for what it holds.
+
+- It is kept only after your yes: the card on the Activities page, the switch **Keep an Activity
+  Journal** in Preferences or `openexpress setup --activity-journal on` (`off` stops it; what it
+  holds stays until you delete it).
+- It is written when a device is opened in the window, after a background sync and after
+  `openexpress sync --apply`; never by this command, `info`, `status` or `activities`. A device
+  on another Garmin Connect account than yours gets none.
+- It says how many activities it holds, since when, its size, and its gaps: spans whose
+  activities the device may have deleted before the journal read them.
+- `--all`: the journal of every device on this computer, the device connected or not.
+- `--delete` names what it would delete; with `--apply` it deletes it (with `--all` every
+  journal). The activities the device no longer keeps cannot be read again.
 
 ### fit inspect
 

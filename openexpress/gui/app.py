@@ -275,8 +275,10 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         self._last_sync_data = None
         self.apps_count = self.music_count = None
         # The activities of the open device as its page read them, and the groups of that page
-        # that grow as more are read (gui/activities_page.py).
+        # that grow as more are read (gui/activities_page.py); the line of the activity journal
+        # at its very bottom (gui/activities_journal.py).
         self.activities = self.activities_list = self.activities_more = None
+        self.activities_note = None
         self.account_picture_offer = self.account_picture_row = None
         # The row "Device Status" of the device page and its group (device_page.status_row);
         # the page Device Status (gui/status_page.py): its facts, whether every crash and update
@@ -294,6 +296,7 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         # The dialogs open: Preferences (with its rows), the order of the apps, Forget Device
         # (kept by confirm(..., keep_as=)).
         self._preferences = self._account_row = self._storage = None
+        self._journal_delete = None  # Delete… of the activity journal in the Preferences open
         self._order_dialog = self._forget_dialog = None
 
     def _start(self) -> None:

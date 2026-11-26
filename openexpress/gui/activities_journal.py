@@ -1,0 +1,164 @@
+"""The activity journal in the window (activity_journal.py keeps it): brought up to date in the
+background once a device is opened; on the Activities page, its card until it is answered (on
+top of the page) and its line at the very bottom (after a no, or for a device on another
+account after the yes). Nothing else of the page changes with it.
+Has: the line at the bottom of the Activities page (activities_note); whether the open
+device's journal was read is in its session (DeviceSession.journal_read)."""
+from __future__ import annotations
+
+import logging
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+
+from gi.repository import Gtk  # noqa: E402 - imports must follow gi.require_version
+
+from openexpress import activity_journal  # noqa: E402
+from openexpress.gui.window_tasks import (  # noqa: E402
+    not_saved_text,
+    still_in_window,
+    wrapping_row,
+)
+from openexpress.i18n import _  # noqa: E402
+
+log = logging.getLogger(__name__)
+
+
+def read_journal(win, again: bool = False) -> None:
+    """The open device's activity journal brought up to date in the background, once a session
+    (after its diagnostics are read: device_page.read_diagnostics), when it is kept: after the
+    user's yes, never for a device on another Garmin Connect account. Before the yes and after
+    a no nothing starts. `again`: also when it was read this session (the yes given again in
+    the preferences: what a reading turned off left out). The page does not change with it."""
+    s = win.session
+    if s is None or not activity_journal.kept() or (s.journal_read and not again):
+        return
+    if activity_journal.on_another_account(s.ownership_error):
+        return
+    s.journal_read = True
+
+    def work():
+        return activity_journal.at_connection(s.device, s.storage, s.ownership_error)
+
+    win.in_background(work, lambda _did: None, lambda _error: None)
+
+
+def _another_account(win) -> bool:
+    return activity_journal.on_another_account(getattr(win.session, "ownership_error", None))
+
+
+def card(win, sec) -> None:
+    """The card on top of the Activities page while the journal is not answered (settings.json
+    has no answer), for a device the journal would be kept of: what it keeps and two buttons,
+    its only answers. Nothing is read or written for it before one is clicked."""
+    if activity_journal.answered() is not None or _another_account(win):
+        return
+    box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=12, margin_top=12,
+                  margin_bottom=12, margin_start=12, margin_end=12)
+    # TRANSLATORS: title of the card on top of the Activities page that asks whether to keep
+    # an activity journal
+    title = Gtk.Label(label=_("Keep an Activity Journal?"), wrap=True, xalign=0)
+    title.add_css_class("title-4")
+    box.append(title)
+    # TRANSLATORS: text of the card about the activity journal; "your weeks and your year":
+    # what the Activities page will show of them
+    text = _("openExpress can keep a summary and the shape of each activity on this computer, "
+             "so that the Activities page shows your weeks and your year even after the device "
+             "deletes old files. Nothing is sent anywhere. You can turn it off or delete it in "
+             "Preferences.")
+    box.append(Gtk.Label(label=text, wrap=True, xalign=0))
+    # TRANSLATORS: button of the card about the activity journal: the no
+    later = Gtk.Button(label=_("Not Now"))
+    later.add_css_class("pill")
+    later.connect("clicked", lambda _button: answer(win, False))
+    # TRANSLATORS: button of the card about the activity journal: the yes
+    keep = Gtk.Button(label=_("Keep a Journal"))
+    keep.add_css_class("pill")
+    keep.add_css_class("suggested-action")
+    keep.connect("clicked", lambda _button: answer(win, True))
+    # Side by side, the second below the first when the window is too narrow for both; at the
+    # start, as the words above them.
+    buttons = wrapping_row([later, keep], 12)
+    buttons.set_halign(Gtk.Align.START)
+    if hasattr(buttons, "set_align"):  # the wrapping box: its lines at the start too
+        buttons.set_align(0.0)
+    box.append(buttons)
+    frame = Gtk.Box()
+    frame.add_css_class("card")
+    frame.append(box)
+    sec.group().add(frame)
+
+
+def line(win, sec) -> None:
+    """The line at the very bottom of the Activities page: after a no, that a journal shows
+    the weeks and the year, with the way to the preferences; after the yes, for a device on
+    another Garmin Connect account, that it gets none."""
+    win.activities_note = None
+    said = activity_journal.answered()
+    if said is False:
+        # TRANSLATORS: line at the very bottom of the Activities page after the no to the
+        # activity journal, beside the button Preferences
+        text, preferences = _("An activity journal shows your weeks and your year"), True
+    elif said is True and _another_account(win):
+        # TRANSLATORS: line at the very bottom of the Activities page of a device on another
+        # Garmin Connect account than the one signed in
+        text, preferences = _("The activity journal is not kept for a device on another Garmin "
+                              "Connect account"), False
+    else:
+        return
+    box = Gtk.Box(spacing=12)
+    words = Gtk.Label(label=text, wrap=True, xalign=0, hexpand=True)
+    words.add_css_class("dim-label")
+    box.append(words)
+    if preferences:
+        button = Gtk.Button(label=_("Preferences"), valign=Gtk.Align.CENTER)
+        button.add_css_class("flat")
+        button.connect("clicked", lambda _button: win.show_preferences())
+        box.append(button)
+    win.activities_note = sec.group()
+    win.activities_note.add(box)
+
+
+def line_last(win) -> None:
+    """The line at the very bottom again, after a group was added below it (Show N More)."""
+    sec = win.sections["activities"]
+    note = win.activities_note
+    if note is None or sec.groups[-1] is note:
+        return
+    sec.page.remove(note)
+    sec.groups.remove(note)
+    sec.page.add(note)
+    sec.groups.append(note)
+
+
+def answer(win, yes: bool) -> None:
+    """The card's answer saved in settings.json; then the card goes for good, the page drawn
+    again as the answer has it, and after the yes the open device's journal brought up to
+    date. When it cannot be saved the card stays and the window says why."""
+    from openexpress.settings import Settings, SetupError
+
+    try:
+        s = Settings.load()
+        s.activity_journal = yes
+        s.save()
+    except (OSError, SetupError) as e:
+        win.error(_("Setting Not Saved"), not_saved_text(e))
+        return
+    log.info("activity journal: %s", "on" if yes else "off")
+    journal_changed(win)
+    if yes:
+        read_journal(win)
+
+
+def journal_changed(win) -> None:
+    """The Activities page drawn again as the journal's answer has it now (its card, its
+    line), when it shows the activities of the open device; nothing is read again."""
+    found, sec = win.activities, (win.sections or {}).get("activities")
+    if (win.session is None or found is None or sec is None or not sec.loaded
+            or found.storage is not win.session.storage):
+        return
+    sec.clear()
+    win._action_buttons = still_in_window(win._action_buttons)
+    win.show_activities(found)

@@ -17,7 +17,7 @@ import gi
 gi.require_version("Gio", "2.0")
 from gi.repository import Gio, GLib  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress import history, last_sync, service  # noqa: E402
+from openexpress import activity_journal, history, last_sync, service  # noqa: E402
 from openexpress.background import watch_id  # noqa: E402
 from openexpress.connect import OwnershipError  # noqa: E402
 from openexpress.device.gio_storage import (  # noqa: E402
@@ -143,7 +143,7 @@ class Watcher(Gio.Application):
         return None
 
     def _sync(self):
-        s = None
+        s = synced = None
 
         def name() -> str:
             """The device's name for a notification, until it is known a generic one."""
@@ -189,6 +189,7 @@ class Watcher(Gio.Application):
             body = last_sync.describe(summary.record(s.device.unit_id)).notification
             # TRANSLATORS: title of a notification of the background sync, over what it did
             GLib.idle_add(self.notify, _("{device} synced").format(device=name()), body)
+            synced = s
         except service.SyncBusy:
             log.info("A sync is running in another process")
         except SeveralDevices:
@@ -205,6 +206,19 @@ class Watcher(Gio.Application):
         except Exception as e:
             log.exception("Sync failed")
             GLib.idle_add(self.notify, _("{device} not synced").format(device=name()), str(e))
+        if synced is not None:
+            self._journal(synced)
+
+    @staticmethod
+    def _journal(s) -> None:
+        """After a background sync, once it is told: the device's activity journal, when it is
+        kept (activity_journal.at_connection). A device that stops responding meanwhile ends
+        it with one line of the log: the sync is done and said."""
+        try:
+            activity_journal.at_connection(s.device, s.storage,
+                                           getattr(s, "ownership_error", None))
+        except DeviceNotResponding:
+            log.info("activity journal: the device stopped responding")
 
 
 def main() -> int:

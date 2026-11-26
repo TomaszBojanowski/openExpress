@@ -34,9 +34,10 @@ Besides the login, this installation keeps what it knows of each device in
   file, the number and size of memory dumps, the crashes the error logs held (kind, time, error,
   where the software stopped, screen, which of the two logs), how many error logs it has and how
   many entries they held, and whether the device has hidden crash logs, without file names,
-  kept whatever **Keep Diagnostic Files** says.
+  kept whatever **Keep Diagnostic Files** says;
+- only after your yes, its activity journal (`activities.jsonl`), see [Activities](#activities).
 
-**Forget Device** removes what it keeps of a device. The Flatpak and the version from source
+**Forget Device** removes what it keeps of a device, its activity journal with it. The Flatpak and the version from source
 each keep their own files; what each sees of the other is described in
 [The Flatpak and the version from source](install.md#the-flatpak-and-the-version-from-source).
 
@@ -107,6 +108,39 @@ readable only by you, each kind within its limit, the oldest removed first:
   describe them and keeps nothing.
 - The log says how many files were read and how large they were, never a file name, a date, a
   sport or a place.
+
+### The activity journal
+
+Devices keep a limited number of activities and delete the oldest themselves (an Edge 1050
+keeps about 200). So that the Activities page can show your activities after that, openExpress
+can keep an activity journal on this computer, only after your yes: the card on the Activities
+page, the switch **Keep an Activity Journal** in Preferences, or
+`openexpress setup --activity-journal on`. Until you answer, and after a no, nothing is read or
+written for it.
+
+- **What it holds, for each activity:** the name and size of its file, where it was read (the
+  device or a backup), its start and time zone, sport, times, distance, ascent and descent,
+  lowest and highest elevation, average and highest heart rate, the time in each heart rate zone
+  (not the zones' limits), average speed, calories, the units the device shows, the shape of its
+  track and its elevation profile.
+- **The shape of a track, without its place:** up to 200 points scaled into a square, with the
+  width and height of the whole in metres. No coordinate is kept, so the journal does not say
+  where an activity was; a distinctive loop could in theory still be matched to a map by its
+  shape and size.
+- **What it never holds:** a position on Earth, the device's serial number or Unit ID, a path.
+  It also keeps a line for each connection: how many activities the device held, its oldest
+  and its newest.
+- **Where:** one file a device, `activities.jsonl` in the device's folder (see
+  [What is kept of each device](#what-is-kept-of-each-device)), readable only by you. Like the
+  rest of that folder it goes into backups of your home folder.
+- **When it is written:** when a device is opened in the window, after a background sync and
+  after `openexpress sync --apply`; never for a device on another Garmin Connect account than
+  the one signed in.
+- **Turning it off** stops it and keeps what it holds. **Delete the Activity Journal** in
+  Preferences, or `openexpress activities journal --delete --apply`, deletes it; **Forget
+  Device** deletes the journal of that device.
+- The log says how many activities were added and how long it took, never a file name, a date,
+  a sport or a place. The device report holds nothing of it.
 
 ## Activity maps from OpenStreetMap
 

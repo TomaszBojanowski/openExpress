@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-25 00:09+0100\n"
+"POT-Creation-Date: 2026-11-25 22:16+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -1136,6 +1136,18 @@ msgstr "Język interfejsu: {language}"
 msgid "system language"
 msgstr "język systemu"
 
+#. TRANSLATORS: `openexpress setup --activity-journal on|off`: the answer saved
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Activity journal: on"
+msgstr "Dziennik aktywności: włączony"
+
+#. TRANSLATORS: `openexpress setup --activity-journal on|off`: the answer saved
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Activity journal: off"
+msgstr "Dziennik aktywności: wyłączony"
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Copy of the device's diagnostic files at each connection: on"
@@ -1811,6 +1823,120 @@ msgstr[2] "{count} aktywności."
 msgid "Only in backups: {count}."
 msgstr "Tylko w kopiach zapasowych: {count}."
 
+#. TRANSLATORS: `openexpress activities journal`: a journal of a device that has no
+#. activity in it yet
+#: openexpress/cli.py
+#, python-brace-format
+msgid "No activities yet"
+msgstr "Jeszcze nie ma aktywności"
+
+#. TRANSLATORS: `openexpress activities journal`: {date} the start of its oldest activity
+#: openexpress/cli.py
+#, python-brace-format
+msgid "{count} activity since {date}"
+msgid_plural "{count} activities since {date}"
+msgstr[0] "{count} aktywność od {date}"
+msgstr[1] "{count} aktywności od {date}"
+msgstr[2] "{count} aktywności od {date}"
+
+#. TRANSLATORS: strftime format of a date in the popover of the server state button
+#: openexpress/cli.py openexpress/gui/courses_page.py openexpress/gui/words.py
+#: openexpress/i18n.py openexpress/netstatus.py openexpress/service.py
+#, python-brace-format
+msgid "%Y-%m-%d"
+msgstr "%d.%m.%Y"
+
+#. TRANSLATORS: `openexpress activities journal`: no span whose activities the device
+#. may have deleted before the journal read them
+#: openexpress/cli.py
+#, python-brace-format
+msgid "No gaps"
+msgstr "Bez luk"
+
+#. TRANSLATORS: `openexpress activities journal`: a span whose activities the device may
+#. have deleted before the journal read them
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Not known: {start} to {end}"
+msgstr "Nieznane: od {start} do {end}"
+
+#. TRANSLATORS: `openexpress activities journal --all`: the journal of a device that
+#. this installation no longer remembers
+#: openexpress/cli.py
+#, python-brace-format
+msgid "A device not remembered"
+msgstr "Urządzenie niezapamiętane"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "No activity journal on this computer."
+msgstr "Na tym komputerze nie ma dziennika aktywności."
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "No activity journal of this device."
+msgstr "To urządzenie nie ma dziennika aktywności."
+
+#. TRANSLATORS: `openexpress activities journal --delete` without --apply: what it
+#. would delete
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Would delete every activity journal on this computer: {count} activity."
+msgid_plural ""
+"Would delete every activity journal on this computer: {count} activities."
+msgstr[0] ""
+"Zostałby usunięty każdy dziennik aktywności na tym komputerze: {count} "
+"aktywność."
+msgstr[1] ""
+"Zostałby usunięty każdy dziennik aktywności na tym komputerze: {count} "
+"aktywności."
+msgstr[2] ""
+"Zostałby usunięty każdy dziennik aktywności na tym komputerze: {count} "
+"aktywności."
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Would delete the activity journal of {device}: {count} activity."
+msgid_plural ""
+"Would delete the activity journal of {device}: {count} activities."
+msgstr[0] ""
+"Zostałby usunięty dziennik aktywności urządzenia {device}: {count} aktywność."
+msgstr[1] ""
+"Zostałby usunięty dziennik aktywności urządzenia {device}: {count} "
+"aktywności."
+msgstr[2] ""
+"Zostałby usunięty dziennik aktywności urządzenia {device}: {count} "
+"aktywności."
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Dry run: nothing was deleted. Add --apply to delete it."
+msgstr "Tryb próbny: nic nie usunięto. Dodaj --apply, aby usunąć."
+
+#. TRANSLATORS: `openexpress activities journal --delete --apply`: what it deleted
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Deleted every activity journal on this computer: {count} activity."
+msgid_plural ""
+"Deleted every activity journal on this computer: {count} activities."
+msgstr[0] ""
+"Usunięto każdy dziennik aktywności na tym komputerze: {count} aktywność."
+msgstr[1] ""
+"Usunięto każdy dziennik aktywności na tym komputerze: {count} aktywności."
+msgstr[2] ""
+"Usunięto każdy dziennik aktywności na tym komputerze: {count} aktywności."
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "Deleted the activity journal of {device}: {count} activity."
+msgid_plural "Deleted the activity journal of {device}: {count} activities."
+msgstr[0] ""
+"Usunięto dziennik aktywności urządzenia {device}: {count} aktywność."
+msgstr[1] ""
+"Usunięto dziennik aktywności urządzenia {device}: {count} aktywności."
+msgstr[2] ""
+"Usunięto dziennik aktywności urządzenia {device}: {count} aktywności."
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid "No activity named {name} is on the device or in its backups."
@@ -1895,13 +2021,6 @@ msgstr "urządzenie"
 msgctxt "activity source"
 msgid "backup {date}"
 msgstr "kopia z {date}"
-
-#. TRANSLATORS: strftime format of a date in the popover of the server state button
-#: openexpress/cli.py openexpress/gui/courses_page.py openexpress/gui/words.py
-#: openexpress/i18n.py openexpress/netstatus.py openexpress/service.py
-#, python-brace-format
-msgid "%Y-%m-%d"
-msgstr "%d.%m.%Y"
 
 #. TRANSLATORS: a note under a row of `openexpress activities`: the activity's file could not
 #. be read
@@ -2330,11 +2449,6 @@ msgstr "Razem: {size}"
 #, python-brace-format
 msgid "Freed {size}."
 msgstr "Zwolniono {size}."
-
-#: openexpress/cli.py
-#, python-brace-format
-msgid "Dry run: nothing was deleted. Add --apply to delete it."
-msgstr "Tryb próbny: nic nie usunięto. Dodaj --apply, aby usunąć."
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -4307,6 +4421,19 @@ msgstr ""
 "kopiuj pliki diagnostyczne urządzenia na ten komputer przy każdym "
 "podłączeniu w oknie (nigdy nie są wysyłane)"
 
+#. TRANSLATORS: help of `openexpress setup --activity-journal on|off`; "on" is
+#. the user's yes
+#: openexpress/cli.py
+#, python-brace-format
+msgid ""
+"keep an activity journal: a summary and the shape of each activity stay on "
+"this computer, also after the device deletes its file (\"on\" is your yes to "
+"it; nothing is sent)"
+msgstr ""
+"prowadź dziennik aktywności: podsumowanie i kształt każdej aktywności "
+"zostają na tym komputerze, także po usunięciu jej pliku przez urządzenie "
+"(„on” to Twoje „tak”; nic nie jest wysyłane)"
+
 #: openexpress/cli.py
 #, python-brace-format
 msgid "device report for GitHub, without serial numbers"
@@ -4382,6 +4509,32 @@ msgstr "nazwa pliku aktywności, tak jak pokazuje ją lista aktywności"
 #, python-brace-format
 msgid "folder for the GPX files (default: {path})"
 msgstr "folder na pliki GPX (domyślnie: {path})"
+
+#. TRANSLATORS: help of `openexpress activities journal`: what the program keeps of the
+#. activities of the device (Preferences: "Activity Journal")
+#: openexpress/cli.py
+#, python-brace-format
+msgid ""
+"the activity journal of the connected device: how many activities, since "
+"when, the gaps, its size"
+msgstr ""
+"dziennik aktywności podłączonego urządzenia: ile aktywności, od kiedy, luki, "
+"jego rozmiar"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "every activity journal on this computer"
+msgstr "każdy dziennik aktywności na tym komputerze"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "delete the activity journal (with --all: every one)"
+msgstr "usuń dziennik aktywności (z --all: każdy)"
+
+#: openexpress/cli.py
+#, python-brace-format
+msgid "with --delete: delete it"
+msgstr "z --delete: usuń go"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -6385,6 +6538,71 @@ msgstr "Zyskany czas aktywności: dziś {today}"
 msgid "last 7 days {week}"
 msgstr "ostatnie 7 dni {week}"
 
+#. TRANSLATORS: title of the card on top of the Activities page that asks whether to keep
+#. an activity journal
+#: openexpress/gui/activities_journal.py
+#, python-brace-format
+msgid "Keep an Activity Journal?"
+msgstr "Prowadzić dziennik aktywności?"
+
+#. TRANSLATORS: text of the card about the activity journal; "your weeks and your year":
+#. what the Activities page will show of them
+#: openexpress/gui/activities_journal.py
+#, python-brace-format
+msgid ""
+"openExpress can keep a summary and the shape of each activity on this "
+"computer, so that the Activities page shows your weeks and your year even "
+"after the device deletes old files. Nothing is sent anywhere. You can turn "
+"it off or delete it in Preferences."
+msgstr ""
+"openExpress może przechowywać na tym komputerze podsumowanie i kształt "
+"każdej aktywności, aby strona Aktywności pokazywała Twoje tygodnie i Twój "
+"rok także po usunięciu starych plików przez urządzenie. Nic nie jest nigdzie "
+"wysyłane. Dziennik możesz wyłączyć albo usunąć w Preferencjach."
+
+#. TRANSLATORS: button of the card about the activity journal: the no
+#: openexpress/gui/activities_journal.py
+#, python-brace-format
+msgid "Not Now"
+msgstr "Nie teraz"
+
+#. TRANSLATORS: button of the card about the activity journal: the yes
+#: openexpress/gui/activities_journal.py
+#, python-brace-format
+msgid "Keep a Journal"
+msgstr "Prowadź dziennik"
+
+#. TRANSLATORS: line at the very bottom of the Activities page after the no to the
+#. activity journal, beside the button Preferences
+#: openexpress/gui/activities_journal.py
+#, python-brace-format
+msgid "An activity journal shows your weeks and your year"
+msgstr "Dziennik aktywności pokazuje Twoje tygodnie i Twój rok"
+
+#. TRANSLATORS: line at the very bottom of the Activities page of a device on another
+#. Garmin Connect account than the one signed in
+#: openexpress/gui/activities_journal.py
+#, python-brace-format
+msgid ""
+"The activity journal is not kept for a device on another Garmin Connect "
+"account"
+msgstr ""
+"Dziennik aktywności nie jest prowadzony dla urządzenia na innym koncie "
+"Garmin Connect"
+
+#: openexpress/gui/activities_journal.py openexpress/gui/app.py
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Preferences"
+msgstr "Preferencje"
+
+#. TRANSLATORS: heading of the error when a switch of a setting could not be saved (in
+#. the preferences, on the device page, under the map of an activity)
+#: openexpress/gui/activities_journal.py openexpress/gui/window_tasks.py
+#, python-brace-format
+msgid "Setting Not Saved"
+msgstr "Nie zapisano ustawienia"
+
 #: openexpress/gui/activities_page.py
 #, python-brace-format
 msgid "Export as GPX…"
@@ -6752,11 +6970,6 @@ msgstr "Stan urządzenia"
 #, python-brace-format
 msgid "Reading the Device…"
 msgstr "Odczyt urządzenia…"
-
-#: openexpress/gui/app.py openexpress/gui/preferences.py
-#, python-brace-format
-msgid "Preferences"
-msgstr "Preferencje"
 
 #: openexpress/gui/app.py openexpress/gui/preferences.py
 #, python-brace-format
@@ -8154,6 +8367,18 @@ msgstr ""
 "Po ponownym podłączeniu będzie liczone jako nowe urządzenie: przy pierwszej "
 "synchronizacji program znów zapyta, czy wysłać wszystko, czy tylko nowe dane."
 
+#. TRANSLATORS: added to the question before a device is forgotten: its activity
+#. journal (Preferences: "Activity Journal") goes with it
+#: openexpress/gui/forget_device.py
+#, python-brace-format
+msgid "Its activity journal, {count} activity, is deleted too."
+msgid_plural "Its activity journal, {count} activities, is deleted too."
+msgstr[0] "Jego dziennik aktywności, {count} aktywność, też zostanie usunięty."
+msgstr[1] ""
+"Jego dziennik aktywności, {count} aktywności, też zostanie usunięty."
+msgstr[2] ""
+"Jego dziennik aktywności, {count} aktywności, też zostanie usunięty."
+
 #: openexpress/gui/forget_device.py
 #, python-brace-format
 msgid "Discard the file not uploaded yet"
@@ -8759,6 +8984,92 @@ msgid ""
 msgstr ""
 "Kopia plików diagnostycznych urządzenia zostaje na tym komputerze; "
 "openExpress nigdy jej nie wysyła"
+
+#. TRANSLATORS: group in the preferences: what openExpress keeps of each activity on this
+#. computer, so that the Activities page can show it after the device deleted its file
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Activity Journal"
+msgstr "Dziennik aktywności"
+
+#. TRANSLATORS: switch in the preferences: keep the activity journal (on is the yes to it)
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Keep an Activity Journal"
+msgstr "Prowadzenie dziennika aktywności"
+
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid ""
+"A summary and the shape of each activity stay on this computer, also after "
+"the device deletes its file"
+msgstr ""
+"Podsumowanie i kształt każdej aktywności zostają na tym komputerze, także po "
+"usunięciu jej pliku przez urządzenie"
+
+#. TRANSLATORS: a toast after the activity journal was turned off in the preferences
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Activity journal turned off; what it holds stays until you delete it"
+msgstr ""
+"Dziennik aktywności wyłączony; to, co zawiera, zostaje, dopóki go nie "
+"usuniesz"
+
+#. TRANSLATORS: row in the preferences, with the button Delete…: every device's activity
+#. journal deleted from this computer
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Delete the Activity Journal"
+msgstr "Usuń dziennik aktywności"
+
+#. TRANSLATORS: button of the row "Delete the Activity Journal" in the preferences: asks first
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Delete…"
+msgstr "Usuń…"
+
+#. TRANSLATORS: heading of the error when the activity journal could not be deleted
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Activity Journal Not Deleted"
+msgstr "Nie usunięto dziennika aktywności"
+
+#. TRANSLATORS: a toast after the activity journal was deleted in the preferences
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Activity journal deleted"
+msgstr "Dziennik aktywności usunięty"
+
+#. TRANSLATORS: heading of the question before the activity journal is deleted
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Delete the Activity Journal?"
+msgstr "Usunąć dziennik aktywności?"
+
+#. TRANSLATORS: the question before the activity journal is deleted
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid ""
+"The journal of {count} activity is deleted from this computer. Activities "
+"the devices no longer keep cannot be read again."
+msgid_plural ""
+"The journal of {count} activities is deleted from this computer. Activities "
+"the devices no longer keep cannot be read again."
+msgstr[0] ""
+"Dziennik {count} aktywności zostanie usunięty z tego komputera. Aktywności, "
+"których urządzenia już nie przechowują, nie da się odczytać ponownie."
+msgstr[1] ""
+"Dziennik {count} aktywności zostanie usunięty z tego komputera. Aktywności, "
+"których urządzenia już nie przechowują, nie da się odczytać ponownie."
+msgstr[2] ""
+"Dziennik {count} aktywności zostanie usunięty z tego komputera. Aktywności, "
+"których urządzenia już nie przechowują, nie da się odczytać ponownie."
+
+#. TRANSLATORS: button of the question before the activity journal is deleted
+#: openexpress/gui/preferences.py
+#, python-brace-format
+msgid "Delete"
+msgstr "Usuń"
 
 #. TRANSLATORS: group in the preferences: the street map from OpenStreetMap under the track of an
 #. activity
@@ -10575,13 +10886,6 @@ msgid ""
 msgstr ""
 "To błąd openExpressu. Aby go zgłosić, wybierz „{item}” w menu głównym "
 "i dołącz ostatni log."
-
-#. TRANSLATORS: heading of the error when a switch of a setting could not be saved (in
-#. the preferences, on the device page, under the map of an activity)
-#: openexpress/gui/window_tasks.py
-#, python-brace-format
-msgid "Setting Not Saved"
-msgstr "Nie zapisano ustawienia"
 
 #: openexpress/gui/window_tasks.py
 #, python-brace-format

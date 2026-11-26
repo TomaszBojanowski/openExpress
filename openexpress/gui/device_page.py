@@ -40,6 +40,7 @@ from openexpress.connect import ApiError, NotAccountDevice, OwnershipError  # no
 from openexpress.device.gio_storage import DeviceSummary, FoundDevice  # noqa: E402
 from openexpress.device.storage import DeviceError, DeviceNotResponding  # noqa: E402
 from openexpress.gui import account_readings, activity_page, pictures, start  # noqa: E402
+from openexpress.gui.activities_journal import read_journal  # noqa: E402
 from openexpress.gui.add_to_account import (  # noqa: E402
     add_to_account_row,
     confirm_add_to_account,
@@ -496,6 +497,8 @@ def read_diagnostics(win) -> None:
         if win.session is s:
             status_changed(win)
             show_satellite(win)
+            # Then, apart from the error logs, the activity journal (when it is kept).
+            read_journal(win)
 
     # Once the page is shown, not in the opening: on a watch it took 3.7-4.4 s of the
     # 4.5-5 s of an opening.
@@ -838,6 +841,7 @@ class DevicePage:
         self.update_checked_at = self._update_record_at = None
         self.apps_count = self.music_count = None  # read again by their pages
         self.activities = self.activities_list = self.activities_more = None
+        self.activities_note = None
         self.map_state = None
         for sec in self.sections.values():
             sec.loaded = False

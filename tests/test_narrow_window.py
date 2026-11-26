@@ -682,6 +682,40 @@ def test_every_page_of_the_device_view_fits_the_narrowest_window(narrow_window, 
     assert _min_width(win.device_view) <= NARROWEST
 
 
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("answer", [None, True])
+def test_the_card_and_the_lines_of_the_activity_journal_fit_the_narrowest_window(
+        narrow_window, language, answer):
+    """Not answered: the card on top of the Activities page, its words wrapped and its two
+    buttons side by side, or one below the other when they do not fit; after the yes, a device
+    on another account: its line at the bottom.
+    (After the no, the line is on the page "activities" above: the tests answer no.)"""
+    from openexpress.connect import NotAccountDevice
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    if answer is not None:
+        s = Settings.load()
+        s.activity_journal = answer
+        s.save()
+    win = narrow_window(language)
+    key = _fill(win, "activities")
+    if answer:
+        win.session.ownership_error = NotAccountDevice("made up: on another account")
+        win.sections[key].clear()
+        MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.05)
+    sec = win.sections[key]
+    added = sec.groups[0] if answer is None else sec.groups[-1]
+    assert added is not sec.groups[1 if answer is None else -2]
+    assert (answer is None) == (win.activities_note is None)
+    assert _min_width(win.device_view) <= NARROWEST
+
+
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_question_before_a_course_is_copied_fits_the_narrowest_window(narrow_window,
                                                                          language):

@@ -1,0 +1,6004 @@
+{
+ "loading": {
+  "shown": "loading",
+  "banner": false,
+  "status": {
+   "type": "AdwStatusPage",
+   "css": [
+    "spinner"
+   ],
+   "title": "Loading…",
+   "description": "",
+   "icon": null,
+   "children": [
+    {
+     "type": "GtkScrolledWindow",
+     "css": [],
+     "children": [
+      {
+       "type": "GtkViewport",
+       "css": [],
+       "children": [
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "AdwClamp",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "vertical"
+             ],
+             "children": [
+              {
+               "type": "GtkImage",
+               "css": [
+                "icon"
+               ],
+               "icon": null
+              },
+              {
+               "type": "GtkBox",
+               "css": [
+                "vertical"
+               ],
+               "children": [
+                {
+                 "type": "GtkLabel",
+                 "css": [
+                  "title"
+                 ],
+                 "label": "Loading…"
+                },
+                {
+                 "type": "GtkLabel",
+                 "css": [
+                  "body",
+                  "description"
+                 ],
+                 "hidden": true,
+                 "label": ""
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "GtkScrollbar",
+       "css": [
+        "bottom",
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "GtkRange",
+         "css": [
+          "horizontal"
+         ],
+         "children": [
+          {
+           "type": "GtkGizmo",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkGizmo",
+             "css": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "GtkScrollbar",
+       "css": [
+        "right",
+        "vertical"
+       ],
+       "children": [
+        {
+         "type": "GtkRange",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkGizmo",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkGizmo",
+             "css": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "error": {
+  "shown": "error",
+  "banner": false,
+  "status": {
+   "type": "AdwStatusPage",
+   "css": [],
+   "title": "Something Went Wrong",
+   "description": "made up: the device stopped answering",
+   "icon": "dialog-warning-symbolic",
+   "children": [
+    {
+     "type": "GtkScrolledWindow",
+     "css": [],
+     "children": [
+      {
+       "type": "GtkViewport",
+       "css": [],
+       "children": [
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "AdwClamp",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "vertical"
+             ],
+             "children": [
+              {
+               "type": "GtkImage",
+               "css": [
+                "icon"
+               ],
+               "icon": "dialog-warning-symbolic"
+              },
+              {
+               "type": "GtkBox",
+               "css": [
+                "vertical"
+               ],
+               "children": [
+                {
+                 "type": "GtkLabel",
+                 "css": [
+                  "title"
+                 ],
+                 "label": "Something Went Wrong"
+                },
+                {
+                 "type": "GtkLabel",
+                 "css": [
+                  "body",
+                  "description"
+                 ],
+                 "label": "made up: the device stopped answering"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          },
+          {
+           "type": "GtkButton",
+           "css": [
+            "pill",
+            "text-button"
+           ],
+           "label": "Try Again",
+           "icon": null,
+           "children": [
+            {
+             "type": "GtkLabel",
+             "css": [],
+             "label": "Try Again"
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "GtkScrollbar",
+       "css": [
+        "bottom",
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "GtkRange",
+         "css": [
+          "horizontal"
+         ],
+         "children": [
+          {
+           "type": "GtkGizmo",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkGizmo",
+             "css": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "GtkScrollbar",
+       "css": [
+        "right",
+        "vertical"
+       ],
+       "children": [
+        {
+         "type": "GtkRange",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkGizmo",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkGizmo",
+             "css": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "keeps-none": {
+  "shown": "info",
+  "banner": false,
+  "status": {
+   "type": "AdwStatusPage",
+   "css": [],
+   "title": "Activities",
+   "description": "This device does not keep activities",
+   "icon": "x-symbolic",
+   "children": [
+    {
+     "type": "GtkScrolledWindow",
+     "css": [],
+     "children": [
+      {
+       "type": "GtkViewport",
+       "css": [],
+       "children": [
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "AdwClamp",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "vertical"
+             ],
+             "children": [
+              {
+               "type": "GtkImage",
+               "css": [
+                "icon"
+               ],
+               "icon": "x-symbolic"
+              },
+              {
+               "type": "GtkBox",
+               "css": [
+                "vertical"
+               ],
+               "children": [
+                {
+                 "type": "GtkLabel",
+                 "css": [
+                  "title"
+                 ],
+                 "label": "Activities"
+                },
+                {
+                 "type": "GtkLabel",
+                 "css": [
+                  "body",
+                  "description"
+                 ],
+                 "label": "This device does not keep activities"
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "GtkScrollbar",
+       "css": [
+        "bottom",
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "GtkRange",
+         "css": [
+          "horizontal"
+         ],
+         "children": [
+          {
+           "type": "GtkGizmo",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkGizmo",
+             "css": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "type": "GtkScrollbar",
+       "css": [
+        "right",
+        "vertical"
+       ],
+       "children": [
+        {
+         "type": "GtkRange",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkGizmo",
+           "css": [],
+           "children": [
+            {
+             "type": "GtkGizmo",
+             "css": []
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ },
+ "none": {
+  "shown": "content",
+  "banner": false,
+  "groups": [
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "hidden": true,
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "hidden": true,
+            "label": ""
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "hidden": true
+         },
+         {
+          "type": "GtkBox",
+          "css": [
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkImage",
+            "css": [],
+            "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "title-2"
+            ],
+            "label": "No Activities"
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "dim-label"
+            ],
+            "label": "There are none on the device or in its backups"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "rows": {
+  "shown": "content",
+  "banner": false,
+  "groups": [
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "7 activities · 1 only in backups",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "label": "7 activities · 1 only in backups"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "children": [
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Activity",
+            "subtitle": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Activity"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [],
+            "title": "Unreadable File",
+            "subtitle": "Device",
+            "activatable": false,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Unreadable File"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "hidden": true
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Training",
+            "subtitle": "2026-10-25 18:00 · 1 h 00 min · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Training"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-25 18:00 · 1 h 00 min · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "insensitive": true,
+                  "tooltip": "No GPS positions in this activity",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Cycling",
+            "subtitle": "2025-09-14 09:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Backup of 2025-10-02",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Cycling"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2025-09-14 09:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Backup of 2025-10-02"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "more": {
+  "shown": "content",
+  "banner": false,
+  "groups": [
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "31 activities",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "label": "31 activities"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "children": [
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-01 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "hidden": true,
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "hidden": true,
+            "label": ""
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "hidden": true
+         },
+         {
+          "type": "GtkButton",
+          "css": [
+           "folding-label",
+           "pill",
+           "text-button"
+          ],
+          "label": "Show 1 More",
+          "icon": null,
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [],
+            "label": "Show 1 More"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "only-in-backups": {
+  "shown": "content",
+  "banner": false,
+  "groups": [
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "2 activities · 2 only in backups",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "label": "2 activities · 2 only in backups"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "children": [
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Backup of 2025-10-02",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Backup of 2025-10-02"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Cycling",
+            "subtitle": "2025-09-14 09:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Backup of 2025-10-02",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Cycling"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2025-09-14 09:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Backup of 2025-10-02"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "drive": {
+  "shown": "content",
+  "banner": false,
+  "groups": [
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "6 activities",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "label": "6 activities"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "children": [
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Activity",
+            "subtitle": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Activity"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [],
+            "title": "Unreadable File",
+            "subtitle": "Device",
+            "activatable": false,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Unreadable File"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "hidden": true
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Training",
+            "subtitle": "2026-10-25 18:00 · 1 h 00 min · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Training"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-25 18:00 · 1 h 00 min · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "insensitive": true,
+                  "tooltip": "No GPS positions in this activity",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "other-account": {
+  "shown": "content",
+  "banner": false,
+  "groups": [
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "6 activities",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "label": "6 activities"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "children": [
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Activity",
+            "subtitle": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Activity"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [],
+            "title": "Unreadable File",
+            "subtitle": "Device",
+            "activatable": false,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Unreadable File"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "hidden": true
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Training",
+            "subtitle": "2026-10-25 18:00 · 1 h 00 min · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Training"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-25 18:00 · 1 h 00 min · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "insensitive": true,
+                  "tooltip": "No GPS positions in this activity",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ },
+ "logged-out": {
+  "shown": "content",
+  "banner": false,
+  "groups": [
+   {
+    "type": "AdwPreferencesGroup",
+    "css": [],
+    "title": "",
+    "description": "6 activities",
+    "children": [
+     {
+      "type": "GtkBox",
+      "css": [
+       "vertical"
+      ],
+      "children": [
+       {
+        "type": "GtkBox",
+        "css": [
+         "header",
+         "horizontal"
+        ],
+        "children": [
+         {
+          "type": "GtkBox",
+          "css": [
+           "labels",
+           "vertical"
+          ],
+          "children": [
+           {
+            "type": "GtkLabel",
+            "css": [
+             "h4",
+             "heading"
+            ],
+            "hidden": true,
+            "label": ""
+           },
+           {
+            "type": "GtkLabel",
+            "css": [
+             "body",
+             "dimmed"
+            ],
+            "label": "6 activities"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "type": "GtkBox",
+        "css": [
+         "vertical"
+        ],
+        "children": [
+         {
+          "type": "GtkListBox",
+          "css": [
+           "boxed-list"
+          ],
+          "children": [
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-29 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Activity",
+            "subtitle": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Activity"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-28 07:00 · Still being written: unplug the device and plug it in again"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [],
+            "title": "Unreadable File",
+            "subtitle": "Device",
+            "activatable": false,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Unreadable File"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "hidden": true
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-26 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device · Damaged file"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Training",
+            "subtitle": "2026-10-25 18:00 · 1 h 00 min · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Training"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-25 18:00 · 1 h 00 min · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "insensitive": true,
+                  "tooltip": "No GPS positions in this activity",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "AdwActionRow",
+            "css": [
+             "activatable"
+            ],
+            "title": "Running",
+            "subtitle": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device",
+            "activatable": true,
+            "children": [
+             {
+              "type": "GtkBox",
+              "css": [
+               "header",
+               "horizontal"
+              ],
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "prefixes"
+                ],
+                "hidden": true
+               },
+               {
+                "type": "GtkImage",
+                "css": [
+                 "icon"
+                ],
+                "hidden": true,
+                "icon": null
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "title",
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "title"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "subtitle"
+                  ],
+                  "label": "2026-10-24 07:00 · 1 h 00 min · 10.0 km · ↑ 100 m · Device"
+                 }
+                ]
+               },
+               {
+                "type": "GtkBox",
+                "css": [
+                 "horizontal",
+                 "suffixes"
+                ],
+                "children": [
+                 {
+                  "type": "GtkButton",
+                  "css": [
+                   "flat",
+                   "image-button"
+                  ],
+                  "tooltip": "Export as GPX…",
+                  "label": null,
+                  "icon": "document-save-as-symbolic",
+                  "children": [
+                   {
+                    "type": "GtkImage",
+                    "css": [],
+                    "icon": "document-save-as-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkImage",
+                  "css": [],
+                  "icon": "go-next-symbolic"
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   }
+  ]
+ }
+}

@@ -816,7 +816,7 @@ def types_namespace(**kw):
 @pytest.mark.needs_display
 def test_preferences_have_the_storage_group(cache, monkeypatch):
     """The "Storage" group is in the preferences, after Sync, Language and Setup; the
-    activity maps after Diagnostics."""
+    activity journal after Diagnostics, right before the activity maps."""
     from gi.repository import Adw, Gtk
 
     from openexpress.gui.app import MainWindow
@@ -830,7 +830,7 @@ def test_preferences_have_the_storage_group(cache, monkeypatch):
     MainWindow.show_preferences(win)
     (dialog,) = shown
     assert titles == ["Garmin Connect Account", "Sync With Garmin Connect", "Language", "Setup",
-                      "Storage", "Diagnostics", "Activity Maps"]
+                      "Storage", "Diagnostics", "Activity Journal", "Activity Maps"]
     assert isinstance(dialog, Gtk.Widget)
 
 
