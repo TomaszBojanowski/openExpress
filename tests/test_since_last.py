@@ -111,7 +111,22 @@ def test_none_new_the_newest_three():
     view = since_last.since_last(journal, "now", [], {"mon.fit", "tue.fit", "wed.fit"})
     assert view.new == []
     assert [a["file"]["name"] for a in view.latest] == ["wed.fit", "tue.fit", "mon.fit"]
-    assert view.earlier == 3
+    assert view.earlier == 0  # the three are those with a tile
+
+
+@pytest.mark.parametrize(("on_device", "earlier"), [
+    ({"mon.fit", "tue.fit", "wed.fit", "a.fit", "b.fit"}, 2),  # 150 on a fēnix: 147
+    ({"MON.FIT", "tue.fit", "wed.fit", "a.fit"}, 1),
+    ({"tue.fit", "wed.fit", "a.fit"}, 1),  # the oldest with a tile only in a backup
+    ({"a.fit"}, 1),
+])
+def test_none_new_earlier_are_those_on_the_device_without_a_tile(on_device, earlier):
+    """None new: the earlier ones are the device's files but those under "Latest"; a tile of an
+    activity only a backup has takes none of the device's."""
+    journal = journal_of(A_WEEK, [connection(NOW - timedelta(hours=1), "b"),
+                                  connection(NOW, "now")])
+    names = {n.casefold() for n in on_device}
+    assert since_last.since_last(journal, "now", [], names).earlier == earlier
 
 
 def test_earlier_counts_only_the_files_on_the_device():

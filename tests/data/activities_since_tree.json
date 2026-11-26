@@ -1707,7 +1707,7 @@
             "css": [
              "dim-label"
             ],
-            "label": "31 earlier activities on this device"
+            "label": "30 earlier activities on this device"
            },
            {
             "type": "GtkButton",
@@ -4337,7 +4337,7 @@
             "css": [
              "dim-label"
             ],
-            "label": "6 earlier activities on this device"
+            "label": "3 earlier activities on this device"
            },
            {
             "type": "GtkButton",

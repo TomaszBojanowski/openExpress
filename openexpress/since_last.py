@@ -69,7 +69,7 @@ class Since:
     latest: list[dict] = field(default_factory=list)  # newest first, when none is new
     count: int = 0  # activities in the journal
     oldest: int | None = None  # the start of the oldest
-    earlier: int = 0  # activities whose file is on the device and that are not new
+    earlier: int = 0  # activities whose file is on the device, without a tile on the page
     units: Units = Units()
     uploaded: frozenset[str] = frozenset()  # file names (casefold) the sync's record has
     waiting: frozenset[str] = frozenset()  # file names (casefold) kept to upload again
@@ -185,9 +185,11 @@ def since_last(journal, conn: str | None, log_lines: list[dict],
                 if conn is not None and c.get("conn") == conn), None)
     if now is not None and now.get("oldest") is not None:
         view.gap = any(end == now["oldest"] for _start, end in journal.gaps())
-    new_files = {a["file"]["name"].casefold() for a in view.new}
+    # The earlier ones: the device's files but those with a tile above them, the new ones or,
+    # none new, the newest under "Latest".
+    shown = {a["file"]["name"].casefold() for a in (view.new or view.latest)}
     if on_device is not None:
-        view.earlier = len({name for name in on_device if name not in new_files})
+        view.earlier = len({name for name in on_device if name not in shown})
     return view
 
 

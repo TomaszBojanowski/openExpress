@@ -456,7 +456,7 @@ def test_after_the_yes_what_is_new_and_the_page_as_it_was_where_nothing_is(tmp_p
         said = texts({"type": "page", "children": drawn[state]["groups"]})
         assert "1 new activity" in said and "Running" in said, state
     more = texts({"type": "page", "children": drawn["more"]["groups"]})
-    assert "No new activities" in more and "31 earlier activities on this device" in more
+    assert "No new activities" in more and "30 earlier activities on this device" in more
     assert "Show All" in texts({"type": "page", "children": drawn["rows"]["groups"]})
     error = texts({"type": "page", "children": drawn["error"]["groups"]})
     assert error[:2] == ["made up: the device stopped answering", "Try Again"]
