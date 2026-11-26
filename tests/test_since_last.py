@@ -263,8 +263,8 @@ def test_the_numbers_of_a_tile(language):
 TRIVIA = {
     "en": ["893 m climbed.", "That is the Eiffel Tower 2.7 times.", "53.0 km covered.",
            "That is a marathon 1.2 times."],
-    "pl": ["Pokonany wznios: 893 m.", "To 2,7 wieży Eiffla.", "Pokonany dystans: 53,0 km.",
-           "To 1,2 maratonu."],
+    "pl": ["Pokonany wznios: 893 m.", "To 2,7 wysokości wieży Eiffla.",
+           "Pokonany dystans: 53,0 km.", "To 1,2 maratonu."],
 }
 
 
@@ -278,6 +278,34 @@ def test_the_trivia_in_words(language):
              words.trivia_lead("distance", 53_000.0, units),
              words.trivia_object("marathon", 1.2)]
     assert [s.replace(NB, " ") for s in found] == TRIVIA[language]
+
+
+# Polish after a number with a fraction: the genitive singular, a height or a length named.
+OBJECTS_PL = {
+    "statue-of-liberty": "To 1,6 wysokości Statui Wolności.",
+    "great-pyramid": f"To 1,6 wysokości Wielkiej Piramidy w{NB}Gizie.",
+    "eiffel-tower": "To 1,6 wysokości wieży Eiffla.",
+    "empire-state-building": "To 1,6 wysokości Empire State Building.",
+    "burj-khalifa": "To 1,6 wysokości Burdż Chalify.",
+    "table-mountain": "To 1,6 wysokości Góry Stołowej.",
+    "mont-blanc": "To 1,6 wysokości Mont Blanc.",
+    "kilimanjaro": "To 1,6 wysokości Kilimandżaro.",
+    "everest": "To 1,6 wysokości Mount Everestu.",
+    "edge-of-space": "To 1,6 wysokości granicy kosmosu.",
+    "marathon": "To 1,6 maratonu.",
+    "panama-canal": "To 1,6 długości Kanału Panamskiego.",
+    "grand-canyon": "To 1,6 długości Wielkiego Kanionu.",
+    "rhine": "To 1,6 długości Renu.",
+    "danube": "To 1,6 długości Dunaju.",
+    "equator": "To 1,6 długości równika.",
+}
+
+
+@pytest.mark.parametrize("language", ["pl"], indirect=True)
+def test_the_polish_sentences_of_the_heights_and_lengths(language):
+    from openexpress.gui import words
+
+    assert {thing: words.trivia_object(thing, 1.6) for thing in OBJECTS_PL} == OBJECTS_PL
 
 
 @pytest.mark.parametrize("language", ["en", "pl"], indirect=True)

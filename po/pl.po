@@ -11599,47 +11599,47 @@ msgstr "Pokonany dystans: {distance}."
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Statue of Liberty {times} times."
-msgstr "To {times} Statui Wolności."
+msgstr "To {times} wysokości Statui Wolności."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Great Pyramid of Giza {times} times."
-msgstr "To {times} Wielkiej Piramidy w Gizie."
+msgstr "To {times} wysokości Wielkiej Piramidy w Gizie."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Eiffel Tower {times} times."
-msgstr "To {times} wieży Eiffla."
+msgstr "To {times} wysokości wieży Eiffla."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Empire State Building {times} times."
-msgstr "To {times} Empire State Building."
+msgstr "To {times} wysokości Empire State Building."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Burj Khalifa {times} times."
-msgstr "To {times} Burdż Chalifa."
+msgstr "To {times} wysokości Burdż Chalify."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is Table Mountain {times} times."
-msgstr "To {times} Góry Stołowej."
+msgstr "To {times} wysokości Góry Stołowej."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is Mont Blanc {times} times."
-msgstr "To {times} Mont Blanc."
+msgstr "To {times} wysokości Mont Blanc."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is Kilimanjaro {times} times."
-msgstr "To {times} Kilimandżaro."
+msgstr "To {times} wysokości Kilimandżaro."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is Mount Everest {times} times."
-msgstr "To {times} Mount Everestu."
+msgstr "To {times} wysokości Mount Everestu."
 
 #. TRANSLATORS: the edge of space: the Kármán line, 100 km up
 #: openexpress/gui/words.py
@@ -11655,27 +11655,27 @@ msgstr "To {times} maratonu."
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Panama Canal {times} times."
-msgstr "To {times} Kanału Panamskiego."
+msgstr "To {times} długości Kanału Panamskiego."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Grand Canyon {times} times."
-msgstr "To {times} Wielkiego Kanionu."
+msgstr "To {times} długości Wielkiego Kanionu."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Rhine {times} times."
-msgstr "To {times} Renu."
+msgstr "To {times} długości Renu."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the Danube {times} times."
-msgstr "To {times} Dunaju."
+msgstr "To {times} długości Dunaju."
 
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "That is the equator {times} times."
-msgstr "To {times} równika."
+msgstr "To {times} długości równika."
 
 #. TRANSLATORS: a pace, the time a kilometre takes ("5:10 /km")
 #: openexpress/gui/words.py
