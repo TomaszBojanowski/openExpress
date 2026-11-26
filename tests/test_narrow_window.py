@@ -3,6 +3,7 @@ device view and the start page fit, in English and in the longer Polish.
 
 The real window, on the tests' hidden display, holds stand-ins: an Edge 1050 with a beta
 update, long component names, maps, apps and music. Nothing asks a device or a server."""
+import json
 import os
 import re
 import time
@@ -792,6 +793,59 @@ def test_what_is_new_fits_the_narrowest_window(narrow_window, clock, language, s
              if isinstance(w, Gtk.Label)]
     assert heading in shown
     assert _min_width(win.device_view) <= NARROWEST
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_what_is_new_in_a_wide_window_four_numbers_and_three_tiles_a_line(narrow_window, clock,
+                                                                        language):
+    """A window 1000 px wide: the four numbers of the new activities on one line, three tiles
+    beside each other; the upload time's number kept with its word."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress import service
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    win = narrow_window(language, width=1000)
+    key = _fill(win, "activities")
+    unit_id = win.session.device.unit_id
+    _journal_of(unit_id, datetime(2026, 10, 15, 9, 0))
+    record = {"time": datetime(2026, 10, 21, 11, 54).timestamp(), "unit_id": unit_id,
+              "uploaded": 5, "errors": [], "lines": []}
+    service.device_last_sync_path(unit_id).write_text(json.dumps(record))
+    win.session.journal_done = True
+    win.activities.storage = win.session.storage
+    win.sections[key].clear()
+    win.sections[key].loaded = True  # as the window has it once the page is shown
+    MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.2)
+    flows = [w for g in win.sections[key].groups for w in descendants(g)
+             if isinstance(w, Gtk.FlowBox)]
+    numbers, tiles = flows
+
+    def lines(flow) -> list[int]:
+        ys = []
+        child = flow.get_first_child()
+        while child is not None:
+            ys.append(child.compute_bounds(flow)[1].get_y())
+            child = child.get_next_sibling()
+        return ys
+
+    assert len(set(lines(numbers))) == 1
+    assert len(set(lines(tiles)[:3])) == 1
+    labels = [w.get_label() for g in win.sections[key].groups for w in descendants(g)
+              if isinstance(w, Gtk.Label)]
+    assert any("6\u00a0min" in label for label in labels)
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

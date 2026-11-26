@@ -414,7 +414,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">10.0</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -440,7 +440,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">00</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -466,7 +466,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">100</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -492,7 +492,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -719,6 +719,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -1162,7 +1163,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">10.0</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -1188,7 +1189,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">00</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -1214,7 +1215,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">100</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -1240,7 +1241,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -1467,6 +1468,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -1805,6 +1807,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-01"
@@ -2143,6 +2146,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-24"
@@ -2211,6 +2215,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2025-09-14"
@@ -2521,7 +2526,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">10.0</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -2547,7 +2552,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">00</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -2573,7 +2578,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">100</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -2599,7 +2604,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -2826,6 +2831,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -3791,7 +3797,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">10.0</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -3817,7 +3823,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">00</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -3843,7 +3849,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">100</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -3869,7 +3875,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -4096,6 +4102,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -4543,6 +4550,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -4611,6 +4619,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-25"
@@ -4679,6 +4688,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-24"
@@ -4989,7 +4999,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">40.0</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">40.0</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -5015,7 +5025,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">4</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">00</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">4:00</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -5041,7 +5051,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">160</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">160</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -5067,7 +5077,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">8</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">8</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -5284,6 +5294,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -5342,6 +5353,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -5400,6 +5412,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -5458,6 +5471,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -5516,6 +5530,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-28"
@@ -5574,6 +5589,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-28"
@@ -5884,7 +5900,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">54.5</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -5910,7 +5926,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">5</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">49</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -5936,7 +5952,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">893</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -5962,7 +5978,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">5</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -6189,6 +6205,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-30"
@@ -6257,6 +6274,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-30"
@@ -6315,6 +6333,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -6373,6 +6392,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -6431,6 +6451,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-28"
@@ -6741,7 +6762,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">54.5</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -6767,7 +6788,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">5</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">49</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -6793,7 +6814,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">893</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -6819,7 +6840,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">5</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -7046,6 +7067,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-30"
@@ -7114,6 +7136,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-30"
@@ -7172,6 +7195,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -7230,6 +7254,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -7310,6 +7335,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-28"
@@ -7642,7 +7668,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">54.5</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">54.5</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -7668,7 +7694,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">5</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">49</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5:49</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -7694,7 +7720,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">893</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">893</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -7720,7 +7746,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">5</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">5</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -7947,6 +7973,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-30"
@@ -8015,6 +8042,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-30"
@@ -8073,6 +8101,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -8131,6 +8160,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -8211,6 +8241,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-28"
@@ -8543,7 +8574,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">13.2</span> mi"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">13.2</span> mi"
                  },
                  {
                   "type": "GtkLabel",
@@ -8569,7 +8600,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">2</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">51</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2:51</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -8595,7 +8626,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">2100</span> ft"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2100</span> ft"
                  },
                  {
                   "type": "GtkLabel",
@@ -8621,7 +8652,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -8838,6 +8869,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"
@@ -9155,7 +9187,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">10.0</span> km"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10.0</span> km"
                  },
                  {
                   "type": "GtkLabel",
@@ -9181,7 +9213,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span> h <span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">00</span> min"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1:00</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -9207,7 +9239,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">100</span> m"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">100</span> m"
                  },
                  {
                   "type": "GtkLabel",
@@ -9233,7 +9265,7 @@
                  {
                   "type": "GtkLabel",
                   "css": [],
-                  "label": "<span font_features=\"tnum\" size=\"200%\" weight=\"heavy\">1</span>"
+                  "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">1</span>"
                  },
                  {
                   "type": "GtkLabel",
@@ -9460,6 +9492,7 @@
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "2026-10-29"

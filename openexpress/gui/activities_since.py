@@ -158,7 +158,9 @@ def _upload_text(view, s) -> str | None:
     told = last_sync.describe(record)
     if view.since is not None and told.when < view.since:
         return None
-    return told.uploaded_text()
+    said = told.uploaded_text()
+    # A number kept with the word after it when the line wraps ("6 min ago").
+    return re.sub(r"(\d) ", "\\1\u00a0", said) if said else None
 
 
 def _heading(sec, view, s) -> None:
@@ -191,7 +193,7 @@ def _markup(template: str, values: dict[str, str]) -> str:
         name = re.fullmatch(r"\{(\w+)\}", part)
         if name:
             value = GLib.markup_escape_text(values[name[1]])
-            out.append(f'<span font_features="tnum" size="200%" weight="heavy">{value}</span>')
+            out.append(f'<span font_features="tnum" size="180%" weight="heavy">{value}</span>')
         elif part:
             out.append(GLib.markup_escape_text(part))
     return "".join(out)
@@ -199,7 +201,7 @@ def _markup(template: str, values: dict[str, str]) -> str:
 
 def _number(markup: str, name: str) -> Gtk.Widget:
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=12,
-                  margin_bottom=12, margin_start=16, margin_end=16)
+                  margin_bottom=12, margin_start=12, margin_end=12)
     value = Gtk.Label(use_markup=True, label=markup, xalign=0, wrap=True)
     box.append(value)
     named = Gtk.Label(label=name, xalign=0, wrap=True)
@@ -212,13 +214,13 @@ def _numbers(sec, view) -> None:
     """The card of the new activities' numbers: distance, time, ascent and how many (four in a
     row, two by two in a narrow window)."""
     t = since_last.totals(view.new)
-    flow = Gtk.FlowBox(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
-                       min_children_per_line=2, max_children_per_line=4)
+    flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=2,
+                       max_children_per_line=4)
     template, number = words.since_distance(t.distance, view.units.miles)
     flow.append(_number(_markup(template, {"distance": number, "value": number}),
                         pgettext("activity tile", "Distance")))
-    template, numbers = words.since_time(t.time)
-    flow.append(_number(_markup(template, numbers), pgettext("activity tile", "Time")))
+    flow.append(_number(_markup("{time}", {"time": words.hours_and_minutes(t.time)}),
+                        pgettext("activity tile", "Time")))
     template, number = words.since_height(t.ascent, view.units.feet)
     flow.append(_number(_markup(template, {"metres": number, "value": number}),
                         pgettext("activity tile", "Total Ascent")))
@@ -305,20 +307,23 @@ def _tile(view, activity: dict) -> Gtk.Widget:
     tile.add_css_class("card")
     tile.append(_shape(activity))
     body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=10,
-                   margin_bottom=12, margin_start=14, margin_end=14)
+                   margin_bottom=12, margin_start=12, margin_end=12)
     top = Gtk.Box(spacing=8)
+    # Short natural widths (max_width_chars): three tiles share a wide line, each label
+    # wrapping in the width its tile gets.
     name = Gtk.Label(label=kind_name(activity.get("sport"), activity.get("sub_sport")),
-                     wrap=True, xalign=0, hexpand=True)
+                     wrap=True, xalign=0, hexpand=True, max_width_chars=6)
     name.add_css_class("heading")
     top.append(name)
     day = Gtk.Label(label=words.tile_day(since_last.local_day(activity)), xalign=1,
-                    valign=Gtk.Align.START)
+                    valign=Gtk.Align.CENTER)
     day.add_css_class("dim-label")
+    day.add_css_class("caption")
     top.append(day)
     body.append(top)
     numbers = words.tile_caption(activity, view.units)
     if numbers:
-        said = Gtk.Label(label=numbers, wrap=True, xalign=0)
+        said = Gtk.Label(label=numbers, wrap=True, xalign=0, max_width_chars=10)
         said.add_css_class("dim-label")
         body.append(said)
     state = view.upload_state(activity)
@@ -406,4 +411,6 @@ def show_all(win) -> None:
         show_list(win, sheet, read)
 
     win.run_task(_("Reading Activities…"), lambda: list_read(found, count, win.progress), done,
-                 device=True, in_page=True)
+                 device=True, in_page=True,
+                 # TRANSLATORS: heading of the error when more activities could not be read
+                 failed_title=_("Activities Not Read"))

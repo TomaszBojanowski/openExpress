@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 08:15+0100\n"
+"POT-Creation-Date: 2026-11-26 08:32+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -6116,7 +6116,7 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. TRANSLATORS: heading of the error when more activities could not be read
-#: openexpress/gui/activities_page.py
+#: openexpress/gui/activities_page.py openexpress/gui/activities_since.py
 #, python-brace-format
 msgid "Activities Not Read"
 msgstr ""

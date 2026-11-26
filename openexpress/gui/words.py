@@ -625,24 +625,9 @@ def since_height(metres: float, feet: bool) -> tuple[str, str]:
     return _("{metres} m"), whole(round(metres))
 
 
-def since_time(seconds: float) -> tuple[str, dict[str, str]]:
-    """A time of the page since the last connection, as a template and its numbers, in the
-    words of an activity's row ("{hours} h {minutes} min")."""
-    total = max(0, round(seconds))
-    hours, minutes = divmod(total // 60, 60)
-    if hours:
-        return _("{hours} h {minutes} min"), {"hours": whole(hours),
-                                                         "minutes": f"{minutes:02}"}
-    return _("{minutes} min"), {"minutes": str(minutes)}
-
-
-def filled(template: str, values: dict[str, str]) -> str:
-    """A template of since_distance, since_height or since_time with its numbers."""
-    return template.format(**values)
-
-
 def hours_and_minutes(seconds: float) -> str:
-    """A time on a tile, the same in every language: "2:51", "0:38"."""
+    """A time of the page since the last connection (its card, a tile), the same in every
+    language: "2:51", "0:38"."""
     total = max(0, round(seconds)) // 60
     return f"{total // 60}:{total % 60:02}"
 
