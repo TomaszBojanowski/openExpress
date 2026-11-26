@@ -857,3 +857,35 @@ def test_a_tile_whose_file_is_gone_is_not_a_button(tmp_path):
     win, section = page_of(session_of(folder))
     assert says(section, "1 new activity")
     assert tile_buttons(section) == []
+
+
+def test_only_the_tile_answers_the_pointer_and_the_focus(tmp_path):
+    """The cell of the grid around a tile: as large as the tile, never a background, a frame or
+    a focus of its own (the tile itself, a button, shows the pointer and the focus); a tile
+    without its file answers neither."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import activities_since
+
+    answer(True)
+    folder = tmp_path / "device"
+    win, section = page_of(write_device(folder, A_WEEK))
+    section.stack.get_root().present()
+    _iterate_until(lambda: tile_buttons(section) and tile_buttons(section)[0].get_width() > 0)
+    (tile,) = tile_buttons(section)
+    cell = tile.get_parent()
+    assert isinstance(cell, Gtk.FlowBoxChild)
+    flow = cell.get_parent()
+    assert flow.has_css_class("oe-tiles") and not flow.get_activate_on_single_click()
+    assert not cell.get_focusable() and tile.get_focusable()
+    assert (cell.get_width(), cell.get_height()) == (tile.get_width(), tile.get_height())
+    rule = activities_since.CSS.split("flowbox.oe-tiles > flowboxchild", 1)[1].split("}", 1)[0]
+    assert "background: none" in rule and "padding: 0" in rule and "outline: none" in rule
+
+
+def _iterate_until(done, seconds: float = 3.0) -> None:
+    from gi.repository import GLib
+
+    deadline = time.monotonic() + seconds
+    while not done() and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)

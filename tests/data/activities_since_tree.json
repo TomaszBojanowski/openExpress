@@ -556,7 +556,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -1195,7 +1196,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -1544,7 +1546,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -1893,7 +1896,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -2388,7 +2392,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -3558,7 +3563,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -4016,7 +4022,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -4776,7 +4783,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -5713,7 +5721,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -6601,7 +6610,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -7519,7 +7529,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -8437,7 +8448,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {
@@ -8949,7 +8961,8 @@
          {
           "type": "GtkFlowBox",
           "css": [
-           "horizontal"
+           "horizontal",
+           "oe-tiles"
           ],
           "children": [
            {

@@ -53,6 +53,19 @@ CSS = """
 .oe-trivia image {
   color: @accent_color;
 }
+/* The cell of the grid around a tile: nothing of its own (the tile, a button, shows the pointer
+   and the focus). */
+flowbox.oe-tiles > flowboxchild,
+flowbox.oe-tiles > flowboxchild:hover,
+flowbox.oe-tiles > flowboxchild:active,
+flowbox.oe-tiles > flowboxchild:selected,
+flowbox.oe-tiles > flowboxchild:focus-visible {
+  padding: 0;
+  background: none;
+  border-radius: 0;
+  box-shadow: none;
+  outline: none;
+}
 .oe-tile-shape {
   background-color: alpha(currentColor, 0.05);
   border-top-left-radius: 12px;
@@ -463,7 +476,8 @@ def _tiles(win, sec, view, found, activities: list[dict], title: str | None) -> 
     a narrow one."""
     flow = Gtk.FlowBox(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
                        min_children_per_line=1, max_children_per_line=3,
-                       column_spacing=10, row_spacing=12)
+                       column_spacing=10, row_spacing=12, activate_on_single_click=False)
+    flow.add_css_class("oe-tiles")
     for a in activities:
         flow.append(_tile(win, view, found, a))
     for child in _children(flow):
