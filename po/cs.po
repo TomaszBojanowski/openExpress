@@ -8,7 +8,7 @@ msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
 "POT-Creation-Date: 2026-11-25 22:16+0100\n"
-"PO-Revision-Date: 2026-11-25 14:55+0000\n"
+"PO-Revision-Date: 2026-11-26 21:16+0000\n"
 "Last-Translator: prajzner <prajzner@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/openexpress/"
 "openexpress/cs/>\n"
@@ -1128,16 +1128,15 @@ msgstr "jazyk systému"
 
 #. TRANSLATORS: `openexpress setup --activity-journal on|off`: the answer saved
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "Activity Maps"
+#, python-brace-format
 msgid "Activity journal: on"
-msgstr "Mapy aktivit"
+msgstr "Deník aktivit: zapnuto"
 
 #. TRANSLATORS: `openexpress setup --activity-journal on|off`: the answer saved
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Activity journal: off"
-msgstr ""
+msgstr "Deník aktivit: vypnuto"
 
 #: openexpress/cli.py
 #, python-brace-format
@@ -1823,21 +1822,18 @@ msgstr "Pouze v zálohách: {count}."
 #. TRANSLATORS: `openexpress activities journal`: a journal of a device that has no
 #. activity in it yet
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "No Activities"
+#, python-brace-format
 msgid "No activities yet"
-msgstr "Žádné aktivity"
+msgstr "Zatím žádné aktivity"
 
 #. TRANSLATORS: `openexpress activities journal`: {date} the start of its oldest activity
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "{count} new activity since {when}"
-#| msgid_plural "{count} new activities since {when}"
+#, python-brace-format
 msgid "{count} activity since {date}"
 msgid_plural "{count} activities since {date}"
-msgstr[0] "{count} nová aktivita od {when}"
-msgstr[1] "{count} nové aktivity od {when}"
-msgstr[2] "{count} nových aktivit od {when}"
+msgstr[0] "{count} aktivita od {date}"
+msgstr[1] "{count} aktivity od {date}"
+msgstr[2] "{count} aktivit od {date}"
 
 #. TRANSLATORS: strftime format of a date in the popover of the server state button
 #: openexpress/cli.py openexpress/gui/courses_page.py openexpress/gui/words.py
@@ -1851,34 +1847,31 @@ msgstr "%Y-%m-%d"
 #: openexpress/cli.py
 #, python-brace-format
 msgid "No gaps"
-msgstr ""
+msgstr "Žádné mezery v záznamech aktivit"
 
 #. TRANSLATORS: `openexpress activities journal`: a span whose activities the device may
 #. have deleted before the journal read them
 #: openexpress/cli.py
 #, python-brace-format
 msgid "Not known: {start} to {end}"
-msgstr ""
+msgstr "Neznámé období: {start} až {end}"
 
 #. TRANSLATORS: `openexpress activities journal --all`: the journal of a device that
 #. this installation no longer remembers
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "No devices are remembered yet."
+#, python-brace-format
 msgid "A device not remembered"
-msgstr "Zatím nejsou uložena žádná zařízení."
+msgstr "Zařízení, které již není uloženo v seznamu"
 
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "Not seen on this computer"
+#, python-brace-format
 msgid "No activity journal on this computer."
-msgstr "Na tomto počítači dosud nezjištěno"
+msgstr "V tomto počítači není žádný deník aktivit."
 
 #: openexpress/cli.py
-#, fuzzy, python-brace-format
-#| msgid "No courses on the device."
+#, python-brace-format
 msgid "No activity journal of this device."
-msgstr "V zařízení nejsou žádné trasy."
+msgstr "Pro toto zařízení není k dispozici žádný deník aktivit."
 
 #. TRANSLATORS: `openexpress activities journal --delete` without --apply: what it
 #. would delete
@@ -8967,10 +8960,9 @@ msgstr ""
 #. TRANSLATORS: group in the preferences: what openExpress keeps of each activity on this
 #. computer, so that the Activities page can show it after the device deleted its file
 #: openexpress/gui/preferences.py
-#, fuzzy, python-brace-format
-#| msgid "Activity Maps"
+#, python-brace-format
 msgid "Activity Journal"
-msgstr "Mapy aktivit"
+msgstr "Deník aktivit"
 
 #. TRANSLATORS: switch in the preferences: keep the activity journal (on is the yes to it)
 #: openexpress/gui/preferences.py
