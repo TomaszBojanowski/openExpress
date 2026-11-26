@@ -290,7 +290,7 @@ KINDS = {"en": ["Trail running", "Gravel cycling", "Open water swimming", "Stren
                 "Running", "Cycling", "Treadmill running", "Track running"],
          "pl": [f"Bieganie w{NB}terenie", "Kolarstwo gravelowe", "Pływanie na wodach otwartych",
                 "Trening siłowy", "Bieganie", "Kolarstwo", "Bieganie na bieżni",
-                "Bieganie na torze"]}
+                "Bieganie na stadionie"]}
 
 
 @pytest.mark.parametrize("language", ["en", "pl"], indirect=True)
