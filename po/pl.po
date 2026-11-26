@@ -161,7 +161,7 @@ msgstr "Sport {number}"
 #, python-brace-format
 msgctxt "sport"
 msgid "Treadmill running"
-msgstr "Bieganie na bieżni mechanicznej"
+msgstr "Bieganie na bieżni"
 
 #: openexpress/activities.py
 #, python-brace-format
@@ -173,7 +173,7 @@ msgstr "Bieganie w terenie"
 #, python-brace-format
 msgctxt "sport"
 msgid "Track running"
-msgstr "Bieganie na stadionie"
+msgstr "Bieganie na torze"
 
 #: openexpress/activities.py
 #, python-brace-format

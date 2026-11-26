@@ -287,9 +287,10 @@ def test_every_height_and_length_has_its_sentence(language):
 
 
 KINDS = {"en": ["Trail running", "Gravel cycling", "Open water swimming", "Strength training",
-                "Running", "Cycling"],
+                "Running", "Cycling", "Treadmill running", "Track running"],
          "pl": [f"Bieganie w{NB}terenie", "Kolarstwo gravelowe", "Pływanie na wodach otwartych",
-                "Trening siłowy", "Bieganie", "Kolarstwo"]}
+                "Trening siłowy", "Bieganie", "Kolarstwo", "Bieganie na bieżni",
+                "Bieganie na torze"]}
 
 
 @pytest.mark.parametrize("language", ["en", "pl"], indirect=True)
@@ -297,7 +298,7 @@ def test_the_kind_of_an_activity_with_its_sub_sport(language):
     from openexpress.activities import kind_name
 
     found = [kind_name(1, 3), kind_name(2, 46), kind_name(5, 18), kind_name(10, 20),
-             kind_name(1, 45), kind_name(2, None)]
+             kind_name(1, 45), kind_name(2, None), kind_name(1, 1), kind_name(1, 4)]
     assert found == KINDS[language]
 
 
