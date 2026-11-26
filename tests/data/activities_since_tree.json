@@ -1424,28 +1424,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -1455,32 +1440,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -1763,28 +1772,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -1794,32 +1788,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-01"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-01"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -2102,28 +2120,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -2133,32 +2136,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-24"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-24"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -2171,28 +2198,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-cycling"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-cycling-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -2202,135 +2214,60 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-cycling"
                     ],
-                    "label": "Cycling"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2025-09-14"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-cycling-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Cycling"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2025-09-14"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
               ]
-             }
-            ]
-           }
-          ]
-         }
-        ]
-       }
-      ]
-     }
-    ]
-   },
-   {
-    "type": "AdwPreferencesGroup",
-    "css": [],
-    "title": "",
-    "description": "",
-    "children": [
-     {
-      "type": "GtkBox",
-      "css": [
-       "vertical"
-      ],
-      "children": [
-       {
-        "type": "GtkBox",
-        "css": [
-         "header",
-         "horizontal"
-        ],
-        "hidden": true,
-        "children": [
-         {
-          "type": "GtkBox",
-          "css": [
-           "labels",
-           "vertical"
-          ],
-          "children": [
-           {
-            "type": "GtkLabel",
-            "css": [
-             "h4",
-             "heading"
-            ],
-            "hidden": true,
-            "label": ""
-           },
-           {
-            "type": "GtkLabel",
-            "css": [
-             "body",
-             "dimmed"
-            ],
-            "hidden": true,
-            "label": ""
-           }
-          ]
-         }
-        ]
-       },
-       {
-        "type": "GtkBox",
-        "css": [
-         "vertical"
-        ],
-        "children": [
-         {
-          "type": "GtkListBox",
-          "css": [
-           "boxed-list"
-          ],
-          "hidden": true
-         },
-         {
-          "type": "GtkBox",
-          "css": [
-           "horizontal"
-          ],
-          "children": [
-           {
-            "type": "GtkLabel",
-            "css": [
-             "dim-label"
-            ],
-            "label": ""
-           },
-           {
-            "type": "GtkButton",
-            "css": [
-             "flat",
-             "text-button"
-            ],
-            "label": "Show All",
-            "icon": null,
-            "children": [
-             {
-              "type": "GtkLabel",
-              "css": [],
-              "label": "Show All"
              }
             ]
            }
@@ -2787,28 +2724,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -2818,32 +2740,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -4058,28 +4004,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -4089,32 +4020,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -4506,28 +4461,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -4537,32 +4477,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -4575,28 +4539,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-training"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -4606,32 +4555,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-training"
                     ],
-                    "label": "Training"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-25"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "1:00"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Training"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-25"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "1:00"
+                   }
+                  ]
                  }
                 ]
                }
@@ -4644,28 +4617,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -4675,32 +4633,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-24"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-24"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -5260,18 +5242,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -5279,34 +5256,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-29"
+                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "5.0 km · 0:30 · 20 m"
                  }
                 ]
                }
@@ -5319,18 +5310,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -5338,34 +5324,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-29"
+                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "5.0 km · 0:30 · 20 m"
                  }
                 ]
                }
@@ -5378,18 +5378,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -5397,34 +5392,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-29"
+                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "5.0 km · 0:30 · 20 m"
                  }
                 ]
                }
@@ -5437,18 +5446,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -5456,34 +5460,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-29"
+                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "5.0 km · 0:30 · 20 m"
                  }
                 ]
                }
@@ -5496,18 +5514,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -5515,34 +5528,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-28"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-28"
+                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "5.0 km · 0:30 · 20 m"
                  }
                 ]
                }
@@ -5555,18 +5582,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -5574,34 +5596,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-28"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-28"
+                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "5.0 km · 0:30 · 20 m"
                  }
                 ]
                }
@@ -6161,28 +6197,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-training"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -6192,32 +6213,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-training"
                     ],
-                    "label": "Strength training"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-30"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "0:45"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Strength training"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-30"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "0:45"
+                   }
+                  ]
                  }
                 ]
                }
@@ -6230,28 +6275,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-water"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-water-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -6261,91 +6291,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-water"
                     ],
-                    "label": "Pool swimming"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-30"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-water-symbolic"
                    }
                   ]
                  },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "1.5 km · 0:40"
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkBox",
-              "css": [
-               "card",
-               "vertical"
-              ],
-              "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Pool swimming"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-30"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-29"
+                    "label": "1.5 km · 0:40"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "6.9 km · 0:38 · 41 m"
                  }
                 ]
                }
@@ -6358,18 +6353,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -6377,34 +6367,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Road cycling"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-29"
+                    "label": "6.9 km · 0:38 · 41 m"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "24.8 km · 0:55 · 212 m"
                  }
                 ]
                }
@@ -6417,18 +6421,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -6436,34 +6435,116 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Trail running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Road cycling"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-28"
+                    "label": "24.8 km · 0:55 · 212 m"
                    }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "21.3 km · 2:51 · 640 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Trail running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-28"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "21.3 km · 2:51 · 640 m"
+                   }
+                  ]
                  }
                 ]
                }
@@ -7023,28 +7104,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-training"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -7054,239 +7120,54 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Strength training"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-30"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "0:45"
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkBox",
-              "css": [
-               "card",
-               "vertical"
-              ],
-              "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-water"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-water-symbolic"
-                 }
-                ]
-               },
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Pool swimming"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-30"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "1.5 km · 0:40"
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkBox",
-              "css": [
-               "card",
-               "vertical"
-              ],
-              "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "6.9 km · 0:38 · 41 m"
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkBox",
-              "css": [
-               "card",
-               "vertical"
-              ],
-              "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Road cycling"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "24.8 km · 0:55 · 212 m"
-                 },
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
                     "type": "GtkImage",
                     "css": [
-                     "warning"
+                     "oe-sport-training"
                     ],
-                    "icon": "dialog-warning-symbolic"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Strength training"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-30"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "warning"
+                     "dim-label"
                     ],
-                    "label": "Not uploaded yet"
+                    "label": "0:45"
                    }
                   ]
                  }
@@ -7301,18 +7182,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -7322,52 +7198,302 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Trail running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-28"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "21.3 km · 2:51 · 640 m"
-                 },
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
                     "type": "GtkImage",
                     "css": [
-                     "success"
+                     "oe-sport-water"
                     ],
-                    "icon": "object-select-symbolic"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-water-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Pool swimming"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-30"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "success"
+                     "dim-label"
                     ],
-                    "label": "Uploaded"
+                    "label": "1.5 km · 0:40"
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "6.9 km · 0:38 · 41 m"
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Road cycling"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "24.8 km · 0:55 · 212 m"
+                   },
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkImage",
+                      "css": [
+                       "warning"
+                      ],
+                      "icon": "dialog-warning-symbolic"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "warning"
+                      ],
+                      "label": "Not uploaded yet"
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Trail running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-28"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "21.3 km · 2:51 · 640 m"
+                   },
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkImage",
+                      "css": [
+                       "success"
+                      ],
+                      "icon": "object-select-symbolic"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "success"
+                      ],
+                      "label": "Uploaded"
+                     }
+                    ]
                    }
                   ]
                  }
@@ -7929,28 +8055,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-training"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -7960,239 +8071,54 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Strength training"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-30"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "0:45"
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkBox",
-              "css": [
-               "card",
-               "vertical"
-              ],
-              "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-water"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-water-symbolic"
-                 }
-                ]
-               },
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Pool swimming"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-30"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "1.5 km · 0:40"
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkBox",
-              "css": [
-               "card",
-               "vertical"
-              ],
-              "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "6.9 km · 0:38 · 41 m"
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkBox",
-              "css": [
-               "card",
-               "vertical"
-              ],
-              "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Road cycling"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "24.8 km · 0:55 · 212 m"
-                 },
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
                     "type": "GtkImage",
                     "css": [
-                     "warning"
+                     "oe-sport-training"
                     ],
-                    "icon": "dialog-warning-symbolic"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-training-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Strength training"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-30"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "warning"
+                     "dim-label"
                     ],
-                    "label": "Not uploaded yet"
+                    "label": "0:45"
                    }
                   ]
                  }
@@ -8207,18 +8133,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -8228,52 +8149,302 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
-                  ],
-                  "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Trail running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-28"
-                   }
-                  ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "21.3 km · 2:51 · 640 m"
-                 },
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
                     "type": "GtkImage",
                     "css": [
-                     "success"
+                     "oe-sport-water"
                     ],
-                    "icon": "object-select-symbolic"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activity-sport-water-symbolic"
+                   }
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Pool swimming"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-30"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "success"
+                     "dim-label"
                     ],
-                    "label": "Uploaded"
+                    "label": "1.5 km · 0:40"
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "6.9 km · 0:38 · 41 m"
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Road cycling"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "24.8 km · 0:55 · 212 m"
+                   },
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkImage",
+                      "css": [
+                       "warning"
+                      ],
+                      "icon": "dialog-warning-symbolic"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "warning"
+                      ],
+                      "label": "Not uploaded yet"
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Trail running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-28"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "21.3 km · 2:51 · 640 m"
+                   },
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkImage",
+                      "css": [
+                       "success"
+                      ],
+                      "icon": "object-select-symbolic"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "success"
+                      ],
+                      "label": "Uploaded"
+                     }
+                    ]
                    }
                   ]
                  }
@@ -8835,18 +9006,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkDrawingArea",
-                "css": [
-                 "oe-tile-shape"
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -8854,34 +9020,48 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "vertical"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkBox",
                     "css": [
-                     "heading"
+                     "horizontal"
                     ],
-                    "label": "Trail running"
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Trail running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
-                     "caption",
                      "dim-label"
                     ],
-                    "label": "2026-10-29"
+                    "label": "13.2 mi · 2:51 · 2100 ft"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "13.2 mi · 2:51 · 2100 ft"
                  }
                 ]
                }
@@ -9448,28 +9628,13 @@
             "css": [],
             "children": [
              {
-              "type": "GtkBox",
+              "type": "GtkButton",
               "css": [
-               "card",
-               "vertical"
+               "card"
               ],
+              "label": null,
+              "icon": null,
               "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "horizontal",
-                 "oe-tile-shape"
-                ],
-                "children": [
-                 {
-                  "type": "GtkImage",
-                  "css": [
-                   "oe-sport-foot"
-                  ],
-                  "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
-                 }
-                ]
-               },
                {
                 "type": "GtkBox",
                 "css": [
@@ -9479,32 +9644,56 @@
                  {
                   "type": "GtkBox",
                   "css": [
-                   "horizontal"
+                   "horizontal",
+                   "oe-tile-shape"
                   ],
                   "children": [
                    {
-                    "type": "GtkLabel",
+                    "type": "GtkImage",
                     "css": [
-                     "heading"
+                     "oe-sport-foot"
                     ],
-                    "label": "Running"
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "caption",
-                     "dim-label"
-                    ],
-                    "label": "2026-10-29"
+                    "icon": "io.github.tomaszbojanowski.OpenExpress-activities-symbolic"
                    }
                   ]
                  },
                  {
-                  "type": "GtkLabel",
+                  "type": "GtkBox",
                   "css": [
-                   "dim-label"
+                   "vertical"
                   ],
-                  "label": "10.0 km · 1:00 · 100 m"
+                  "children": [
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "heading"
+                      ],
+                      "label": "Running"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   }
+                  ]
                  }
                 ]
                }

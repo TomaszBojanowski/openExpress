@@ -97,6 +97,7 @@ def show(win, sec, found, error: str | None = None) -> None:
         return
     view = since_last.of_device(s.device, s.storage, None if error else on_device(found))
     listed = error is None and found is not None and bool(found.listing)
+    on_it = listed and any(a.source is Source.DEVICE for a in found.listing)
     if error is not None:
         _error(win, sec, error)
         if view.count == 0:
@@ -110,10 +111,10 @@ def show(win, sec, found, error: str | None = None) -> None:
     if view.new:
         _numbers(sec, view)
         _trivia(sec, view)
-        _tiles(sec, view, view.new[:since_last.NEW_TILES], None)
+        _tiles(win, sec, view, found, view.new[:since_last.NEW_TILES], None)
     elif view.latest:
-        _tiles(sec, view, view.latest, words.latest_text())
-    if listed:
+        _tiles(win, sec, view, found, view.latest, words.latest_text())
+    if on_it:
         _footer(win, sec, view)
     log.info("activities page: %d new, %d with a tile, %d earlier on the device",
              len(view.new), min(len(view.new), since_last.NEW_TILES) or len(view.latest),
@@ -307,20 +308,49 @@ def _shape(activity: dict) -> Gtk.Widget:
     return box
 
 
-def _tile(view, activity: dict) -> Gtk.Widget:
-    tile = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
-    tile.add_css_class("card")
-    tile.append(_shape(activity))
+def read_of(found, activity: dict):
+    """The activity's file among those the page listed (the device's first, else a backup's),
+    as a row of the list has it, with what the journal says of it (activities.Read); None when
+    neither holds it any more."""
+    from openexpress import fit
+    from openexpress.activities import Read
+
+    if found is None or found.listing is None:
+        return None
+    name, size = activity["file"]["name"].casefold(), activity["file"]["size"]
+    files = [a for a in found.listing if a.name.casefold() == name and a.size == size]
+    if not files:
+        return None
+    file = min(files, key=lambda a: a.source is not Source.DEVICE)
+    return Read(file, fit.ActivitySummary(
+        fit.FileState.WHOLE, start=activity["start"], sport=activity.get("sport"),
+        timer_time=activity.get("timer_time"), distance=activity.get("distance"),
+        ascent=activity.get("ascent"), has_positions=bool(activity.get("has_track"))))
+
+
+def _open(win, read) -> None:
+    from openexpress.gui import activity_page  # it imports this module
+
+    activity_page.open_activity(win, read)
+
+
+def _tile(win, view, found, activity: dict) -> Gtk.Widget:
+    """A tile: a button that opens the page of its activity (a click, or Enter), named by its
+    kind and day; a card that opens nothing when its file is gone."""
+    content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    content.append(_shape(activity))
     body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=10,
                    margin_bottom=12, margin_start=12, margin_end=12)
     top = Gtk.Box(spacing=8)
     # Short natural widths (max_width_chars): three tiles share a wide line, each label
     # wrapping in the width its tile gets.
-    name = Gtk.Label(label=kind_name(activity.get("sport"), activity.get("sub_sport")),
+    kind = kind_name(activity.get("sport"), activity.get("sub_sport"))
+    name = Gtk.Label(label=kind,
                      wrap=True, xalign=0, hexpand=True, max_width_chars=6)
     name.add_css_class("heading")
     top.append(name)
-    day = Gtk.Label(label=words.tile_day(since_last.local_day(activity)), xalign=1,
+    when = words.tile_day(since_last.local_day(activity))
+    day = Gtk.Label(label=when, xalign=1,
                     valign=Gtk.Align.START, margin_top=DAY_DROP)
     day.add_css_class("dim-label")
     day.add_css_class("caption")
@@ -343,18 +373,26 @@ def _tile(view, activity: dict) -> Gtk.Widget:
         words_.add_css_class(style)
         line.append(words_)
         body.append(line)
-    tile.append(body)
+    content.append(body)
+    read = read_of(found, activity)
+    if read is None:
+        content.add_css_class("card")
+        return content
+    tile = Gtk.Button(child=content)
+    tile.add_css_class("card")
+    tile.update_property([Gtk.AccessibleProperty.LABEL], [caption(kind, when)])
+    tile.connect("clicked", lambda _button: _open(win, read))
     return tile
 
 
-def _tiles(sec, view, activities: list[dict], title: str | None) -> None:
+def _tiles(win, sec, view, found, activities: list[dict], title: str | None) -> None:
     """A tile for each of `activities`, newest first: three in a row in a wide window, one in
     a narrow one."""
     flow = Gtk.FlowBox(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
                        min_children_per_line=1, max_children_per_line=3,
                        column_spacing=12, row_spacing=12)
     for a in activities:
-        flow.append(_tile(view, a))
+        flow.append(_tile(win, view, found, a))
     for child in _children(flow):
         child.set_focusable(False)
     g = sec.group(title=GLib.markup_escape_text(title) if title else "")

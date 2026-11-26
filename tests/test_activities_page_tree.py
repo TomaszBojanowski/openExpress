@@ -394,7 +394,7 @@ def texts(tree: dict) -> list[str]:
     """Every text of a tree, in order."""
     found = [tree[k] for k in ("title", "description", "label", "subtitle")
              if isinstance(tree.get(k), str) and tree[k]]
-    if tree["type"] == "GtkButton":
+    if tree["type"] == "GtkButton" and tree.get("label"):
         return found  # its label once, not again as the label inside it
     for child in tree.get("children", ()):
         found += texts(child)
@@ -772,3 +772,88 @@ def test_a_listing_that_fails_with_an_empty_journal_says_only_why(tmp_path, monk
     win.load_activities()
     said = texts({"type": "page", "children": page_tree(section)["groups"]})
     assert said == ["made up: the device stopped answering", "Try Again"]
+
+
+# --- the bottom of the page and the tiles that open an activity --------------------------------
+
+def test_show_all_only_with_activity_files_on_the_device(tmp_path, backups, monkeypatch,
+                                                         in_warsaw):
+    """None earlier on the device: no sentence of them; Show All while the device has activity
+    files (the list leads to each one's page and GPX), none when only a backup has them."""
+    answer(True)
+    _win, section = draw_since("many", tmp_path / "many")
+    said = texts({"type": "page", "children": page_tree(section)["groups"]})
+    assert "Show All" in said and not any("earlier" in t for t in said)
+    _win, section = draw("only-in-backups", tmp_path / "backups", backups, monkeypatch)
+    said = texts({"type": "page", "children": page_tree(section)["groups"]})
+    assert "Show All" not in said and "Latest" in said
+
+
+def tile_buttons(section):
+    from gi.repository import Gtk
+
+    return [w for g in section.groups for w in descendants(g)
+            if isinstance(w, Gtk.Button) and w.has_css_class("card")]
+
+
+def test_a_tile_opens_the_page_of_its_activity(tmp_path, monkeypatch):
+    """A click on a tile, or Enter on it, opens the page of its activity as the arrow of its
+    row does (its file on the device); the tile is a button named by its kind and day."""
+    from gi.repository import GLib, Gtk
+
+    from openexpress.gui import activity_page
+
+    answer(True)
+    win, section = page_of(write_device(tmp_path / "device", A_WEEK))
+    opened = []
+    monkeypatch.setattr(activity_page, "open_activity", lambda w, read: opened.append(read))
+    (tile,) = tile_buttons(section)
+    assert tile.get_accessible_role() == Gtk.AccessibleRole.BUTTON
+    tile.emit("clicked")
+    assert [r.activity.name for r in opened] == ["2026-10-29-07-00-00.fit"]
+    # Enter on the tile with the focus: the button's own key, which clicks it after its press
+    # is shown (a window shown, its main loop turning).
+    section.stack.get_root().present()
+    tile.grab_focus()
+    tile.emit("activate")
+    deadline = time.monotonic() + 3
+    while len(opened) < 2 and time.monotonic() < deadline:
+        GLib.MainContext.default().iteration(False)
+    assert [r.activity.name for r in opened] == ["2026-10-29-07-00-00.fit"] * 2
+    assert opened[0].activity.source.value == "device"
+    assert opened[0].summary.sport == 1
+
+
+def test_back_from_the_page_of_a_tile_and_the_device_unplugged(tmp_path):
+    """The page of a tile's activity pushed; back: the page of what is new as it was, also
+    drawn again; opened again, the device unplugged: the page goes with the device view."""
+    from openexpress.gui import activity_page
+
+    answer(True)
+    win, section = page_of(write_device(tmp_path / "device", A_WEEK))
+    navigation(win)
+    before = page_tree(section)
+    (tile,) = tile_buttons(section)
+    tile.emit("clicked")
+    assert win.navigation.get_visible_page().get_tag() == "activity"
+    win.navigation.pop()
+    assert page_tree(section) == before
+    win.load_activities()
+    assert page_tree(section) == before
+    (tile,) = tile_buttons(section)
+    tile.emit("clicked")
+    activity_page.leave(win)  # the device unplugged
+    assert win.navigation.get_visible_page() is win.device_view
+
+
+def test_a_tile_whose_file_is_gone_is_not_a_button(tmp_path):
+    """An activity the journal has, whose file the device no longer holds nor a backup: its
+    tile shows it but opens nothing."""
+    answer(True)
+    folder = tmp_path / "device"
+    session = write_device(folder, A_WEEK)
+    keep_journal(session)
+    (folder / "GARMIN" / "Activity" / "2026-10-29-07-00-00.fit").unlink()
+    win, section = page_of(session_of(folder))
+    assert says(section, "1 new activity")
+    assert tile_buttons(section) == []
