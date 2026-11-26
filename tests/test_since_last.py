@@ -213,18 +213,54 @@ DAYS = {"en": ["Since Monday", "Since Tuesday", "Since Wednesday", "Since Thursd
                "Od soboty", "Od niedzieli"]}
 
 
+SINCE = {"en": {"today": "Since today", "yesterday": "Since yesterday"},
+         "pl": {"today": "Od dzisiaj", "yesterday": "Od wczoraj"}}
+
+
+@pytest.fixture
+def in_warsaw(monkeypatch):
+    """Local time as this computer's in Poland, with its change of the clocks."""
+    import time
+
+    monkeypatch.setenv("TZ", "Europe/Warsaw")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()
+
+
+# (the connection before, now, what the page says: "today", "yesterday", a day's name by its
+# weekday number, or "date"); days counted on this computer's local calendar.
+SINCE_CASES = [
+    (datetime(2026, 11, 26, 7, 0), datetime(2026, 11, 26, 23, 59), "today"),
+    (datetime(2026, 11, 26, 0, 1), datetime(2026, 11, 26, 0, 2), "today"),
+    (datetime(2026, 11, 25, 23, 59), datetime(2026, 11, 26, 0, 1), "yesterday"),
+    (datetime(2026, 11, 25, 0, 1), datetime(2026, 11, 26, 23, 59), "yesterday"),
+    (datetime(2026, 11, 24, 23, 59), datetime(2026, 11, 26, 0, 1), 1),  # 2 days: Tuesday
+    (datetime(2026, 11, 20, 9, 0), datetime(2026, 11, 26, 12, 0), 4),  # 6 days: Friday
+    (datetime(2026, 11, 19, 9, 0), datetime(2026, 11, 26, 12, 0), "date"),  # 7 days
+    (datetime(2026, 10, 24, 23, 30), datetime(2026, 10, 25, 23, 30), "yesterday"),  # 25 h
+    (datetime(2026, 10, 25, 0, 30), datetime(2026, 10, 25, 23, 30), "today"),  # 24 h
+    (datetime(2026, 3, 28, 23, 30), datetime(2026, 3, 29, 23, 30), "yesterday"),  # 23 h
+]
+
+
 @pytest.mark.parametrize("language", ["en", "pl"], indirect=True)
-def test_since_a_day_of_the_last_six_then_a_date(language):
-    """From today to six days back the day's own sentence (today's for one earlier today);
-    before, the date in digits. Never a name from strftime."""
+@pytest.mark.parametrize(("before", "now", "said"), SINCE_CASES)
+def test_since_today_yesterday_a_day_of_the_week_then_a_date(language, in_warsaw, before, now,
+                                                            said):
+    """The same day "Since today", the day before "Since yesterday", two to six days back the
+    day's own sentence, before that the date in digits; on the local calendar, also when the
+    clocks change. Never a name from strftime."""
     from openexpress.gui import words
 
-    for back in range(7):
-        day = NOW - timedelta(days=back, hours=2)
-        assert words.since_text(day.timestamp(), NOW) == DAYS[language][day.weekday()]
-    week = (NOW - timedelta(days=7)).timestamp()
-    assert words.since_text(week, NOW) == {"en": "Since 2026-11-19",
-                                           "pl": "Od 19.11.2026"}[language]
+    if said == "date":
+        expected = {"en": f"Since {before:%Y-%m-%d}", "pl": f"Od {before:%d.%m.%Y}"}[language]
+    elif isinstance(said, int):
+        expected = DAYS[language][said]
+    else:
+        expected = SINCE[language][said]
+    assert words.since_text(before.timestamp(), now) == expected
 
 
 HEADINGS = {"en": ["No new activities", "1 new activity", "3 new activities"],

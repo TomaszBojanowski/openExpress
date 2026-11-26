@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-26 09:17+0100\n"
+"POT-Creation-Date: 2026-11-26 22:19+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -11435,47 +11435,60 @@ msgstr[1] "Urządzenia przestały odpowiadać. Odłącz je i podłącz ponownie
 msgstr[2] "Urządzenia przestały odpowiadać. Odłącz je i podłącz ponownie."
 
 #. TRANSLATORS: under the heading of the Activities page: the activities since the device's
-#. connection before this one, on a Monday of the last six days
+#. connection before this one, on a Monday two to six days back
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Since Monday"
 msgstr "Od poniedziałku"
 
-#. TRANSLATORS: the same, on a Tuesday of the last six days
+#. TRANSLATORS: the same, on a Tuesday two to six days back
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Since Tuesday"
 msgstr "Od wtorku"
 
-#. TRANSLATORS: the same, on a Wednesday of the last six days
+#. TRANSLATORS: the same, on a Wednesday two to six days back
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Since Wednesday"
 msgstr "Od środy"
 
-#. TRANSLATORS: the same, on a Thursday of the last six days
+#. TRANSLATORS: the same, on a Thursday two to six days back
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Since Thursday"
 msgstr "Od czwartku"
 
-#. TRANSLATORS: the same, on a Friday of the last six days
+#. TRANSLATORS: the same, on a Friday two to six days back
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Since Friday"
 msgstr "Od piątku"
 
-#. TRANSLATORS: the same, on a Saturday of the last six days
+#. TRANSLATORS: the same, on a Saturday two to six days back
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Since Saturday"
 msgstr "Od soboty"
 
-#. TRANSLATORS: the same, on a Sunday of the last six days
+#. TRANSLATORS: the same, on a Sunday two to six days back
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Since Sunday"
 msgstr "Od niedzieli"
+
+#. TRANSLATORS: under the heading of the Activities page: the activities since the device's
+#. connection before this one, earlier today
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since today"
+msgstr "Od dzisiaj"
+
+#. TRANSLATORS: the same, the connection before this one yesterday
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Since yesterday"
+msgstr "Od wczoraj"
 
 #. TRANSLATORS: under the heading of the Activities page: the activities since the device's
 #. connection before this one, more than six days ago; {date} in digits, e.g. 2026-11-12

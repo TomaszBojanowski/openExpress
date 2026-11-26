@@ -509,35 +509,43 @@ def stalled_text(names: list[str | None]) -> str:
 
 # --- the Activities page since the connection before this one (since_last.py) ----------------
 
-# The days of the week as datetime.weekday() counts them, each a whole sentence: in some
-# languages the name changes with the words before it.
+# The days of the week as datetime.weekday() counts them, each a whole sentence (in some
+# languages the name changes with the words before it); two to six days back.
 _SINCE_DAY = (
     # TRANSLATORS: under the heading of the Activities page: the activities since the device's
-    # connection before this one, on a Monday of the last six days
+    # connection before this one, on a Monday two to six days back
     N_("Since Monday"),
-    # TRANSLATORS: the same, on a Tuesday of the last six days
+    # TRANSLATORS: the same, on a Tuesday two to six days back
     N_("Since Tuesday"),
-    # TRANSLATORS: the same, on a Wednesday of the last six days
+    # TRANSLATORS: the same, on a Wednesday two to six days back
     N_("Since Wednesday"),
-    # TRANSLATORS: the same, on a Thursday of the last six days
+    # TRANSLATORS: the same, on a Thursday two to six days back
     N_("Since Thursday"),
-    # TRANSLATORS: the same, on a Friday of the last six days
+    # TRANSLATORS: the same, on a Friday two to six days back
     N_("Since Friday"),
-    # TRANSLATORS: the same, on a Saturday of the last six days
+    # TRANSLATORS: the same, on a Saturday two to six days back
     N_("Since Saturday"),
-    # TRANSLATORS: the same, on a Sunday of the last six days
+    # TRANSLATORS: the same, on a Sunday two to six days back
     N_("Since Sunday"),
 )
 SINCE_DAYS = 6  # back to here, the day's name; before, its date
 
 
 def since_text(since: float, now: datetime | None = None) -> str:
-    """Since when the Activities page counts new activities: the day of the week of the
-    connection before this one, from today to six days back ("Since Thursday", today's own name
-    for one earlier today); its date in digits before that ("Since 2026-11-12")."""
+    """Since when the Activities page counts new activities, by the day of the connection before
+    this one on this computer's calendar: "Since today", "Since yesterday", the day of the week
+    two to six days back ("Since Thursday"), its date in digits before that ("Since
+    2026-11-12")."""
     day = datetime.fromtimestamp(since)
     back = ((now or datetime.now()).date() - day.date()).days
-    if 0 <= back <= SINCE_DAYS:
+    if back == 0:
+        # TRANSLATORS: under the heading of the Activities page: the activities since the device's
+        # connection before this one, earlier today
+        return _("Since today")
+    if back == 1:
+        # TRANSLATORS: the same, the connection before this one yesterday
+        return _("Since yesterday")
+    if 2 <= back <= SINCE_DAYS:
         return _(_SINCE_DAY[day.weekday()])
     # TRANSLATORS: under the heading of the Activities page: the activities since the device's
     # connection before this one, more than six days ago; {date} in digits, e.g. 2026-11-12
