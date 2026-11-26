@@ -738,3 +738,17 @@ def test_the_page_of_show_all_goes_with_the_device_view(tmp_path, backups, monke
     click(section, "Show All")
     activity_page.leave(win)
     assert win.navigation.get_visible_page() is win.device_view
+
+
+@pytest.mark.parametrize("value", [None, False, True])
+def test_after_a_sync_only_the_page_of_what_is_new_is_drawn_again(tmp_path, value):
+    """A sync done (the window's, or one seen in last_sync.json): the page of what is new is
+    drawn again (what was uploaded); the page as it was is left as it is (its scroll, its rows
+    shown)."""
+    from openexpress.gui.activities_journal import synced
+
+    answer(value)
+    win, section = page_of(write_device(tmp_path / "device", A_WEEK))
+    before = list(section.groups)
+    synced(win)
+    assert (list(section.groups) == before) is (value is not True)

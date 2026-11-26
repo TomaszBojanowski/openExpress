@@ -174,6 +174,15 @@ def answer(win, yes: bool) -> None:
         read_journal(win)
 
 
+def synced(win) -> None:
+    """A sync done (the window's, or one seen in last_sync.json): the page of what is new drawn
+    again, for what it uploaded; the page as it was is left as it is."""
+    from openexpress.gui import activities_since
+
+    if activities_since.shown(win):
+        journal_changed(win)
+
+
 def journal_changed(win) -> None:
     """The Activities page drawn again as the journal's answer has it now (its card, its line,
     or what is new), when it shows the activities of the open device; nothing is read again,
