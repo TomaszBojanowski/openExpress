@@ -423,12 +423,14 @@ class Added:
 
 
 def at_connection(device, storage, ownership_error=None, backups: Path | None = None,
-                  now: datetime | None = None) -> Added | None:
+                  now: datetime | None = None,
+                  progress: Callable[[int, int], None] | None = None) -> Added | None:
     """The journal of a device just connected brought up to date (add), when it is kept: after
     the yes (settings.json), for a device that keeps activities, not on another Garmin Connect
     account (ownership_error, as the session found it). Otherwise None: nothing read, nothing
     written. The journal is a side line: a failure is one line of the program's log, never an
-    error of what connected the device (a device that stopped responding still says so)."""
+    error of what connected the device (a device that stopped responding still says so).
+    `progress(done, of)`: as add tells it."""
     from openexpress import activities, history
     from openexpress.device.storage import DeviceNotResponding
 
@@ -439,7 +441,7 @@ def at_connection(device, storage, ownership_error=None, backups: Path | None = 
         return add(device, storage, backups if backups is not None else
                    paths.default_backup_dir(), now=now,
                    test_drive=bool(getattr(storage, "test_drive", False)), keep_going=kept,
-                   conn=history.connection_key(device, storage))
+                   conn=history.connection_key(device, storage), progress=progress)
     except DeviceNotResponding:
         raise
     except Exception as e:  # noqa: BLE001 - a side line: never a failed connection
@@ -460,13 +462,16 @@ def _deleted_meanwhile(where: Path, was_there: bool, did: Added, started: float)
 
 def add(device, storage, backups: Path | None, *, now: datetime | None = None,
         test_drive: bool = False, keep_going: Callable[[], bool] = lambda: True,
-        read_file: Callable | None = None, conn: str | None = None) -> Added:
+        read_file: Callable | None = None, conn: str | None = None,
+        progress: Callable[[int, int], None] | None = None) -> Added:
     """The activity files of `device` (on `storage`, and of its backups in `backups`) that the
     journal does not have yet read and added, each line written as soon as it is read (a
     device unplugged meanwhile loses nothing written), then the line of this connection
     (`conn`: none when its last line is of the same connection already). Stops between two
     files when `keep_going()` says no (the journal turned off). An error of the device passes
-    on (DeviceError). One line of the program's log: numbers and times only."""
+    on (DeviceError). `progress(done, of)`: how many of the files the journal did not have are
+    read, before the first and after each (numbers only, for the window). One line of the
+    program's log: numbers and times only."""
     from openexpress import activities
     from openexpress.device import whole_reads
 
@@ -481,8 +486,12 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
     found.list_files()
     did = Added(on_device=sum(1 for a in found.listing if a.source is activities.Source.DEVICE))
     size = 0
-    for a in found.listing:
-        if (a.name.casefold(), a.size) in known:
+    to_read = [a for a in found.listing if (a.name.casefold(), a.size) not in known]
+    told = progress or (lambda _done, _of: None)
+    told(0, len(to_read))
+    for done, a in enumerate(to_read, start=1):
+        if (a.name.casefold(), a.size) in known:  # the same file listed twice
+            told(done, len(to_read))
             continue
         if not keep_going():
             log.info("activity journal: stopped after %d added (%.1f s)", did.added,
@@ -504,6 +513,7 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
             line = None
         if line is None:
             did.not_whole += 1
+            told(done, len(to_read))
             continue
         if not keep_going():  # turned off while this file was read: not written
             log.info("activity journal: stopped after %d added (%.1f s)", did.added,
@@ -519,6 +529,7 @@ def add(device, storage, backups: Path | None, *, now: datetime | None = None,
             did.written_elsewhere += 1  # by another reading of this journal meanwhile
         known[(a.name.casefold(), a.size)] = line
         journal.activities[line["key"]] = line
+        told(done, len(to_read))
     starts = [known[(a.name.casefold(), a.size)]["start"] for a in found.listing
               if a.source is activities.Source.DEVICE and (a.name.casefold(), a.size) in known]
     if _deleted_meanwhile(where, existed or wrote, did, started):
