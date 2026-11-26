@@ -39,6 +39,9 @@ TRIVIA_ICONS = {"climbed": f"{APP_ID}-activity-elevation-symbolic",
 # The symbol of each group of sports on a tile without a track (the program's own, in data/).
 SYMBOLS = {group: f"{APP_ID}-activity-sport-{group}-symbolic" for group in sports.COLOURS}
 SYMBOLS["foot"] = f"{APP_ID}-activities-symbolic"  # the page's runner
+# The day of a tile at the top of its title, its smaller letters this far lower: a title in two
+# lines keeps the day beside its first line.
+DAY_DROP = 2
 
 CSS = """
 .oe-since-number {
@@ -318,7 +321,7 @@ def _tile(view, activity: dict) -> Gtk.Widget:
     name.add_css_class("heading")
     top.append(name)
     day = Gtk.Label(label=words.tile_day(since_last.local_day(activity)), xalign=1,
-                    valign=Gtk.Align.CENTER)
+                    valign=Gtk.Align.START, margin_top=DAY_DROP)
     day.add_css_class("dim-label")
     day.add_css_class("caption")
     top.append(day)

@@ -848,6 +848,52 @@ def test_what_is_new_in_a_wide_window_four_numbers_and_three_tiles_a_line(narrow
     assert any("6\u00a0min" in label for label in labels)
 
 
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("width", [800, 1000])
+def test_a_tile_s_day_stands_by_the_first_line_of_its_title(narrow_window, clock, width):
+    """A title of a tile in two lines or more (Polish, a long kind of sport, tiles side by
+    side): its day beside the first line, not the middle of them. (In the narrowest window a
+    tile takes the whole line, and its title one line.)"""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    win = narrow_window("pl", width=width)
+    key = _fill(win, "activities")
+    _journal_of(win.session.device.unit_id, datetime(2026, 10, 15, 9, 0))
+    win.session.journal_done = True
+    win.sections[key].clear()
+    win.sections[key].loaded = True
+    MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.2)
+    two_lines = 0
+    for g in win.sections[key].groups:
+        for name in descendants(g):
+            if not (isinstance(name, Gtk.Label) and name.has_css_class("heading")):
+                continue
+            day = name.get_next_sibling()
+            lines = name.get_layout().get_line_count()
+            if day is None or lines < 2:
+                continue
+            two_lines += 1
+            top = name.compute_bounds(name.get_parent())[1]
+            beside = day.compute_bounds(name.get_parent())[1]
+            middle = beside.get_y() + beside.get_height() / 2
+            line = top.get_height() / lines
+            assert top.get_y() <= middle < top.get_y() + 0.75 * line
+    assert two_lines
+
+
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_question_before_a_course_is_copied_fits_the_narrowest_window(narrow_window,
                                                                          language):
