@@ -846,15 +846,16 @@ def test_what_is_new_in_a_wide_window_four_numbers_and_three_tiles_a_line(narrow
 
 
 @pytest.mark.journal_answer
-@pytest.mark.parametrize("width", [800, 1000])
-def test_a_tile_s_day_stands_by_the_first_line_of_its_title(narrow_window, clock, width):
-    """A title of a tile in two lines or more (Polish, a long kind of sport, tiles side by
-    side): its day beside the first line, not the middle of them. (In the narrowest window a
-    tile takes the whole line, and its title one line.)"""
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_a_tile_its_title_its_numbers_then_its_state_and_day(narrow_window, clock, language):
+    """A window 1000 px wide, three tiles a line: the title alone on its line, as wide as the
+    tile; the numbers on one line under it, never broken; at the bottom the state at the start
+    and the day at the end, the day alone at the end when there is no state."""
     from datetime import datetime
 
     from gi.repository import Gtk
 
+    from openexpress import sync
     from openexpress.gui.app import MainWindow
     from openexpress.settings import Settings
 
@@ -862,33 +863,47 @@ def test_a_tile_s_day_stands_by_the_first_line_of_its_title(narrow_window, clock
     s = Settings.load()
     s.activity_journal = True
     s.save()
-    win = narrow_window("pl", width=width)
+    win = narrow_window(language, width=1000)
     key = _fill(win, "activities")
-    _journal_of(win.session.device.unit_id, datetime(2026, 10, 15, 9, 0))
+    unit_id = win.session.device.unit_id
+    _journal_of(unit_id, datetime(2026, 10, 15, 9, 0))
+    state = sync.SyncState(unit_id)
+    state.mark_completed(sync.ACTIVITY_TYPE, "activity-4.fit")
+    state.save()
     win.session.journal_done = True
+    win.activities.storage = win.session.storage
     win.sections[key].clear()
     win.sections[key].loaded = True
     MainWindow.show_activities(win, win.activities)
     win.navigation.set_animate_transitions(False)
     win.navigation.push(win.device_view)
     win.select_section(key)
-    _iterate(0.2)
-    two_lines = 0
-    for g in win.sections[key].groups:
-        for name in descendants(g):
-            if not (isinstance(name, Gtk.Label) and name.has_css_class("heading")):
-                continue
-            day = name.get_next_sibling()
-            lines = name.get_layout().get_line_count()
-            if day is None or lines < 2:
-                continue
-            two_lines += 1
-            top = name.compute_bounds(name.get_parent())[1]
-            beside = day.compute_bounds(name.get_parent())[1]
-            middle = beside.get_y() + beside.get_height() / 2
-            line = top.get_height() / lines
-            assert top.get_y() <= middle < top.get_y() + 0.75 * line
-    assert two_lines
+    _iterate(0.3)
+    (tiles,) = [w for g in win.sections[key].groups for w in descendants(g)
+                if isinstance(w, Gtk.FlowBox)]
+    shown, child = [], tiles.get_first_child()
+    while child is not None:
+        shown.append(child)
+        child = child.get_next_sibling()
+    assert len({c.compute_bounds(tiles)[1].get_y() for c in shown[:3]}) == 1
+    with_state = 0
+    for tile in shown[:3]:
+        labels = [w for w in descendants(tile) if isinstance(w, Gtk.Label) and w.get_label()]
+        title, numbers, *rest = labels
+        # The title alone on its line: the numbers under it, as wide as the tile's words.
+        assert title.get_parent() is numbers.get_parent()
+        assert title.get_parent().get_orientation() == Gtk.Orientation.VERTICAL
+        assert title.get_width() == title.get_parent().get_width()
+        assert numbers.get_layout().get_line_count() == 1
+        day = rest[-1]
+        row = day.get_parent()
+        right = day.compute_bounds(row)[1]
+        assert abs(right.get_x() + right.get_width() - row.get_width()) <= 1
+        if len(rest) == 2:  # a state at the start, the day at the end
+            with_state += 1
+            assert rest[0].get_parent() is row
+            assert rest[0].compute_bounds(row)[1].get_x() < right.get_x()
+    assert with_state == 1
 
 
 @pytest.mark.journal_answer

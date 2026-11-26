@@ -39,9 +39,6 @@ TRIVIA_ICONS = {"climbed": f"{APP_ID}-activity-elevation-symbolic",
 # The symbol of each group of sports on a tile without a track (the program's own, in data/).
 SYMBOLS = {group: f"{APP_ID}-activity-sport-{group}-symbolic" for group in sports.COLOURS}
 SYMBOLS["foot"] = f"{APP_ID}-activities-symbolic"  # the page's runner
-# The day of a tile at the top of its title, its smaller letters this far lower: a title in two
-# lines keeps the day beside its first line.
-DAY_DROP = 2
 
 CSS = """
 .oe-since-number {
@@ -416,38 +413,39 @@ def _tile(win, view, found, activity: dict) -> Gtk.Widget:
     content.append(_shape(activity))
     body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=10,
                    margin_bottom=12, margin_start=12, margin_end=12)
-    top = Gtk.Box(spacing=8)
-    # Short natural widths (max_width_chars): three tiles share a wide line, each label
-    # wrapping in the width its tile gets.
+    # The title alone on its line, wrapping in the width of the tile (a short natural width,
+    # max_width_chars, so that three tiles share a wide line).
     kind = kind_name(activity.get("sport"), activity.get("sub_sport"))
-    name = Gtk.Label(label=kind,
-                     wrap=True, xalign=0, hexpand=True, max_width_chars=6)
+    name = Gtk.Label(label=kind, wrap=True, xalign=0, max_width_chars=6)
     name.add_css_class("heading")
-    top.append(name)
-    when = words.tile_day(since_last.local_day(activity))
-    day = Gtk.Label(label=when, xalign=1,
-                    valign=Gtk.Align.START, margin_top=DAY_DROP)
-    day.add_css_class("dim-label")
-    day.add_css_class("caption")
-    top.append(day)
-    body.append(top)
+    body.append(name)
     numbers = words.tile_caption(activity, view.units)
     if numbers:
-        said = Gtk.Label(label=numbers, wrap=True, xalign=0, max_width_chars=10)
+        # One line, never broken: a tile too narrow for it shares its line with fewer tiles.
+        said = Gtk.Label(label=numbers, xalign=0)
         said.add_css_class("dim-label")
+        said.add_css_class("caption")
         body.append(said)
+    # At the bottom the upload state at the start, the day at the end.
+    bottom = Gtk.Box(spacing=4)
     state = view.upload_state(activity)
     if state is not None:
-        line = Gtk.Box(spacing=6)
         style = "success" if state == "uploaded" else "warning"
         icon = "object-select-symbolic" if state == "uploaded" else "dialog-warning-symbolic"
         image = Gtk.Image(icon_name=icon, accessible_role=Gtk.AccessibleRole.PRESENTATION)
         image.add_css_class(style)
-        line.append(image)
-        words_ = Gtk.Label(label=words.upload_state_text(state), wrap=True, xalign=0)
+        bottom.append(image)
+        words_ = Gtk.Label(label=words.upload_state_text(state), wrap=True, xalign=0,
+                           max_width_chars=6)
         words_.add_css_class(style)
-        line.append(words_)
-        body.append(line)
+        words_.add_css_class("caption")
+        bottom.append(words_)
+    when = words.tile_day(since_last.local_day(activity))
+    day = Gtk.Label(label=when, xalign=1, hexpand=True, halign=Gtk.Align.END)
+    day.add_css_class("dim-label")
+    day.add_css_class("caption")
+    bottom.append(day)
+    body.append(bottom)
     content.append(body)
     read = read_of(found, activity)
     if read is None:
@@ -465,7 +463,7 @@ def _tiles(win, sec, view, found, activities: list[dict], title: str | None) -> 
     a narrow one."""
     flow = Gtk.FlowBox(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
                        min_children_per_line=1, max_children_per_line=3,
-                       column_spacing=12, row_spacing=12)
+                       column_spacing=10, row_spacing=12)
     for a in activities:
         flow.append(_tile(win, view, found, a))
     for child in _children(flow):

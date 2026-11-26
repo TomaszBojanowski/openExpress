@@ -593,18 +593,26 @@
                 ],
                 "children": [
                  {
+                  "type": "GtkLabel",
+                  "css": [
+                   "heading"
+                  ],
+                  "label": "Running"
+                 },
+                 {
+                  "type": "GtkLabel",
+                  "css": [
+                   "caption",
+                   "dim-label"
+                  ],
+                  "label": "10.0 km · 1:00 · 100 m"
+                 },
+                 {
                   "type": "GtkBox",
                   "css": [
                    "horizontal"
                   ],
                   "children": [
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "heading"
-                    ],
-                    "label": "Running"
-                   },
                    {
                     "type": "GtkLabel",
                     "css": [
@@ -614,13 +622,6 @@
                     "label": "2026-10-29"
                    }
                   ]
-                 },
-                 {
-                  "type": "GtkLabel",
-                  "css": [
-                   "dim-label"
-                  ],
-                  "label": "10.0 km · 1:00 · 100 m"
                  }
                 ]
                }
@@ -1238,18 +1239,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -1259,13 +1268,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -1586,18 +1588,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -1607,13 +1617,6 @@
                       "label": "2026-10-01"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -1934,18 +1937,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -1955,13 +1966,6 @@
                       "label": "2026-10-24"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -2012,18 +2016,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Cycling"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Cycling"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -2033,13 +2045,6 @@
                       "label": "2025-09-14"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -2427,18 +2432,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -2448,13 +2461,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -3596,18 +3602,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -3617,13 +3631,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -4053,18 +4060,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -4074,13 +4089,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -4131,18 +4139,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Training"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "1:00"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Training"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -4152,13 +4168,6 @@
                       "label": "2026-10-25"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "1:00"
                    }
                   ]
                  }
@@ -4209,18 +4218,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -4230,13 +4247,6 @@
                       "label": "2026-10-24"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
@@ -4800,18 +4810,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "5.0 km · 0:30 · 20 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -4821,13 +4839,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
                  }
@@ -4868,18 +4879,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "5.0 km · 0:30 · 20 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -4889,13 +4908,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
                  }
@@ -4936,18 +4948,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "5.0 km · 0:30 · 20 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -4957,13 +4977,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
                  }
@@ -5004,18 +5017,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "5.0 km · 0:30 · 20 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -5025,13 +5046,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
                  }
@@ -5072,18 +5086,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "5.0 km · 0:30 · 20 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -5093,13 +5115,6 @@
                       "label": "2026-10-28"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
                  }
@@ -5140,18 +5155,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "5.0 km · 0:30 · 20 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -5161,13 +5184,6 @@
                       "label": "2026-10-28"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "5.0 km · 0:30 · 20 m"
                    }
                   ]
                  }
@@ -5741,18 +5757,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Strength training"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "0:45"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Strength training"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -5762,13 +5786,6 @@
                       "label": "2026-10-30"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "0:45"
                    }
                   ]
                  }
@@ -5819,18 +5836,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Pool swimming"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "1.5 km · 0:40"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Pool swimming"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -5840,13 +5865,6 @@
                       "label": "2026-10-30"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "1.5 km · 0:40"
                    }
                   ]
                  }
@@ -5887,86 +5905,26 @@
                   ],
                   "children": [
                    {
-                    "type": "GtkBox",
+                    "type": "GtkLabel",
                     "css": [
-                     "horizontal"
+                     "heading"
                     ],
-                    "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "caption",
-                       "dim-label"
-                      ],
-                      "label": "2026-10-29"
-                     }
-                    ]
+                    "label": "Running"
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "6.9 km · 0:38 · 41 m"
-                   }
-                  ]
-                 }
-                ]
-               }
-              ]
-             }
-            ]
-           },
-           {
-            "type": "GtkFlowBoxChild",
-            "css": [],
-            "children": [
-             {
-              "type": "GtkButton",
-              "css": [
-               "card"
-              ],
-              "label": null,
-              "icon": null,
-              "children": [
-               {
-                "type": "GtkBox",
-                "css": [
-                 "vertical"
-                ],
-                "children": [
-                 {
-                  "type": "GtkDrawingArea",
-                  "css": [
-                   "oe-tile-shape"
-                  ]
-                 },
-                 {
-                  "type": "GtkBox",
-                  "css": [
-                   "vertical"
-                  ],
-                  "children": [
+                   },
                    {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Road cycling"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -5976,13 +5934,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "24.8 km · 0:55 · 212 m"
                    }
                   ]
                  }
@@ -6023,6 +5974,21 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Road cycling"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "24.8 km · 0:55 · 212 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
@@ -6031,10 +5997,72 @@
                      {
                       "type": "GtkLabel",
                       "css": [
-                       "heading"
+                       "caption",
+                       "dim-label"
                       ],
-                      "label": "Trail running"
-                     },
+                      "label": "2026-10-29"
+                     }
+                    ]
+                   }
+                  ]
+                 }
+                ]
+               }
+              ]
+             }
+            ]
+           },
+           {
+            "type": "GtkFlowBoxChild",
+            "css": [],
+            "children": [
+             {
+              "type": "GtkButton",
+              "css": [
+               "card"
+              ],
+              "label": null,
+              "icon": null,
+              "children": [
+               {
+                "type": "GtkBox",
+                "css": [
+                 "vertical"
+                ],
+                "children": [
+                 {
+                  "type": "GtkDrawingArea",
+                  "css": [
+                   "oe-tile-shape"
+                  ]
+                 },
+                 {
+                  "type": "GtkBox",
+                  "css": [
+                   "vertical"
+                  ],
+                  "children": [
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Trail running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "21.3 km · 2:51 · 640 m"
+                   },
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -6044,13 +6072,6 @@
                       "label": "2026-10-28"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "21.3 km · 2:51 · 640 m"
                    }
                   ]
                  }
@@ -6624,18 +6645,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Strength training"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "0:45"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Strength training"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -6645,13 +6674,6 @@
                       "label": "2026-10-30"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "0:45"
                    }
                   ]
                  }
@@ -6702,18 +6724,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Pool swimming"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "1.5 km · 0:40"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Pool swimming"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -6723,13 +6753,6 @@
                       "label": "2026-10-30"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "1.5 km · 0:40"
                    }
                   ]
                  }
@@ -6770,34 +6793,35 @@
                   ],
                   "children": [
                    {
-                    "type": "GtkBox",
+                    "type": "GtkLabel",
                     "css": [
-                     "horizontal"
+                     "heading"
                     ],
-                    "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "caption",
-                       "dim-label"
-                      ],
-                      "label": "2026-10-29"
-                     }
-                    ]
+                    "label": "Running"
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "6.9 km · 0:38 · 41 m"
+                   },
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    }
                   ]
                  }
@@ -6838,31 +6862,16 @@
                   ],
                   "children": [
                    {
-                    "type": "GtkBox",
+                    "type": "GtkLabel",
                     "css": [
-                     "horizontal"
+                     "heading"
                     ],
-                    "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Road cycling"
-                     },
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "caption",
-                       "dim-label"
-                      ],
-                      "label": "2026-10-29"
-                     }
-                    ]
+                    "label": "Road cycling"
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "24.8 km · 0:55 · 212 m"
@@ -6883,9 +6892,18 @@
                      {
                       "type": "GtkLabel",
                       "css": [
+                       "caption",
                        "warning"
                       ],
                       "label": "Not uploaded yet"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
                      }
                     ]
                    }
@@ -6928,31 +6946,16 @@
                   ],
                   "children": [
                    {
-                    "type": "GtkBox",
+                    "type": "GtkLabel",
                     "css": [
-                     "horizontal"
+                     "heading"
                     ],
-                    "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Trail running"
-                     },
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "caption",
-                       "dim-label"
-                      ],
-                      "label": "2026-10-28"
-                     }
-                    ]
+                    "label": "Trail running"
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "21.3 km · 2:51 · 640 m"
@@ -6973,9 +6976,18 @@
                      {
                       "type": "GtkLabel",
                       "css": [
+                       "caption",
                        "success"
                       ],
                       "label": "Uploaded"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-28"
                      }
                     ]
                    }
@@ -7551,18 +7563,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Strength training"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "0:45"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Strength training"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -7572,13 +7592,6 @@
                       "label": "2026-10-30"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "0:45"
                    }
                   ]
                  }
@@ -7629,18 +7642,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Pool swimming"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "1.5 km · 0:40"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Pool swimming"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -7650,13 +7671,6 @@
                       "label": "2026-10-30"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "1.5 km · 0:40"
                    }
                   ]
                  }
@@ -7697,34 +7711,35 @@
                   ],
                   "children": [
                    {
-                    "type": "GtkBox",
+                    "type": "GtkLabel",
                     "css": [
-                     "horizontal"
+                     "heading"
                     ],
-                    "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "caption",
-                       "dim-label"
-                      ],
-                      "label": "2026-10-29"
-                     }
-                    ]
+                    "label": "Running"
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "6.9 km · 0:38 · 41 m"
+                   },
+                   {
+                    "type": "GtkBox",
+                    "css": [
+                     "horizontal"
+                    ],
+                    "children": [
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
+                     }
+                    ]
                    }
                   ]
                  }
@@ -7765,31 +7780,16 @@
                   ],
                   "children": [
                    {
-                    "type": "GtkBox",
+                    "type": "GtkLabel",
                     "css": [
-                     "horizontal"
+                     "heading"
                     ],
-                    "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Road cycling"
-                     },
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "caption",
-                       "dim-label"
-                      ],
-                      "label": "2026-10-29"
-                     }
-                    ]
+                    "label": "Road cycling"
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "24.8 km · 0:55 · 212 m"
@@ -7810,9 +7810,18 @@
                      {
                       "type": "GtkLabel",
                       "css": [
+                       "caption",
                        "warning"
                       ],
                       "label": "Not uploaded yet"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-29"
                      }
                     ]
                    }
@@ -7855,31 +7864,16 @@
                   ],
                   "children": [
                    {
-                    "type": "GtkBox",
+                    "type": "GtkLabel",
                     "css": [
-                     "horizontal"
+                     "heading"
                     ],
-                    "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Trail running"
-                     },
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "caption",
-                       "dim-label"
-                      ],
-                      "label": "2026-10-28"
-                     }
-                    ]
+                    "label": "Trail running"
                    },
                    {
                     "type": "GtkLabel",
                     "css": [
+                     "caption",
                      "dim-label"
                     ],
                     "label": "21.3 km · 2:51 · 640 m"
@@ -7900,9 +7894,18 @@
                      {
                       "type": "GtkLabel",
                       "css": [
+                       "caption",
                        "success"
                       ],
                       "label": "Uploaded"
+                     },
+                     {
+                      "type": "GtkLabel",
+                      "css": [
+                       "caption",
+                       "dim-label"
+                      ],
+                      "label": "2026-10-28"
                      }
                     ]
                    }
@@ -8468,18 +8471,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Trail running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "13.2 mi · 2:51 · 2100 ft"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Trail running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -8489,13 +8500,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "13.2 mi · 2:51 · 2100 ft"
                    }
                   ]
                  }
@@ -8989,18 +8993,26 @@
                   ],
                   "children": [
                    {
+                    "type": "GtkLabel",
+                    "css": [
+                     "heading"
+                    ],
+                    "label": "Running"
+                   },
+                   {
+                    "type": "GtkLabel",
+                    "css": [
+                     "caption",
+                     "dim-label"
+                    ],
+                    "label": "10.0 km · 1:00 · 100 m"
+                   },
+                   {
                     "type": "GtkBox",
                     "css": [
                      "horizontal"
                     ],
                     "children": [
-                     {
-                      "type": "GtkLabel",
-                      "css": [
-                       "heading"
-                      ],
-                      "label": "Running"
-                     },
                      {
                       "type": "GtkLabel",
                       "css": [
@@ -9010,13 +9022,6 @@
                       "label": "2026-10-29"
                      }
                     ]
-                   },
-                   {
-                    "type": "GtkLabel",
-                    "css": [
-                     "dim-label"
-                    ],
-                    "label": "10.0 km · 1:00 · 100 m"
                    }
                   ]
                  }
