@@ -228,6 +228,35 @@ def test_the_first_reading_takes_the_device_and_its_backups(tmp_path, backups, c
     assert not re.search(r"\d{4}-\d{2}-\d{2}|running|52\.|21\.", said)
 
 
+def test_a_reading_tells_its_progress(tmp_path, backups):
+    """Each file the journal does not have yet is a step: none read before the first, then one
+    more after each (whole or not), out of all of them; the next reading has only the file that
+    is not whole to read again. Numbers only."""
+    from openexpress import activity_journal as journal
+
+    found = on_device(tmp_path / "device", {**THREE, "notes.fit": b"no FIT file"})
+    in_a_backup(backups, {"old.fit": a_run(START - 30 * DAY)})
+    told = []
+    journal.add(found.device, found.storage, backups, now=SEEN,
+                progress=lambda done, of: told.append((done, of)))
+    assert told == [(0, 5), (1, 5), (2, 5), (3, 5), (4, 5), (5, 5)]
+    told.clear()
+    journal.add(found.device, found.storage, backups, now=SEEN,
+                progress=lambda done, of: told.append((done, of)))
+    assert told == [(0, 1), (1, 1)]
+
+
+def test_at_a_connection_the_progress_goes_to_the_caller(tmp_path, backups, monkeypatch):
+    from openexpress import activity_journal as journal
+
+    monkeypatch.setattr(journal, "kept", lambda: True)
+    found = on_device(tmp_path / "device", dict(THREE))
+    told = []
+    journal.at_connection(found.device, found.storage, None, backups,
+                          progress=lambda done, of: told.append((done, of)))
+    assert told[0] == (0, 3) and told[-1] == (3, 3)
+
+
 def test_the_device_report_holds_nothing_of_it(tmp_path, backups):
     from openexpress import activity_journal as journal
     from openexpress import report

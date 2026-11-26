@@ -40,7 +40,7 @@ from openexpress.connect import ApiError, NotAccountDevice, OwnershipError  # no
 from openexpress.device.gio_storage import DeviceSummary, FoundDevice  # noqa: E402
 from openexpress.device.storage import DeviceError, DeviceNotResponding  # noqa: E402
 from openexpress.gui import account_readings, activity_page, pictures, start  # noqa: E402
-from openexpress.gui.activities_journal import read_journal  # noqa: E402
+from openexpress.gui.activities_journal import read_journal, synced  # noqa: E402
 from openexpress.gui.add_to_account import (  # noqa: E402
     add_to_account_row,
     confirm_add_to_account,
@@ -841,7 +841,7 @@ class DevicePage:
         self.update_checked_at = self._update_record_at = None
         self.apps_count = self.music_count = None  # read again by their pages
         self.activities = self.activities_list = self.activities_more = None
-        self.activities_note = None
+        self.activities_note = self.activities_sheet = self.activities_progress = None
         self.map_state = None
         for sec in self.sections.values():
             sec.loaded = False
@@ -1592,6 +1592,8 @@ class DevicePage:
                 tile_facts.note_count(summary.to_sync)
         if self._on_start_page():
             self._update_tile_chips()
+        # What is new on the Activities page says what the sync uploaded.
+        synced(self)
 
     # --- backup -----------------------------------------------------------------
 

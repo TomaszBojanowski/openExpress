@@ -208,8 +208,9 @@ def test_the_no_drawn_again_with_more_than_a_page(tmp_path, reading, caplog):
 
 def test_the_switch_turned_off_and_on_again_with_the_page_open(tmp_path, reading, caplog):
     """True, false, true again in the preferences while the Activities page of more than a page
-    of activities is shown: drawn again each time, the line after the no only, and the device
-    read again after the yes."""
+    of activities is shown: drawn again each time; after the no the page as it was, its first
+    activities read and the line at the bottom; after the yes what is new, while the journal
+    reads the device again."""
     from gi.repository import Adw
 
     from openexpress.gui.preferences import journal_group
@@ -220,11 +221,12 @@ def test_the_switch_turned_off_and_on_again_with_the_page_open(tmp_path, reading
     (switch,) = [w for w in descendants(journal_group(win)) if isinstance(w, Adw.SwitchRow)]
     switch.set_active(False)
     assert section.groups[-1] is win.activities_note and texts_of(win.activities_note) == LINE
+    button(section, "Show 1 More")
     switch.set_active(True)
     assert unexpected(caplog) == [] and win.errors == []
     assert win.activities_note is None
     assert all(texts_of(g) != LINE for g in section.groups)
-    button(section, "Show 1 More")
+    assert [texts_of(g) for g in section.groups] == [["Reading the activities of this device…"]]
     assert reading == [win]
 
 

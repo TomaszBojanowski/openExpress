@@ -16,8 +16,10 @@ ROOT = Path(__file__).resolve().parent.parent
 APP_ID = "io.github.tomaszbojanowski.OpenExpress"
 SMALL = ["watch-small", "cycling-computer-small", "handheld-small", "bike-accessory-small",
          "device-small"]
+SPORTS = ["activity-sport-cycling", "activity-sport-water", "activity-sport-winter",
+          "activity-sport-training", "activity-sport-others"]
 OWN = [*SMALL, "activities", "courses", "activity-distance", "activity-time", "activity-speed",
-       "activity-heart-rate", "activity-calories", "activity-elevation"]
+       "activity-heart-rate", "activity-calories", "activity-elevation", *SPORTS]
 
 
 def own(name: str) -> str:
@@ -72,3 +74,41 @@ def test_the_pages_without_activities_take_their_side_panel_icon():
     from openexpress.gui import activities_page, activity_page
 
     assert activities_page.PAGE_ICON == activity_page.PAGE_ICON == own("activities")
+
+
+def test_each_group_of_sports_has_its_symbol():
+    """A tile of the Activities page without a track shows its sport's symbol: one of the
+    program's own for each group, the page's runner for those on foot."""
+    from openexpress.gui import activities_since, sports
+
+    assert sorted(activities_since.SYMBOLS) == sorted(sports.COLOURS)
+    assert activities_since.SYMBOLS["foot"] == own("activities")
+    assert sorted(v for k, v in activities_since.SYMBOLS.items() if k != "foot") == sorted(
+        own(name) for name in SPORTS)
+
+
+def _drawing(name):
+    import xml.etree.ElementTree as ET
+
+    return ET.parse(ROOT / "packaging" / "icons" / f"{name}.svg").getroot()
+
+
+def test_the_bike_is_lines_of_one_width_and_two_rings():
+    """Two wheels as rings with room inside (never a solid spot at 16 px), the frame, saddle and
+    handlebar as strokes: every line of one width, nothing filled."""
+    root = _drawing("activity-sport-cycling")
+    shapes = [e for e in root.iter() if e is not root]
+    circles = [e for e in shapes if e.tag.endswith("circle")]
+    assert len(circles) == 2
+    widths = {float(e.get("stroke-width", root.get("stroke-width"))) for e in shapes}
+    assert len(widths) == 1
+    (width,) = widths
+    assert all(float(c.get("r")) - width / 2 >= 1.75 for c in circles)
+    assert not any(e.get("fill") not in (None, "none") for e in shapes)
+
+
+def test_the_snowflake_has_branches_on_its_arms():
+    """Three lines through the middle and short branches on each of their six arms."""
+    root = _drawing("activity-sport-winter")
+    lines = [e for e in root.iter() if e.tag.endswith("path")]
+    assert len(lines) == 3 + 6 * 2

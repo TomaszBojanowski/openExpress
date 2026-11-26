@@ -279,6 +279,9 @@ class MainWindow(TaskRunner, DeviceDetection, StartWindow, DevicePage, MapsPage,
         # at its very bottom (gui/activities_journal.py).
         self.activities = self.activities_list = self.activities_more = None
         self.activities_note = None
+        # The page the list of activities is drawn on (the section, or the page Show All
+        # pushes), and the bar of the journal's progress (gui/activities_since.py).
+        self.activities_sheet = self.activities_progress = None
         self.account_picture_offer = self.account_picture_row = None
         # The row "Device Status" of the device page and its group (device_page.status_row);
         # the page Device Status (gui/status_page.py): its facts, whether every crash and update

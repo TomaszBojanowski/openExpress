@@ -64,8 +64,11 @@ class DeviceSession:
     # a count was started.
     to_sync: sync.ActivitiesToSync | None = None
     to_sync_asked: bool = False
-    # Whether the window started bringing its activity journal up to date (once a session).
+    # Whether the window started bringing its activity journal up to date (once a session),
+    # whether that reading is done (also when it failed), and how far it got (files read, of).
     journal_read: bool = False
+    journal_done: bool = False
+    journal_progress: tuple[int, int] | None = None
     # What Garmin's update server said of the device (unit-info), asked once for the
     # session (unit_info()); it carries the unit ID and the serial number: never shown.
     unit_info_answer: dict | None = field(default=None, repr=False)

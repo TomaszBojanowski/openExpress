@@ -25,6 +25,7 @@ openexpress/gpx.py
 openexpress/gui/account_readings.py
 openexpress/gui/activities_journal.py
 openexpress/gui/activities_page.py
+openexpress/gui/activities_since.py
 openexpress/gui/activity_map.py
 openexpress/gui/activity_page.py
 openexpress/gui/add_to_account.py

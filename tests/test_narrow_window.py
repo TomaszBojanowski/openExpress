@@ -3,6 +3,7 @@ device view and the start page fit, in English and in the longer Polish.
 
 The real window, on the tests' hidden display, holds stand-ins: an Edge 1050 with a beta
 update, long component names, maps, apps and music. Nothing asks a device or a server."""
+import json
 import os
 import re
 import time
@@ -714,6 +715,239 @@ def test_the_card_and_the_lines_of_the_activity_journal_fit_the_narrowest_window
     assert added is not sec.groups[1 if answer is None else -2]
     assert (answer is None) == (win.activities_note is None)
     assert _min_width(win.device_view) <= NARROWEST
+
+
+def _journal_of(unit_id: int, before) -> None:
+    """A made-up activity journal of the device: five activities of the last days, with their
+    shapes (none for the swim and the gym), and a connection before this one at `before` (a
+    datetime; None: none, the journal's first reading)."""
+    import json
+    import math
+    from datetime import datetime
+
+    from openexpress import activity_journal
+
+    loop = {"width": 900, "height": 600,
+            "points": [[round(500 + 450 * math.cos(n / 10 * math.pi)),
+                        round(300 + 280 * math.sin(n / 10 * math.pi))] for n in range(21)]}
+    kinds = [(1, 3, 21_300.0, 10_260.0, 640, loop), (2, 46, 74_800.0, 11_100.0, 912, loop),
+             (5, 18, 2_500.0, 3_000.0, None, None), (10, 20, None, 2_700.0, None, None),
+             (17, None, 18_000.0, 21_600.0, 1_240, loop)]
+    lines = []
+    if before is not None:
+        lines.append(activity_journal.connection(before, 4, None, None,
+                                                 "the connection before"))
+    for n, (sport, sub, metres, seconds, ascent, shape) in enumerate(kinds):
+        start = int(datetime(2026, 10, 16 + n, 7, 0).timestamp())
+        lines.append({"v": 1, "kind": "activity", "key": f"made up {n}",
+                      "file": {"name": f"activity-{n}.fit", "size": 1000}, "from": "device",
+                      "seen": "2026-10-21T12:00:00+02:00", "start": start, "utc_offset": 7200,
+                      "sport": sport, "sub_sport": sub, "timer_time": seconds,
+                      "elapsed_time": seconds, "distance": metres, "ascent": ascent,
+                      "units": None, "shape": shape, "has_track": shape is not None})
+    where = activity_journal.path(unit_id)
+    where.parent.mkdir(parents=True, exist_ok=True)
+    where.write_text("".join(json.dumps(line) + "\n" for line in lines))
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("state", ["new", "none-new", "started", "reading", "error"])
+def test_what_is_new_fits_the_narrowest_window(narrow_window, clock, language, state):
+    """After the yes, the Activities page of what is new in each of its states: the heading,
+    the card of numbers two by two, the trivia and the tiles one below the other, their words
+    wrapped; the reading with its bar; the error with Try Again."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress.gui import activities_page, words
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    win = narrow_window(language)
+    key = _fill(win, "activities")
+    before = {"started": None, "none-new": datetime(2026, 10, 21, 8, 0)}.get(
+        state, datetime(2026, 10, 15, 9, 0))
+    _journal_of(win.session.device.unit_id, before)
+    win.session.journal_done = state != "reading"
+    win.session.journal_progress = (3, 10) if state == "reading" else None
+    win.sections[key].clear()
+    if state == "error":
+        activities_page._not_listed(win, win.activities, OSError("made up: not listed"))
+    else:
+        MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.05)
+    assert win.activities_note is None
+    heading = {"new": words.new_activities_text(5), "none-new": words.new_activities_text(0),
+               "started": words.journal_started_text(),
+               "reading": words.reading_journal_text(), "error": "made up: not listed"}[state]
+    shown = [w.get_label() for g in win.sections[key].groups for w in descendants(g)
+             if isinstance(w, Gtk.Label)]
+    assert heading in shown
+    assert _min_width(win.device_view) <= NARROWEST
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_what_is_new_in_a_wide_window_four_numbers_and_three_tiles_a_line(narrow_window, clock,
+                                                                        language):
+    """A window 1000 px wide: the four numbers of the new activities on one line, three tiles
+    beside each other; the upload time's number kept with its word."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress import service
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    win = narrow_window(language, width=1000)
+    key = _fill(win, "activities")
+    unit_id = win.session.device.unit_id
+    _journal_of(unit_id, datetime(2026, 10, 15, 9, 0))
+    record = {"time": datetime(2026, 10, 21, 11, 54).timestamp(), "unit_id": unit_id,
+              "uploaded": 5, "errors": [], "lines": []}
+    service.device_last_sync_path(unit_id).write_text(json.dumps(record))
+    win.session.journal_done = True
+    win.activities.storage = win.session.storage
+    win.sections[key].clear()
+    win.sections[key].loaded = True  # as the window has it once the page is shown
+    MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.2)
+    card = win.sections[key].groups[1]
+    named = [w for w in descendants(card) if isinstance(w, Gtk.Label)
+             and w.has_css_class("dim-label")]
+    assert len({round(w.compute_bounds(card)[1].get_y()) for w in named}) == 1
+    (tiles,) = [w for g in win.sections[key].groups for w in descendants(g)
+                if isinstance(w, Gtk.FlowBox)]
+    ys, child = [], tiles.get_first_child()
+    while child is not None:
+        ys.append(child.compute_bounds(tiles)[1].get_y())
+        child = child.get_next_sibling()
+    assert len(set(ys[:3])) == 1
+    labels = [w.get_label() for g in win.sections[key].groups for w in descendants(g)
+              if isinstance(w, Gtk.Label)]
+    assert any("6\u00a0min" in label for label in labels)
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_a_tile_its_title_its_numbers_then_its_state_and_day(narrow_window, clock, language):
+    """A window 1000 px wide, three tiles a line: the title alone on its line, as wide as the
+    tile; the numbers on one line under it, never broken; at the bottom the state at the start
+    and the day at the end, the day alone at the end when there is no state."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress import sync
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    win = narrow_window(language, width=1000)
+    key = _fill(win, "activities")
+    unit_id = win.session.device.unit_id
+    _journal_of(unit_id, datetime(2026, 10, 15, 9, 0))
+    state = sync.SyncState(unit_id)
+    state.mark_completed(sync.ACTIVITY_TYPE, "activity-4.fit")
+    state.save()
+    win.session.journal_done = True
+    win.activities.storage = win.session.storage
+    win.sections[key].clear()
+    win.sections[key].loaded = True
+    MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.3)
+    (tiles,) = [w for g in win.sections[key].groups for w in descendants(g)
+                if isinstance(w, Gtk.FlowBox)]
+    shown, child = [], tiles.get_first_child()
+    while child is not None:
+        shown.append(child)
+        child = child.get_next_sibling()
+    assert len({c.compute_bounds(tiles)[1].get_y() for c in shown[:3]}) == 1
+    with_state = 0
+    for tile in shown[:3]:
+        labels = [w for w in descendants(tile) if isinstance(w, Gtk.Label) and w.get_label()]
+        title, numbers, *rest = labels
+        # The title alone on its line: the numbers under it, as wide as the tile's words.
+        assert title.get_parent() is numbers.get_parent()
+        assert title.get_parent().get_orientation() == Gtk.Orientation.VERTICAL
+        assert title.get_width() == title.get_parent().get_width()
+        assert numbers.get_layout().get_line_count() == 1
+        day = rest[-1]
+        row = day.get_parent()
+        right = day.compute_bounds(row)[1]
+        assert abs(right.get_x() + right.get_width() - row.get_width()) <= 1
+        if len(rest) == 2:  # a state at the start, the day at the end
+            with_state += 1
+            assert rest[0].get_parent() is row
+            assert rest[0].compute_bounds(row)[1].get_x() < right.get_x()
+    assert with_state == 1
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_card_of_numbers_is_four_in_a_row_or_two_by_two(narrow_window, clock, language):
+    """The four numbers of the new activities: all four on one line, or two lines of two;
+    never three and one, at the narrowest width and at the widths between."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    seen = {}
+    for width in (360, 480, 560, 640, 700, 760, 820, 880, 940, 1000, 1100, 1300):
+        win = narrow_window(language, width=width)
+        key = _fill(win, "activities")
+        _journal_of(win.session.device.unit_id, datetime(2026, 10, 15, 9, 0))
+        win.session.journal_done = True
+        win.activities.storage = win.session.storage
+        win.sections[key].clear()
+        win.sections[key].loaded = True
+        MainWindow.show_activities(win, win.activities)
+        win.navigation.set_animate_transitions(False)
+        win.navigation.push(win.device_view)
+        win.select_section(key)
+        _iterate(0.3)
+        card = win.sections[key].groups[1]
+        assert card.get_width() > 0
+        cells = [w for w in descendants(card) if isinstance(w, Gtk.Label)
+                 and w.has_css_class("dim-label")]
+        rows = {}
+        for named in cells:
+            y = round(named.compute_bounds(card)[1].get_y())
+            rows[y] = rows.get(y, 0) + 1
+        seen[width] = sorted(rows.values())
+        win.destroy()
+    assert all(counts in ([4], [2, 2]) for counts in seen.values()), seen
+    assert seen[360] == [2, 2]
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

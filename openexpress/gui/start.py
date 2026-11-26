@@ -17,7 +17,7 @@ from gi.repository import Adw, GLib, Graphene, Gsk, Gtk, Pango  # noqa: E402
 
 from openexpress import devicelist, tile_facts  # noqa: E402
 from openexpress.devicelist import CONNECTED, LIST, ON_ACCOUNT, REMEMBERED  # noqa: E402
-from openexpress.gui import sports  # noqa: E402
+from openexpress.gui import activities_since, sports  # noqa: E402
 from openexpress.gui.window_tasks import chip, new_spinner, wrapping_line  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
     last_seen_tooltip,
@@ -192,9 +192,10 @@ image.oe-status-icon.unknown {
 
 
 def load_css(display) -> None:
-    """The program's style (CSS) and the colours of the sports (gui/sports.py)."""
+    """The program's style (CSS), the colours of the sports (gui/sports.py) and the look of
+    the Activities page (gui/activities_since.py)."""
     provider = Gtk.CssProvider()
-    style = CSS + sports.css()
+    style = CSS + sports.css() + activities_since.CSS
     if hasattr(provider, "load_from_string"):  # GTK 4.12
         provider.load_from_string(style)
     else:
