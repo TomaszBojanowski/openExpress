@@ -2272,6 +2272,149 @@ def test_the_bands_of_the_zones_behind_the_chart_of_heart_rate(monkeypatch):
         win.toplevel.destroy()
 
 
+def a_walk_below_zone_1():
+    """Ten minutes of a slow walk (made-up): its heart rate from 95 up to 124 bpm, only its
+    last minutes in zone 1 (ZONE_BOUNDS)."""
+    from openexpress import fit
+
+    begin = START + FIT_EPOCH
+    samples = tuple(fit.Sample(begin + s, heart_rate=95 + s * 30 // 600) for s in range(600))
+    return fit.ActivityData(fit.FileState.WHOLE, start=begin, sport=TRAINING, timer_time=600.0,
+                            avg_heart_rate=110, max_heart_rate=124, calories=40,
+                            samples=samples)
+
+
+def a_run_in_waves():
+    """An hour of a run (made-up): its heart rate in three waves from 128 to 168 bpm, beginning
+    and ending at 148, in zone 2 (ZONE_BOUNDS), where its name would be in the band's middle at
+    either edge."""
+    import math
+
+    from openexpress import fit
+
+    begin = START + FIT_EPOCH
+    samples = tuple(fit.Sample(begin + s, heart_rate=round(148 + 20 * math.sin(
+        6 * math.pi * s / 3600))) for s in range(0, 3600, 5))
+    return fit.ActivityData(fit.FileState.WHOLE, start=begin, sport=TRAINING, timer_time=3600.0,
+                            avg_heart_rate=148, max_heart_rate=168, calories=600,
+                            samples=samples)
+
+
+def zone_names_drawn(monkeypatch, data, language="en") -> dict:
+    """The page of `data` in `language`: the names its chart of heart rate draws over the
+    bands of the zones, each with its box (left, top, right, bottom), the band of each zone
+    (its top and bottom), the height of a line of text, the edges of the plot, how many points
+    of the line each name's box holds, and what the cursor and the chart's labels say."""
+    from gi.repository import Gtk
+
+    from openexpress import i18n
+    from openexpress.gui import activity_chart, words
+
+    i18n.setup(language)
+    try:
+        win, page = page_of(monkeypatch, data, sport=TRAINING)
+        present(win)
+        try:
+            chart = chart_of(page)
+            area = chart.area
+            turn(0.2)
+            drawn = []
+            real = activity_chart._text
+
+            def text(area_, cr, said, x, y, align, *rest, **named):
+                drawn.append((said, x, y, align))
+                real(area_, cr, said, x, y, align, *rest, **named)
+
+            monkeypatch.setattr(activity_chart, "_text", text)
+            area.queue_draw()
+            turn(0.2)
+            plot = activity_chart._plot(area, area.get_width(), area.get_height())
+            tall = activity_chart._layout(area, "0").get_pixel_size()[1]
+            zones = {words.zone_name(zone) for zone in range(1, 6)}
+            names = {}
+            for said, x, y, align in drawn:
+                if said in zones:
+                    wide = activity_chart._layout(area, said).get_pixel_size()[0]
+                    names[said] = (x - wide * align, y, x - wide * align + wide, y + tall)
+            line = [(plot.x(at), activity_chart._within(plot, value))
+                    for run in activity_chart._drawn_runs(area, plot) for at, value in run]
+            area.place(300)
+            return {
+                "names": names,
+                "crossed": {said: sum(1 for x, y in line if left - 1 <= x <= right + 1
+                                      and top - 1 <= y <= bottom + 1)
+                            for said, (left, top, right, bottom) in names.items()},
+                "bands": {words.zone_name(zone): (plot.y(top), plot.y(bottom))
+                          for zone, bottom, top in activity_chart._zone_bands(
+                              area.zones, plot.values.low, plot.values.high)},
+                "tall": tall, "left": plot.left, "right": plot.right,
+                "cursor": [area.cursor_text(), chart.value_label.get_label()],
+                "labels": [w.get_label() for w in descendants(chart)
+                           if isinstance(w, Gtk.Label)],
+                "names_of_zones": zones}
+        finally:
+            win.toplevel.destroy()
+    finally:
+        i18n.setup("en")
+
+
+def placed_well(found) -> list[str]:
+    """The names drawn in their band, at an edge of the plot, the line through none."""
+    wrong = []
+    for said, (left, top, right, bottom) in found["names"].items():
+        upper, lower = found["bands"][said]
+        at_an_edge = abs(left - (found["left"] + 4)) < 1 or abs(right - (found["right"] - 4)) < 1
+        if not (upper - 0.5 <= top and bottom <= lower + 0.5 and at_an_edge
+                and found["crossed"][said] == 0):
+            wrong.append(said)
+    return wrong
+
+
+def test_a_lone_band_of_a_zone_has_its_name_at_the_chart_s_edge(monkeypatch):
+    """A slow walk: the one band behind its chart (zone 1, on top) has its name, in the band,
+    at an edge of the plot, where the line does not pass (it ends in zone 1); drawn only, not
+    said: the cursor says its time and value as ever, and no label of the chart is a zone's
+    name."""
+    found = zone_names_drawn(monkeypatch, zoned(a_walk_below_zone_1(), times=(590, 10, 0, 0,
+                                                                               0, 0)))
+    assert list(found["bands"]) == ["Zone 1"] and list(found["names"]) == ["Zone 1"]
+    assert placed_well(found) == []
+    assert not any(name in text for text in [*found["cursor"], *found["labels"]]
+                   for name in found["names_of_zones"])
+    assert found["cursor"][0]
+
+
+def test_a_band_lower_than_a_line_of_text_has_no_name(monkeypatch):
+    """Several bands: each as tall as a line of text has its zone's name, from zone 1 up; one
+    lower than that none (made-up bounds: zone 3 begins 3 bpm under the top of the chart)."""
+    import dataclasses
+
+    data = zoned(plateaus())
+    data = dataclasses.replace(data, zones=dataclasses.replace(
+        data.zones, bounds=(120, 140, 157, 165, 178, 190)))
+    found = zone_names_drawn(monkeypatch, data)
+    heights = {said: lower - upper for said, (upper, lower) in found["bands"].items()}
+    assert list(heights) == ["Zone 1", "Zone 2", "Zone 3"]
+    assert heights["Zone 3"] < found["tall"] <= min(heights["Zone 1"], heights["Zone 2"])
+    assert list(found["names"]) == ["Zone 1", "Zone 2"]
+    assert placed_well(found) == []
+
+
+def test_the_name_of_a_band_goes_where_the_line_does_not_pass(monkeypatch):
+    """The line crossing the middle of a band at both edges: its name moves up or down in its
+    band, at an edge, to a place the line does not pass; at the right edge when it can."""
+    found = zone_names_drawn(monkeypatch, zoned(a_run_in_waves(), times=(0, 600, 1800, 1200,
+                                                                          0, 0)))
+    assert "Zone 2" in found["names"]
+    assert placed_well(found) == []
+
+
+def test_the_name_of_a_band_in_polish(monkeypatch):
+    found = zone_names_drawn(monkeypatch, zoned(a_walk_below_zone_1(), times=(590, 10, 0, 0,
+                                                                               0, 0)), "pl")
+    assert list(found["names"]) == ["Strefa 1"]
+
+
 def test_the_bar_of_the_chart_s_switch_has_no_background_under_the_pointer(monkeypatch):
     """Only the buttons have one: beside them, under the pointer, the page as above the bar."""
     from gi.repository import Gtk

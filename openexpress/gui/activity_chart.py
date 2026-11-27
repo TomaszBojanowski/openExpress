@@ -5,9 +5,11 @@ pause) leave a gap in the line; so does a stop in the pace, never a slow climb. 
 smoothed over about 30 s of moving and drawn with the faster on top, its axis from the pace of
 most of the moving records (a value beyond it drawn at its edge); the points are brought down
 to two a pixel column without losing a peak; the axes have round values. Heart rate has the
-bands of the heart rate zones 1-5 behind it, in their colours (gui/activity_zones.py). A click,
-a drag or the keys place a cursor, its value said beside the switch. The numbers need no
-screen; the drawing is Cairo in a Gtk.DrawingArea.
+bands of the heart rate zones 1-5 behind it, in their colours (gui/activity_zones.py), each as
+tall as a line of text with its zone's name in it, at an edge, where the line does not pass,
+faint (drawn only: the screen reader has the chart's name and the value at its cursor). A click, a
+drag or the keys place a cursor, its value said beside the switch. The numbers need no screen;
+the drawing is Cairo in a Gtk.DrawingArea.
 Has: no attribute of the window; the chart's widgets keep their series and cursor themselves."""
 from __future__ import annotations
 
@@ -41,6 +43,7 @@ from openexpress.gui.words import (  # noqa: E402
     chart_tick,
     chart_unit,
     speed_kind,
+    zone_name,
 )
 
 GAP_S = 60  # records further apart than this: a pause, a gap in the line
@@ -59,6 +62,8 @@ KEY_STEP = 100  # a key moves the cursor by a hundredth of the activity
 CHART_HEIGHT = 200
 LAP_SHADE = 0.14  # the strength of the accent colour behind the lap chosen
 ZONE_SHADE = 0.13  # the strength of the zones' colours behind the line of heart rate
+TEXT_SHADE = 0.7  # the strength of the text's colour of the axes' values and times
+NAME_SHADE = 0.55  # and of the names of the zones' bands: fainter, as a dimmed label
 WHOLE = ("heart rate", "elevation")  # their axes have whole steps
 LEAST_SPAN = {"heart rate": 10, "elevation": 10, "speed": 1, "pace": 60, "swim pace": 10}
 NICE = (1, 2, 2.5, 5, 10)
@@ -448,11 +453,12 @@ def _plot(area, width: int, height: int) -> Plot:
     return Plot(left, top, right, bottom, times, values, faster_on_top(series.kind))
 
 
-def _text(area, cr, text: str, x: float, y: float, align: float, color) -> None:
+def _text(area, cr, text: str, x: float, y: float, align: float, color,
+          shade: float = TEXT_SHADE) -> None:
     """`text` at `y` (its top), `align` 0 left of `x`… 1 right of it."""
     layout = _layout(area, text)
     width = layout.get_pixel_size()[0]
-    cr.set_source_rgba(color.red, color.green, color.blue, 0.7)
+    cr.set_source_rgba(color.red, color.green, color.blue, shade)
     cr.move_to(x - width * align, y)
     PangoCairo.show_layout(cr, layout)
 
@@ -466,6 +472,7 @@ def _draw(area, cr, width: int, height: int) -> None:
     text_height = _layout(area, "0").get_pixel_size()[1]
     if area.zones is not None and kind == "heart rate":
         _draw_zones(cr, plot, area.zones)
+        _name_zones(area, cr, plot, area.zones, fg, text_height)
     if area.lap is not None:  # the lap chosen under the page: a band behind the line
         start, end = (min(max(plot.x(at), plot.left), plot.right) for at in area.lap)
         cr.set_source_rgba(accent.red, accent.green, accent.blue, LAP_SHADE)
@@ -541,6 +548,41 @@ def _draw_zones(cr, plot: Plot, bounds) -> None:
         cr.set_source_rgba(color.red, color.green, color.blue, ZONE_SHADE)
         cr.rectangle(plot.left, plot.y(top), plot.right - plot.left, plot.y(bottom) - plot.y(top))
         cr.fill()
+
+
+def _name_zones(area, cr, plot: Plot, bounds, fg, text_height: float) -> None:
+    """The name of each band of a zone as tall as a line of text ("Zone 1"), in its band, at
+    the right edge of the plot or else at the left one, as near the band's middle as the line
+    leaves room: the first place the line does not pass, else the one it passes least; a lower
+    band none."""
+    points = [(plot.x(at), _within(plot, value)) for run in _drawn_runs(area, plot)
+              for at, value in run]
+    for zone, bottom, top in _zone_bands(bounds, plot.values.low, plot.values.high):
+        upper, lower = plot.y(top), plot.y(bottom)
+        if lower - upper < text_height:
+            continue
+        name = zone_name(zone)
+        width = _layout(area, name).get_pixel_size()[0]
+        middle = (upper + lower - text_height) / 2
+        room = int((lower - upper - text_height) / 2)
+        heights = [middle + shift * sign for shift in range(0, room + 1, 2)
+                   for sign in ((1,) if shift == 0 else (-1, 1))]
+        places = [(edge, y) for edge in ("right", "left") for y in heights]
+        # The heights of the line under the name at each edge, looked for once.
+        under = {edge: [at for x, at in points if start - 2 <= x <= start + width + 2]
+                 for edge, start in (("right", plot.right - 4 - width),
+                                     ("left", plot.left + 4))}
+
+        def crossed(place, under=under) -> int:
+            edge, y = place
+            return sum(1 for at in under[edge] if y - 2 <= at <= y + text_height + 2)
+
+        edge, y = next((place for place in places if not crossed(place)), None) or min(
+            places, key=crossed)
+        if edge == "right":
+            _text(area, cr, name, plot.right - 4, y, 1, fg, NAME_SHADE)
+        else:
+            _text(area, cr, name, plot.left + 4, y, 0, fg, NAME_SHADE)
 
 
 def _within(plot: Plot, value: float) -> float:
