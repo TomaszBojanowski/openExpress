@@ -2325,6 +2325,17 @@ def zone_names_drawn(monkeypatch, data, language="en") -> dict:
                 drawn.append((said, x, y, align))
                 real(area_, cr, said, x, y, align, *rest, **named)
 
+            ticks = {activity_chart.chart_tick("heart rate", value, step) for step in (5, 10, 20)
+                     for value in range(0, 250, 5)}
+            left_out = []
+            real_grid = activity_chart._grid
+
+            def grid(cr, plot, fg, values, around):
+                left_out.extend(around)
+                real_grid(cr, plot, fg, values, around)
+
+            monkeypatch.setattr(activity_chart, "_grid", grid)
+
             monkeypatch.setattr(activity_chart, "_text", text)
             area.queue_draw()
             turn(0.2)
@@ -2339,8 +2350,12 @@ def zone_names_drawn(monkeypatch, data, language="en") -> dict:
             line = [(plot.x(at), activity_chart._within(plot, value))
                     for run in activity_chart._drawn_runs(area, plot) for at, value in run]
             area.place(300)
+            order = [said for said, *_where in drawn]
             return {
                 "names": names,
+                "over_the_grid": all(order.index(name) > max(
+                    i for i, said in enumerate(order) if said in ticks) for name in names),
+                "grid_left_out": left_out,
                 "crossed": {said: sum(1 for x, y in line if left - 1 <= x <= right + 1
                                       and top - 1 <= y <= bottom + 1)
                             for said, (left, top, right, bottom) in names.items()},
@@ -2398,6 +2413,42 @@ def test_a_band_lower_than_a_line_of_text_has_no_name(monkeypatch):
     assert heights["Zone 3"] < found["tall"] <= min(heights["Zone 1"], heights["Zone 2"])
     assert list(found["names"]) == ["Zone 1", "Zone 2"]
     assert placed_well(found) == []
+
+
+def test_the_names_of_the_bands_are_over_the_lines_of_the_grid(monkeypatch):
+    """No line of the grid strikes a name through (a band whose middle is a round value): the
+    grid leaves out the place of each name, and the names come after it (and its values),
+    the line of heart rate still after them."""
+    found = zone_names_drawn(monkeypatch, zoned(a_run_in_waves(), times=(0, 600, 1800, 1200,
+                                                                          0, 0)))
+    assert found["names"] and found["over_the_grid"]
+    left_out = found["grid_left_out"]
+    assert all(any(l0 <= left and top >= t0 and right <= r0 and bottom <= b0
+                   for l0, t0, r0, b0 in left_out)
+               for left, top, right, bottom in found["names"].values())
+
+
+def test_the_grid_leaves_out_the_places_it_is_given():
+    """A line of the grid stops at a place left out and goes on after it (made-up plot)."""
+    import cairo
+    import gi
+
+    gi.require_version("Gdk", "4.0")
+    from gi.repository import Gdk
+
+    from openexpress.gui import activity_chart
+
+    axis = activity_chart.Axis(0, 100, 50)
+    plot = activity_chart.Plot(10, 10, 190, 90, axis, axis, False)
+    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 100)
+    black = Gdk.RGBA()
+    black.parse("black")
+    activity_chart._grid(cairo.Context(surface), plot, black, [50], [(100, 40, 150, 60)])
+    surface.flush()
+    row = round(plot.y(50))
+    data, stride = surface.get_data(), surface.get_stride()
+    alpha = [data[row * stride + x * 4 + 3] for x in (50, 99 - 2, 120, 152 + 2, 170)]
+    assert [a > 0 for a in alpha] == [True, True, False, True, True]
 
 
 def test_the_name_of_a_band_goes_where_the_line_does_not_pass(monkeypatch):

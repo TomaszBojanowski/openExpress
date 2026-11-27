@@ -472,24 +472,22 @@ def _draw(area, cr, width: int, height: int) -> None:
     text_height = _layout(area, "0").get_pixel_size()[1]
     if area.zones is not None and kind == "heart rate":
         _draw_zones(cr, plot, area.zones)
-        _name_zones(area, cr, plot, area.zones, fg, text_height)
     if area.lap is not None:  # the lap chosen under the page: a band behind the line
         start, end = (min(max(plot.x(at), plot.left), plot.right) for at in area.lap)
         cr.set_source_rgba(accent.red, accent.green, accent.blue, LAP_SHADE)
         cr.rectangle(start, plot.top, end - start, plot.bottom - plot.top)
         cr.fill()
-    cr.set_line_width(1)
+    names = (_zone_names(area, plot, area.zones, text_height)
+             if area.zones is not None and kind == "heart rate" else [])
+    _grid(cr, plot, fg, plot.values.ticks, [box for *_place, box in names])
     for value in plot.values.ticks:
-        y = round(plot.y(value)) + 0.5
-        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.12)
-        cr.move_to(plot.left, y)
-        cr.line_to(plot.right, y)
-        cr.stroke()
         _text(area, cr, chart_tick(kind, value, plot.values.step), plot.left - 6,
-              y - text_height / 2, 1, fg)
+              round(plot.y(value)) + 0.5 - text_height / 2, 1, fg)
     _text(area, cr, chart_unit(kind, area.series.units), 0, 0, 0, fg)
     for at in plot.times.ticks:
         _text(area, cr, activity_clock(at), plot.x(at), plot.bottom + 4, 0.5, fg)
+    for name, x, y, align, _box in names:  # over the grid, under the line
+        _text(area, cr, name, x, y, align, fg, NAME_SHADE)
     cr.save()
     cr.rectangle(plot.left, plot.top - 2, plot.right - plot.left, plot.bottom - plot.top + 4)
     cr.clip()
@@ -550,13 +548,36 @@ def _draw_zones(cr, plot: Plot, bounds) -> None:
         cr.fill()
 
 
-def _name_zones(area, cr, plot: Plot, bounds, fg, text_height: float) -> None:
+def _grid(cr, plot: Plot, fg, values, around) -> None:
+    """The faint lines of the grid at the axis' round `values`, none in the boxes `around`
+    (left, top, right, bottom: the names of the zones), which no line strikes through."""
+    cr.save()
+    if around:
+        cr.rectangle(plot.left - 1, plot.top - 1, plot.right - plot.left + 2,
+                     plot.bottom - plot.top + 2)
+        for left, top, right, bottom in around:
+            cr.rectangle(left - 2, top, right - left + 4, bottom - top)
+        cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
+        cr.clip()
+    cr.set_line_width(1)
+    cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.12)
+    for value in values:
+        y = round(plot.y(value)) + 0.5
+        cr.move_to(plot.left, y)
+        cr.line_to(plot.right, y)
+        cr.stroke()
+    cr.restore()
+
+
+def _zone_names(area, plot: Plot, bounds, text_height: float) -> list[tuple]:
     """The name of each band of a zone as tall as a line of text ("Zone 1"), in its band, at
     the right edge of the plot or else at the left one, as near the band's middle as the line
     leaves room: the first place the line does not pass, else the one it passes least; a lower
-    band none."""
+    band none. Each (name, x, y, align, box) as _text takes them, its box (left, top, right,
+    bottom) for the grid to leave out."""
     points = [(plot.x(at), _within(plot, value)) for run in _drawn_runs(area, plot)
               for at, value in run]
+    found = []
     for zone, bottom, top in _zone_bands(bounds, plot.values.low, plot.values.high):
         upper, lower = plot.y(top), plot.y(bottom)
         if lower - upper < text_height:
@@ -568,10 +589,10 @@ def _name_zones(area, cr, plot: Plot, bounds, fg, text_height: float) -> None:
         heights = [middle + shift * sign for shift in range(0, room + 1, 2)
                    for sign in ((1,) if shift == 0 else (-1, 1))]
         places = [(edge, y) for edge in ("right", "left") for y in heights]
+        starts = {"right": plot.right - 4 - width, "left": plot.left + 4}
         # The heights of the line under the name at each edge, looked for once.
         under = {edge: [at for x, at in points if start - 2 <= x <= start + width + 2]
-                 for edge, start in (("right", plot.right - 4 - width),
-                                     ("left", plot.left + 4))}
+                 for edge, start in starts.items()}
 
         def crossed(place, under=under) -> int:
             edge, y = place
@@ -579,10 +600,12 @@ def _name_zones(area, cr, plot: Plot, bounds, fg, text_height: float) -> None:
 
         edge, y = next((place for place in places if not crossed(place)), None) or min(
             places, key=crossed)
+        box = (starts[edge], y, starts[edge] + width, y + text_height)
         if edge == "right":
-            _text(area, cr, name, plot.right - 4, y, 1, fg, NAME_SHADE)
+            found.append((name, plot.right - 4, y, 1, box))
         else:
-            _text(area, cr, name, plot.left + 4, y, 0, fg, NAME_SHADE)
+            found.append((name, plot.left + 4, y, 0, box))
+    return found
 
 
 def _within(plot: Plot, value: float) -> float:
