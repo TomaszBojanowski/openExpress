@@ -301,3 +301,27 @@ def test_no_text_of_the_activities_promises_what_is_not_there():
         if NOT_YET.search(said):
             promised.append(said)
     assert promised == []
+
+
+def test_an_update_from_before_the_journal_asks_once_over_the_list_as_it_was(tmp_path, reading):
+    """settings.json as the release before the journal left it has no answer about it: the card
+    on top of the page as it was, its rows of activities under it, nothing read for a journal;
+    after Not Now the list as it was with the line at its bottom, the no saved and every other
+    setting as that release left it."""
+    from fakes import SETTINGS_BEFORE_THE_JOURNAL, settings_before_the_journal
+    from gi.repository import Adw, Gtk
+
+    from openexpress import activity_journal, paths
+
+    settings_before_the_journal()
+    assert activity_journal.answered() is None
+    win, section = the_page(tmp_path)
+    first = [w.get_label() for w in descendants(section.groups[0]) if isinstance(w, Gtk.Label)]
+    assert "Keep an Activity Journal?" in first
+    rows = [w for g in section.groups for w in descendants(g) if isinstance(w, Adw.ActionRow)]
+    assert len(rows) >= 3 and reading == [] and "Show All" not in labels(section)
+    button(section, "Not Now").emit("clicked")
+    assert json.loads(paths.settings_file().read_text()) == {**SETTINGS_BEFORE_THE_JOURNAL,
+                                                             "activity_journal": False}
+    assert "Keep an Activity Journal?" not in labels(section)
+    assert section.groups[-1] is win.activities_note and reading == []

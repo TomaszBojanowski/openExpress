@@ -1882,3 +1882,23 @@ def found_now(monkeypatch, storage) -> None:
     from openexpress import service
 
     monkeypatch.setattr(service, "open_device_or_drive", lambda **kw: storage)
+
+
+# settings.json as the last release before the activity journal wrote it: the fields of its
+# Settings (a made-up GUID) and the language chosen in the window; no answer about the journal.
+SETTINGS_BEFORE_THE_JOURNAL = {"environment": "production", "client_name": "express",
+                   "client_version": "7.29.1.0", "client_platform": "Windows",
+                   "client_platform_version": "10.0.19045.0",
+                   "client_guid": "00000000-0000-4000-8000-000000000013",
+                   "diagnostics_copy": False, "ui_language": "en"}
+
+
+def settings_before_the_journal() -> None:
+    """The program's settings.json as an update from the release before the journal finds it."""
+    import json
+
+    from openexpress import paths
+
+    where = paths.settings_file()
+    where.parent.mkdir(parents=True, exist_ok=True)
+    where.write_text(json.dumps(SETTINGS_BEFORE_THE_JOURNAL, indent=2))
