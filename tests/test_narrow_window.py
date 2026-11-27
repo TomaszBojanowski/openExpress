@@ -1176,20 +1176,20 @@ def _zone_bounds_break_between_words(zones) -> None:
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkeypatch, language,
                                                            sport, tiles):
-    """Its tiles two by two, the damaged file said under them, the map with its note and
-    button (or its attribution), the chart with its switch and the value at its cursor, its
-    kilometres, its heart rate zones and training effect, its details open (their longest
-    values), its sport and start in the header bar with the GPX button."""
+    """Its heading (the dot of its sport hidden), the damaged file said under it, the map with
+    its note and button (or its attribution), its numbers two by two, its elevation, its heart
+    rate with the bar of its zones and their rows, the chart with its switch and the value at
+    its cursor, its kilometres, training effect, its details open (their longest values), the
+    GPX button in the header bar."""
     from fakes import RunNow
-    from gi.repository import Adw, Gtk
+    from gi.repository import Gtk
 
-    from openexpress.gui import activity_map, activity_page
+    from openexpress.gui import activity_map, activity_overview, activity_page
     from openexpress.gui.activity_chart import ActivityChart
     from openexpress.gui.activity_details import DetailsList
     from openexpress.gui.activity_effect import EffectList
     from openexpress.gui.activity_laps import LapList
-    from openexpress.gui.activity_zones import ZoneList
-    from openexpress.gui.words import activity_start as read_start
+    from openexpress.gui.activity_zones import ZoneList, ZoneShares
 
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
@@ -1207,10 +1207,12 @@ def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkey
     _iterate(0.3)
     page = win.navigation.get_visible_page()
     assert page.get_tag() == "activity"
-    shown = [w.get_label() for w in descendants(page) if isinstance(w, Gtk.Label)]
-    assert {"99:59:59", "9999 m"} <= set(shown) and len(
-        [w for w in descendants(page) if isinstance(w, Gtk.FlowBoxChild)
-         and w.get_child().has_css_class("card")]) == 5
+    shown = [w.get_text() for w in descendants(page) if isinstance(w, Gtk.Label)]
+    assert {"99:59:59", "9999\u00a0m"} <= set(shown)
+    (card,) = [w for w in descendants(page) if isinstance(w, activity_overview.NumbersCard)]
+    lines = {round(c.compute_bounds(card)[1].get_y()) for c in card.cells}
+    assert len(card.cells) == 4 and len(lines) == 2  # two by two
+    assert [w for w in descendants(page) if isinstance(w, activity_overview.ElevationSection)]
     assert len([w for w in descendants(page) if isinstance(w, Gtk.ToggleButton)]) == 3
     (chart,) = [w for w in descendants(page) if isinstance(w, ActivityChart)]
     chart.area.place(180_000)
@@ -1227,16 +1229,17 @@ def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkey
     assert [w for w in descendants(page) if isinstance(w, LapList)]  # its kilometres: no laps kept
     (zones,) = [w for w in descendants(page) if isinstance(w, ZoneList)]  # the longest words
     _zone_bounds_break_between_words(zones)
+    assert [w for w in descendants(zones) if isinstance(w, ZoneShares)]
     assert [w for w in descendants(page) if isinstance(w, EffectList)]  # the scale's longest words
     (details,) = [w for w in descendants(page) if isinstance(w, DetailsList)]  # open, every row
     details.expander.set_expanded(True)
     assert len(details.rows) == LONG_DETAILS - (sport == CYCLING)
     _iterate(0.2)
     (dot,) = [w for w in descendants(page) if w.has_css_class("oe-sport-dot")]
-    assert not dot.get_visible()  # not in a narrow window: the start under the title stays whole
-    (start,) = [w for w in descendants(page) if isinstance(w, Gtk.Label) and w.get_mapped()
-                and w.get_ancestor(Adw.WindowTitle) and w.get_label() == read_start(read)]
-    assert not start.get_layout().is_ellipsized()
+    assert not dot.get_visible()  # not in a narrow window: the title has the whole width
+    (heading,) = [w for w in descendants(page) if isinstance(w, activity_overview.Heading)]
+    assert all(not w.get_layout().is_ellipsized() for w in descendants(heading)
+               if isinstance(w, Gtk.Label))
     assert _min_width(page) <= NARROWEST
     assert page.get_width() <= NARROWEST
 

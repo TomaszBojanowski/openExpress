@@ -31,6 +31,7 @@ from fakes import (
     fit_activity,
     fit_file,
     page_window,
+    widget_tree,
     window_methods,
 )
 
@@ -87,53 +88,15 @@ def kept() -> bool:
     return activity_journal.answered() is True
 
 
-def widget(w) -> dict:
-    """One widget and all under it: its type, CSS classes, what it says and shows, whether it
-    is visible and takes clicks."""
-    from gi.repository import Adw, Gtk
-
-    said: dict = {"type": w.__gtype__.name, "css": sorted(w.get_css_classes())}
-    if not w.get_visible():
-        said["hidden"] = True
-    if not w.get_sensitive():
-        said["insensitive"] = True
-    if w.get_tooltip_text():
-        said["tooltip"] = w.get_tooltip_text()
-    if isinstance(w, Gtk.Label):
-        said["label"] = w.get_label()
-    elif isinstance(w, Gtk.Button):
-        said["label"] = w.get_label()
-        said["icon"] = w.get_icon_name()
-    elif isinstance(w, Gtk.Image):
-        said["icon"] = w.get_icon_name()
-    if isinstance(w, Adw.PreferencesRow):
-        said["title"] = w.get_title()
-    if isinstance(w, Adw.ActionRow):
-        said["subtitle"] = w.get_subtitle()
-        said["activatable"] = w.get_activatable()
-    if isinstance(w, Adw.PreferencesGroup):
-        said["title"], said["description"] = w.get_title(), w.get_description()
-    if isinstance(w, Adw.StatusPage):
-        said["title"], said["description"] = w.get_title(), w.get_description()
-        said["icon"] = w.get_icon_name()
-    children, child = [], w.get_first_child()
-    while child is not None:
-        children.append(widget(child))
-        child = child.get_next_sibling()
-    if children:
-        said["children"] = children
-    return said
-
-
 def page_tree(section) -> dict:
     """What the page shows: which of its views, the banner, and the groups of its content (the
     status page instead, when it shows one)."""
     shown = section.stack.get_visible_child_name()
     tree = {"shown": shown, "banner": section.banner.get_revealed()}
     if shown == "content":
-        tree["groups"] = [widget(g) for g in section.groups]
+        tree["groups"] = [widget_tree(g) for g in section.groups]
     else:
-        tree["status"] = widget(section.stack.get_visible_child())
+        tree["status"] = widget_tree(section.stack.get_visible_child())
     return tree
 
 
@@ -156,7 +119,8 @@ def session_of(folder: Path):
     storage = LocalStorage(folder)
     return types.SimpleNamespace(device=parse(storage.read("GARMIN/GarminDevice.xml")),
                                  storage=storage, logged_in=True, ownership_error=None,
-                                 mass_storage=False, journal_read=False)
+                                 mass_storage=False, journal_read=False,
+                                 unit_info_answer=None)
 
 
 def write_backup(backups: Path, files: dict[str, bytes]) -> None:
@@ -695,7 +659,7 @@ def test_show_all_pushes_the_page_as_it_was_and_back(tmp_path, backups, monkeypa
     click(section, "Show All")
     page = win.navigation.get_visible_page()
     assert page.get_tag() == "activities-all" and page.get_title() == "Activities"
-    assert [widget(g) for g in win.activities_sheet.groups] == pattern["rows"]["groups"]
+    assert [widget_tree(g) for g in win.activities_sheet.groups] == pattern["rows"]["groups"]
     win.navigation.pop()
     assert win.navigation.get_visible_page() is win.device_view
     assert page_tree(section) == before
@@ -846,23 +810,146 @@ def test_back_from_the_page_of_a_tile_and_the_device_unplugged(tmp_path):
     assert win.navigation.get_visible_page() is win.device_view
 
 
-def test_a_tile_whose_file_is_gone_is_not_a_button(tmp_path):
-    """An activity the journal has, whose file the device no longer holds nor a backup: its
-    tile shows it but opens nothing."""
+def gone_from_the_device(tmp_path, files=None):
+    """The page of what is new, the journal kept, the newest activity's file gone from the
+    device (and no backup has it): its window with the device view, and the page."""
     answer(True)
     folder = tmp_path / "device"
-    session = write_device(folder, A_WEEK)
+    session = write_device(folder, files or A_WEEK)
     keep_journal(session)
-    (folder / "GARMIN" / "Activity" / "2026-10-29-07-00-00.fit").unlink()
+    newest = max(f for f in (folder / "GARMIN" / "Activity").iterdir() if f.name[:4].isdigit())
+    newest.unlink()
     win, section = page_of(session_of(folder))
-    assert says(section, "1 new activity")
-    assert tile_buttons(section) == []
+    navigation(win)
+    return win, section
+
+
+def journal_page(win):
+    """The modules of the page of an activity from the journal alone, top to bottom, and its
+    header bar's buttons."""
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import activity_overview
+    from openexpress.gui.activity_zones import ZoneList
+
+    page = win.navigation.get_visible_page()
+    kinds = [(activity_overview.Heading, "heading"), (activity_overview.ShapeCard, "shape"),
+             (activity_overview.NumbersCard, "numbers"),
+             (activity_overview.ElevationSection, "elevation"), (ZoneList, "heart rate")]
+    (clamp,) = [w for w in descendants(page) if isinstance(w, Adw.Clamp)
+                and w.get_maximum_size() == 1000]
+    found, child = [], clamp.get_child().get_first_child()
+    while child is not None:
+        name = next((n for kind, n in kinds if isinstance(child, kind)), None)
+        found.append(name or child.get_label())
+        child = child.get_next_sibling()
+    (header,) = [w for w in descendants(page) if isinstance(w, Adw.HeaderBar)]
+    buttons = [w for w in descendants(header) if isinstance(w, Gtk.Button)
+               and w.get_tooltip_text()]
+    return found, buttons
+
+
+FROM_JOURNAL = ("The file of this activity is no longer on the device or in its backups; this "
+                "is what the activity journal kept")
+
+
+def test_a_tile_whose_file_is_gone_opens_the_page_from_the_journal(tmp_path, caplog):
+    """An activity the journal has, whose file the device no longer holds nor a backup: its
+    tile, a button too, opens its page from the journal: its heading, where it comes from, its
+    shape, numbers and heart rate, no chart, laps, details nor GPX; back, the page of what is
+    new as it was. The log has counts only."""
+    import logging
+
+    win, section = gone_from_the_device(tmp_path, SHAPES)
+    before = page_tree(section)
+    tiles = tile_buttons(section)
+    assert says(section, "5 new activities") and len(tiles) == 5
+    with caplog.at_level(logging.INFO, logger="openexpress.gui.activity_page"):
+        tiles[0].emit("clicked")
+    page = win.navigation.get_visible_page()
+    assert page.get_tag() == "activity-journal" and page.get_title() == "Strength training"
+    found, buttons = journal_page(win)
+    assert found == ["heading", FROM_JOURNAL, "numbers"] and buttons == []
+    said = [r.getMessage() for r in caplog.records]
+    assert said == [("activity page: from the activity journal, 1 numbers, no shape, no "
+                     "elevation, no heart rate")]
+    win.navigation.pop()
+    assert page_tree(section) == before
+    assert len(list((tmp_path / "device" / "GARMIN" / "Activity").iterdir())) == 4
+
+
+def test_a_tile_of_a_listing_that_failed_opens_nothing(tmp_path, monkeypatch):
+    """The device's files not listed: whether a tile's file is there is not known, so its tile
+    opens nothing (neither its file nor the journal, which would say the file is gone)."""
+    from openexpress.device.storage import DeviceError
+
+    answer(True)
+    win, section = page_window("activities")
+    window_methods(win, PAGE_METHODS)
+    win.progress = lambda _step: None
+    win.session = write_device(tmp_path / "device", A_WEEK)
+    keep_journal(win.session)
+
+    def broken(*args, **kwargs):
+        raise DeviceError("made up: the device stopped answering")
+    monkeypatch.setattr(win.session.storage, "walk_files", broken)
+    win.load_activities()
+    assert says(section, "1 new activity") and tile_buttons(section) == []
+
+
+def test_the_page_from_the_journal_of_an_activity_with_a_track(tmp_path):
+    """A run whose file is gone: its shape on a grid, its numbers, its heart rate when the
+    journal kept one."""
+    win, section = gone_from_the_device(tmp_path, {
+        "2026-10-28-07-00-00.fit": track(datetime(2026, 10, 28, 7, 0), 1, 3, ZIGZAG, km=21.3,
+                                         minutes=171, ascent=640),
+        "2026-10-29-07-00-00.fit": track(datetime(2026, 10, 29, 7, 0), 1, 3, LOOP, km=6.9,
+                                         minutes=38, ascent=41)})
+    tiles = tile_buttons(section)
+    tiles[0].emit("clicked")
+    found, buttons = journal_page(win)
+    assert found == ["heading", FROM_JOURNAL, "shape", "numbers"] and buttons == []
+
+
+def test_the_page_from_the_journal_goes_with_the_device_and_with_the_journal(tmp_path):
+    """The page of an activity from the journal: unplugged, it goes with the device view; the
+    journal turned off in Preferences, it goes too (its page is only for the journal kept),
+    while the page of a file stays (its new look is for everyone)."""
+    from openexpress.gui import activity_page
+    from openexpress.gui.activities_journal import journal_changed
+
+    win, section = gone_from_the_device(tmp_path)
+    (tile,) = tile_buttons(section)
+    tile.emit("clicked")
+    activity_page.leave(win)  # the device unplugged
+    assert win.navigation.get_visible_page() is win.device_view
+    (tile,) = tile_buttons(section)
+    tile.emit("clicked")
+    assert win.navigation.get_visible_page().get_tag() == "activity-journal"
+    answer(False)
+    journal_changed(win)
+    assert win.navigation.get_visible_page() is win.device_view
+    assert says(section, "Show 5 More") or not says(section, "new activit")
+
+
+def test_the_page_of_a_file_stays_when_the_journal_is_turned_off(tmp_path):
+    from openexpress.gui.activities_journal import journal_changed
+
+    answer(True)
+    win, section = page_of(write_device(tmp_path / "device", A_WEEK))
+    navigation(win)
+    (tile,) = tile_buttons(section)
+    tile.emit("clicked")
+    page = win.navigation.get_visible_page()
+    assert page.get_tag() == "activity"
+    answer(False)
+    journal_changed(win)
+    assert win.navigation.get_visible_page() is page
 
 
 def test_only_the_tile_answers_the_pointer_and_the_focus(tmp_path):
     """The cell of the grid around a tile: as large as the tile, never a background, a frame or
-    a focus of its own (the tile itself, a button, shows the pointer and the focus); a tile
-    without its file answers neither."""
+    a focus of its own (the tile itself, a button, shows the pointer and the focus)."""
     from gi.repository import Gtk
 
     from openexpress.gui import activities_since

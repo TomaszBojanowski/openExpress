@@ -1,11 +1,16 @@
-"""The page of one activity, pushed onto the window's navigation from its row: its sport and
-start in the header bar with the back arrow and the GPX export, its tiles, and what a file
-that could not be read, one still being written, a damaged one and one without a summary say;
-its file read again in a task from the device or from a backup's copy. Every file is made up
-from the public FIT protocol."""
+"""The page of one activity, pushed onto the window's navigation from its row: the back arrow
+and the GPX export in its header bar; on top its heading (its kind, when and on which device),
+the shape of its track, its numbers, its elevation and heart rate; then the chart, laps,
+training effect and details; what a file that could not be read, one still being written, a
+damaged one and one without a summary say; its file read again in a task from the device or
+from a backup's copy. Every file is made up from the public FIT protocol."""
 
+import json
+import os
+import time
 import types
 from datetime import datetime
+from pathlib import Path
 
 import pytest
 from fakes import (
@@ -23,6 +28,7 @@ from fakes import (
     stalled_session,
     tasks_at_once,
     tells_stalls,
+    widget_tree,
     window,
 )
 
@@ -101,9 +107,10 @@ def seen(widget, page) -> bool:
 
 
 def labels(page) -> list[str]:
+    """The words of the labels seen on the page (of a label with markup, its text)."""
     from gi.repository import Gtk
 
-    return [w.get_label() for w in descendants(page) if isinstance(w, Gtk.Label) and seen(w, page)]
+    return [w.get_text() for w in descendants(page) if isinstance(w, Gtk.Label) and seen(w, page)]
 
 
 def status_texts(page) -> list[str]:
@@ -121,20 +128,16 @@ def open_page(win, read):
 
 
 def test_a_row_opens_the_page_of_its_activity_and_reads_it():
-    from gi.repository import Adw
-
     win, the_list = a_window(hike())
     page = open_page(win, read_of())
     assert page is not the_list and page.get_tag() == "activity"
+    assert page.get_title() == "Hiking"
     (call,) = win.run_task.calls
     assert call.title == "Reading the Activity…" and call.in_page and call.device
-    title = next(w for w in descendants(page) if isinstance(w, Adw.WindowTitle))
-    assert title.get_title() == "Hiking" and title.get_subtitle()
-    texts = labels(page)
-    for value, name in [("12.40 km", "Distance"), ("3:50:00", "Time"),
-                        ("16:40 /km", "Average Pace"), ("128 bpm", "Average Heart Rate"),
-                        ("740 m", "Total Ascent")]:
-        assert value in texts and name in texts
+    assert heading_of(page)[0] == "Hiking"
+    assert numbers_of(page) == [(f"12.40{NB}km", "Distance"), ("3:50:00", "Time"),
+                                (f"16:40{NB}/km", "Average Pace"), (f"740{NB}m", "Total Ascent")]
+    assert f"128{NB}bpm average{NB}· 165{NB}bpm highest" in labels(page)
 
 
 def test_back_returns_to_the_list():
@@ -170,9 +173,9 @@ def test_an_activity_without_positions_has_its_gpx_button_off():
     (button,) = [w for w in descendants(page) if isinstance(w, Gtk.Button)
                  and w.get_tooltip_text() == "No GPS positions in this activity"]
     assert not button.get_sensitive()
-    texts = labels(page)
-    assert {"45:00", "Time", "112 bpm", "151 bpm", "320 kcal", "Calories"} <= set(texts)
-    assert "Distance" not in texts
+    assert numbers_of(page) == [("45:00", "Time"), (f"320{NB}kcal", "Calories")]
+    assert f"112{NB}bpm average{NB}· 151{NB}bpm highest" in labels(page)
+    assert "Distance" not in labels(page)
 
 
 def test_a_copy_in_a_backup_is_read_without_the_device():
@@ -193,7 +196,7 @@ def test_a_file_that_could_not_be_read_is_said_on_the_page(fails):
     win, _the_list = a_window(data)
     page = open_page(win, read_of())
     assert NOTHING_READ in status_texts(page)
-    assert labels(page).count("12.40 km") == 0
+    assert labels(page).count(f"12.40{NB}km") == 0
 
 
 @pytest.mark.parametrize("state", ["still being written", "damaged", "no summary"])
@@ -202,8 +205,9 @@ def test_what_a_file_still_being_written_a_damaged_one_and_one_without_a_summary
             "no summary": fit_file(HEART, FitData(1, (START, 110)))}[state]  # no session
     win, _the_list = a_window(data)
     page = open_page(win, read_of())
-    if state == "damaged":  # its tiles, and that the file is damaged
-        assert "Damaged file" in labels(page) and "12.40 km" in labels(page)
+    if state == "damaged":  # its numbers, and under its heading that the file is damaged
+        assert "Damaged file" in labels(page) and f"12.40{NB}km" in labels(page)
+        assert modules(page)[:3] == ["heading", "damaged", "map"]
     else:
         said = {"still being written": ["Still Being Written",
                                         "Unplug the device and plug it in again"],
@@ -252,41 +256,345 @@ def test_rows_open_their_activity_but_for_a_file_that_is_no_fit_file():
     assert not unreadable.get_activatable()
 
 
-@pytest.mark.parametrize(("data", "sport", "count"), [(hike, HIKING, 5), (workout, TRAINING, 4)])
-def test_the_tiles_share_the_whole_line_of_a_wide_window(data, sport, count):
-    """No empty place at the end of the line: five tiles or four, they take its whole width."""
-    from gi.repository import GLib, Gtk
+# --- the top of the page: its heading, shape, numbers, elevation and heart rate ---------------
 
-    win, _the_list = a_window(data())
-    page = open_page(win, read_of(sport=sport))
-    win.toplevel.set_default_size(1000, 600)
-    win.toplevel.present()
-    try:
-        flow = next(w for w in descendants(page) if isinstance(w, Gtk.FlowBox))
-        tiles = [w for w in descendants(flow) if isinstance(w, Gtk.FlowBoxChild)]
-        for _ in range(500):
-            if flow.get_width() > 0:
-                break
-            GLib.MainContext.default().iteration(False)
-        bounds = [t.compute_bounds(flow)[1] for t in tiles]
-        assert len(tiles) == count and len({round(b.get_y()) for b in bounds}) == 1
-        assert bounds[-1].get_x() + bounds[-1].get_width() >= flow.get_width() - 1
-    finally:
-        win.toplevel.destroy()
+NB = "\u00a0"
 
 
-def test_a_tile_looks_under_the_pointer_as_it_does_elsewhere():
-    """A tile does nothing when clicked: nothing under the pointer says it would (the class
-    oe-plain of the flow boxes that only lay out), and it takes no focus nor selection."""
+def content_of(page):
+    """The page's content: the box of its modules, top to bottom."""
+    from gi.repository import Adw
+
+    from openexpress.gui.activity_page import CONTENT_WIDTH
+
+    (clamp,) = [w for w in descendants(page) if isinstance(w, Adw.Clamp)
+                and w.get_maximum_size() == CONTENT_WIDTH]
+    return clamp.get_child()
+
+
+def modules(page) -> list[str]:
+    """The modules of the page, top to bottom, by what they are."""
     from gi.repository import Gtk
 
-    win, _the_list = a_window(hike())
-    page = open_page(win, read_of(sport=HIKING))
-    flow = next(w for w in descendants(page) if isinstance(w, Gtk.FlowBox))
-    tiles = [w for w in descendants(flow) if isinstance(w, Gtk.FlowBoxChild)]
-    assert flow.has_css_class("oe-plain")
-    assert flow.get_selection_mode() == Gtk.SelectionMode.NONE
-    assert tiles and not any(t.get_focusable() for t in tiles)
+    from openexpress.gui import activity_map, activity_overview
+    from openexpress.gui.activity_chart import ActivityChart
+    from openexpress.gui.activity_details import DetailsList
+    from openexpress.gui.activity_effect import EffectList
+    from openexpress.gui.activity_laps import LapList
+    from openexpress.gui.activity_zones import ZoneList
+
+    kinds = [(activity_overview.Heading, "heading"), (activity_map.ActivityMap, "map"),
+             (activity_overview.ShapeCard, "shape"), (activity_overview.NumbersCard, "numbers"),
+             (activity_overview.ElevationSection, "elevation"), (ZoneList, "heart rate"),
+             (ActivityChart, "chart"), (LapList, "laps"), (EffectList, "effect"),
+             (DetailsList, "details")]
+    found, child = [], content_of(page).get_first_child()
+    while child is not None:
+        name = next((n for kind, n in kinds if isinstance(child, kind)), None)
+        if name is None and isinstance(child, Gtk.Label):
+            name = {"Damaged file": "damaged"}.get(child.get_label(), child.get_label())
+        found.append(name)
+        child = child.get_next_sibling()
+    return found
+
+
+def heading_of(page) -> list[str]:
+    """The title of the page's heading and the line under it."""
+    from gi.repository import Gtk
+
+    from openexpress.gui.activity_overview import Heading
+
+    (found,) = [w for w in descendants(page) if isinstance(w, Heading)]
+    return [w.get_label() for w in descendants(found) if isinstance(w, Gtk.Label)]
+
+
+def numbers_of(page) -> list[tuple[str, str]]:
+    """The numbers of the card on top, each its value and its name."""
+    from gi.repository import Gtk
+
+    from openexpress.gui.activity_overview import NumbersCard
+
+    (card,) = [w for w in descendants(page) if isinstance(w, NumbersCard)]
+    found = []
+    for cell in card.cells:
+        value, name = [w for w in descendants(cell) if isinstance(w, Gtk.Label)]
+        found.append((value.get_text(), name.get_label()))
+    return found
+
+
+def section_words(section) -> tuple[str, str]:
+    """The title of a section of the top and the words beside it."""
+    return section.group.get_title(), section.said.get_label()
+
+
+def walk_on_top(**fields):
+    """The walk with its heart rate zones, training effect and details (made-up)."""
+    import dataclasses
+
+    data = with_details(with_effect(zoned(lapped_walk(), times=(0, 600, 3100, 3800, 2100,
+                                                                 400))))
+    return dataclasses.replace(data, **fields)
+
+
+def test_the_page_of_a_file_from_its_heading_down(monkeypatch):
+    """Its heading, the map of its track, its numbers, its elevation, its heart rate; then the
+    chart, its laps, its training effect and its details."""
+    from datetime import datetime
+
+    win, page = page_of(monkeypatch, walk_on_top())
+    assert modules(page) == ["heading", "map", "numbers", "elevation", "heart rate", "chart",
+                             "laps", "effect", "details"]
+    started = datetime.fromtimestamp(START + FIT_EPOCH)
+    assert heading_of(page) == ["Walking", started.strftime(f"%Y-%m-%d{NB}· %H:%M")]
+    assert numbers_of(page) == [(f"3.25{NB}km", "Distance"), ("43:20", "Time"),
+                                (f"13:20{NB}/km", "Average Pace"), (f"10{NB}m", "Total Ascent")]
+    (elevation,) = [w for w in descendants(page) if type(w).__name__ == "ElevationSection"]
+    assert section_words(elevation) == ("Elevation", f"95{NB}m lowest{NB}· 105{NB}m highest")
+    assert elevation.profile is not None and len(elevation.profile.values) > 2
+    zones = zone_section(page)
+    assert section_words(zones) == ("Heart Rate Zones",
+                                    f"105{NB}bpm average{NB}· 120{NB}bpm highest")
+
+
+def test_the_share_of_each_zone_on_a_bar_and_the_rows_of_the_zones_under_it(monkeypatch):
+    """On top of the section of the heart rate: one bar of the zones' shares in their colours,
+    zone 1 first, with a legend of each zone and its share; the rows of the zones under it."""
+    from gi.repository import Gtk
+
+    from openexpress.gui.activity_zones import ZONE_COLOURS, ZoneShares
+
+    _win, page = page_of(monkeypatch, walk_on_top())
+    zones = zone_section(page)
+    (shares,) = [w for w in descendants(zones) if isinstance(w, ZoneShares)]
+    assert shares.bar.parts == [(1, 0.06), (2, 0.31), (3, 0.38), (4, 0.21), (5, 0.04)]
+    assert [c for c in shares.bar.colours] == list(ZONE_COLOURS[1:])
+    legend = [w.get_label() for w in descendants(shares) if isinstance(w, Gtk.Label)]
+    assert legend == [f"Zone{NB}1{NB}· 6%", f"Zone{NB}2{NB}· 31%", f"Zone{NB}3{NB}· 38%",
+                      f"Zone{NB}4{NB}· 21%", f"Zone{NB}5{NB}· 4%"]
+    rows = [w for w in descendants(zones) if isinstance(w, Gtk.ListBoxRow)]
+    assert rows[0].get_child() is shares and len(rows) == 7
+    assert [row_texts(r)[0] for r in zones.rows] == ["Zone 5", "Zone 4", "Zone 3", "Zone 2",
+                                                     "Zone 1", "Below Zone 1"]
+
+
+def test_the_time_below_zone_1_on_the_bar_only_when_there_is_some(monkeypatch):
+    from openexpress.gui.activity_zones import ZoneShares
+
+    _win, page = page_of(monkeypatch, zoned(lapped_walk(), times=(300, 300, 0, 0, 0, 0)))
+    (shares,) = [w for w in descendants(zone_section(page)) if isinstance(w, ZoneShares)]
+    assert shares.bar.parts == [(0, 0.5), (1, 0.5), (2, 0.0), (3, 0.0), (4, 0.0), (5, 0.0)]
+
+
+def test_without_a_track_the_numbers_first(monkeypatch):
+    """A workout: no shape, its numbers under its heading."""
+    win, _the_list = a_window(workout())
+    page = open_page(win, read_of(sport=TRAINING, positions=False))
+    assert modules(page)[:2] == ["heading", "numbers"]
+    assert "map" not in modules(page)
+
+
+def test_without_heart_rate_no_section_of_it(monkeypatch):
+    _win, page = page_of(monkeypatch, walk_on_top(zones=None, avg_heart_rate=None,
+                                                  max_heart_rate=None))
+    assert "heart rate" not in modules(page)
+    assert not any("bpm average" in t for t in labels(page))
+
+
+def test_heart_rate_without_zones_its_average_and_highest(monkeypatch):
+    """A file with a heart rate but no zones: the section of the heart rate, its words only."""
+    _win, page = page_of(monkeypatch, walk_on_top(zones=None))
+    zones = zone_section(page)
+    assert section_words(zones) == ("Heart Rate", f"105{NB}bpm average{NB}· 120{NB}bpm highest")
+    assert zones.rows == [] and zones.shares is None
+
+
+def test_without_elevation_no_section_of_it(monkeypatch):
+    import dataclasses
+
+    data = walk_on_top()
+    flat = dataclasses.replace(data, samples=tuple(dataclasses.replace(s, altitude=None)
+                                                   for s in data.samples))
+    _win, page = page_of(monkeypatch, flat)
+    assert "elevation" not in modules(page)
+
+
+def test_the_top_in_the_units_of_the_device_the_rest_in_kilometres(monkeypatch):
+    """A device in statute units: the numbers, the lowest and the highest point in miles and
+    feet; the chart, the laps and the details in kilometres and metres."""
+    from openexpress import fit
+
+    _win, page = page_of(monkeypatch, walk_on_top(units=fit.Units("statute", "statute",
+                                                                  "statute")))
+    assert numbers_of(page) == [(f"2.02{NB}mi", "Distance"), ("43:20", "Time"),
+                                (f"21:27{NB}/mi", "Average Pace"), (f"33{NB}ft", "Total Ascent")]
+    (elevation,) = [w for w in descendants(page) if type(w).__name__ == "ElevationSection"]
+    assert section_words(elevation)[1] == f"312{NB}ft lowest{NB}· 344{NB}ft highest"
+    assert any("/km" in t for r in lap_rows(page) for t in row_texts(r))
+
+
+def test_the_header_bar_keeps_the_back_arrow_and_the_export_its_title_on_the_page(monkeypatch):
+    """While the file is read the header bar says the sport; once read, the heading of the
+    page says the kind, and the header bar keeps only the back arrow and the export."""
+    from gi.repository import Adw
+
+    win, page = page_of(monkeypatch, walk_on_top())
+    (header,) = [w for w in descendants(page) if isinstance(w, Adw.HeaderBar)]
+    assert not header.get_show_title()
+    loading, _the_list = a_window(RuntimeError("never read"))
+    loading.run_task = lambda *args, **kwargs: None
+    waiting = open_page(loading, read_of())
+    (header,) = [w for w in descendants(waiting) if isinstance(w, Adw.HeaderBar)]
+    assert header.get_show_title() and waiting.get_title() == "Hiking"
+
+
+def test_the_numbers_take_no_click_nor_focus(monkeypatch):
+    """The card of numbers only says them: nothing in it is a button or takes the focus."""
+    from gi.repository import Gtk
+
+    from openexpress.gui.activity_overview import NumbersCard
+
+    _win, page = page_of(monkeypatch, walk_on_top())
+    (card,) = [w for w in descendants(page) if isinstance(w, NumbersCard)]
+    assert not [w for w in descendants(card) if isinstance(w, Gtk.Button) or w.get_focusable()]
+
+
+# --- each state of the page: its pattern, and the same drawn again -----------------------------
+
+ACTIVITY_PATTERN = Path(__file__).parent / "data" / "activity_page_tree.json"
+WRITE_ACTIVITY = "OPENEXPRESS_WRITE_ACTIVITY_TREE"  # to draw the pattern again, on its commit
+ACTIVITY_STATES = ("walk", "statute", "no-heart-rate", "pool", "strength", "workout", "damaged",
+                   "still-being-written", "no-summary", "not-read", "journal",
+                   "journal-no-track")
+
+
+@pytest.fixture
+def in_warsaw(monkeypatch):
+    """The page's times in one zone wherever the tests run."""
+    monkeypatch.setenv("TZ", "Europe/Warsaw")
+    time.tzset()
+    yield
+    monkeypatch.undo()
+    time.tzset()
+
+
+def made_up(**fields):
+    from openexpress import fit
+
+    return fit.ActivityData(fit.FileState.WHOLE, start=START + FIT_EPOCH, **fields)
+
+
+def journal_line(**fields) -> dict:
+    """A made-up line of the activity journal: a run with its shape, profile and zones."""
+    line = {"v": 1, "kind": "activity", "key": "made up", "file": {"name": "a.fit", "size": 1},
+            "from": "device", "start": START + FIT_EPOCH, "utc_offset": 3600, "sport": 1,
+            "sub_sport": 3, "timer_time": 10_268.0, "elapsed_time": 10_400.0,
+            "distance": 21_300.0, "ascent": 640, "min_altitude": 38.0, "max_altitude": 212.0,
+            "avg_heart_rate": 148, "max_heart_rate": 176,
+            "zones": [0, 600, 3100, 3800, 2100, 400], "avg_speed": None, "calories": 1500,
+            "has_track": True, "has_heart_rate": True,
+            "units": {"distance": "metric", "elevation": "metric", "speed": "metric"},
+            "shape": {"width": 900, "height": 400,
+                      "points": [[0, 300], [250, 0], [600, 400], [1000, 100], [0, 300]]},
+            "profile": [40, 80, 212, 150, 38]}
+    line.update(fields)
+    return line
+
+
+def state_window(state: str, monkeypatch):
+    """A window and how to open the page in `state` in it (again and again)."""
+    from openexpress import fit
+    from openexpress.gui import activity_page
+
+    # What a window's file holds: its own made-up data when it has some, else its file read.
+    real = getattr(activity_page._data, "real", activity_page._data)
+
+    def data_of(found, activity):
+        made = getattr(found, "made_up", None)
+        return made if made is not None else real(found, activity)
+    data_of.real = real
+    monkeypatch.setattr(activity_page, "_data", data_of)
+    files = {"workout": workout(), "damaged": hike(bad_crc=True),
+             "still-being-written": hike(cut=len(hike()) - 40),
+             "no-summary": fit_file(HEART, FitData(1, (START, 110))), "not-read": None}
+    if state in files:
+        win, _the_list = a_window(files[state])
+        sport = TRAINING if state == "workout" else HIKING
+        return win, lambda: open_page(win, read_of(sport=sport, positions=state != "workout"))
+    if state.startswith("journal"):
+        line = journal_line() if state == "journal" else journal_line(
+            sport=10, sub_sport=20, distance=None, timer_time=2700.0, ascent=None,
+            min_altitude=None, max_altitude=None, has_track=False, shape=None, profile=None,
+            calories=320)
+        win, _the_list = a_window(b"")
+
+        def journal():
+            activity_page.open_from_journal(win, line)
+            return shown(win)
+        return win, journal
+    data = {"walk": walk_on_top(), "no-heart-rate": walk_on_top(
+                zones=None, avg_heart_rate=None, max_heart_rate=None),
+            "statute": walk_on_top(units=fit.Units("statute", "statute", "statute")),
+            "pool": made_up(sport=5, sub_sport=17, timer_time=1800.0, elapsed_time=1900.0,
+                            distance=1500.0, avg_heart_rate=130, max_heart_rate=150),
+            "strength": made_up(sport=10, sub_sport=20, timer_time=2700.0, elapsed_time=2900.0,
+                                calories=320, rest_time=600.0, avg_heart_rate=112,
+                                max_heart_rate=151, zones=fit.HeartRateZones(
+                                    times=(300.0, 900.0, 1200.0, 300.0, 0.0, 0.0),
+                                    bounds=ZONE_BOUNDS))}[state]
+    win, _the_list = a_window(b"")
+    win.activities.made_up = data
+    return win, lambda: open_page(win, read_of(sport=data.sport,
+                                               positions=bool(data.samples)))
+
+
+def activity_tree(page) -> dict:
+    """What the page shows: its title and tag, whether its header bar says the title and the
+    tooltips of its buttons, which of its views; its content's widgets (of the map, the map
+    alone: libshumate's inner widgets change with its version) or its message."""
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import activity_map
+
+    (header,) = [w for w in descendants(page) if isinstance(w, Adw.HeaderBar)]
+    stack = next(w for w in descendants(page) if isinstance(w, Gtk.Stack))
+    tree = {"title": page.get_title(), "tag": page.get_tag(),
+            "header title": header.get_show_title(),
+            "buttons": [w.get_tooltip_text() for w in descendants(header)
+                        if isinstance(w, Gtk.Button) and w.get_tooltip_text()],
+            "shown": stack.get_visible_child_name()}
+    if tree["shown"] == "content":
+        opaque = (activity_map.Shumate.Map,) if activity_map.Shumate is not None else ()
+        tree["content"] = widget_tree(content_of(page), opaque)
+    else:
+        tree["status"] = widget_tree(stack.get_visible_child())
+    return tree
+
+
+def test_each_state_of_the_page_is_its_pattern(monkeypatch, in_warsaw):
+    """Of a file and from the journal, with and without a track, a heart rate, a distance;
+    in statute units; damaged, still being written, without a summary, not read
+    (tests/data/activity_page_tree.json)."""
+    drawn = {}
+    for state in ACTIVITY_STATES:
+        _win, page_in = state_window(state, monkeypatch)
+        drawn[state] = activity_tree(page_in())
+    if os.environ.get(WRITE_ACTIVITY):
+        ACTIVITY_PATTERN.write_text(json.dumps(drawn, indent=1, ensure_ascii=False) + "\n",
+                                    encoding="utf-8")
+        pytest.fail(f"pattern written ({WRITE_ACTIVITY}), nothing compared")
+    pattern = json.loads(ACTIVITY_PATTERN.read_text(encoding="utf-8"))
+    assert sorted(pattern) == sorted(ACTIVITY_STATES)
+    for state in ACTIVITY_STATES:
+        assert drawn[state] == pattern[state], state
+
+
+def test_each_state_opened_again_in_its_window_is_the_same(monkeypatch, in_warsaw):
+    """Each state opened, back, and opened again in the same window: the same tree."""
+    for state in ACTIVITY_STATES:
+        win, page_in = state_window(state, monkeypatch)
+        first = activity_tree(page_in())
+        win.navigation.pop()
+        assert activity_tree(page_in()) == first, state
 
 
 # --- the chart -------------------------------------------------------------------------------
@@ -1448,17 +1756,10 @@ def sport_dot(page):
     return found[0] if found else None
 
 
-def tile_icons(page):
-    from gi.repository import Gtk
-
-    return [w for w in descendants(page) if isinstance(w, Gtk.Image) and w.get_ancestor(Gtk.FlowBoxChild)
-            and w.get_ancestor(Gtk.FlowBoxChild).get_child().has_css_class("card")]
-
-
 def test_a_dot_of_the_sport_s_colour_before_the_title_not_in_a_narrow_window(monkeypatch):
-    """A walk: green, from the program's style; in a narrow window not shown (it would cut
-    the start under the title)."""
-    from gi.repository import Adw
+    """A walk: green, from the program's style, before the title of its heading; in a narrow
+    window not shown (the title has the whole width)."""
+    from openexpress.gui.activity_overview import Heading
 
     program_style()
     win, page = page_of(monkeypatch, lapped_walk())
@@ -1466,7 +1767,7 @@ def test_a_dot_of_the_sport_s_colour_before_the_title_not_in_a_narrow_window(mon
     try:
         dot = sport_dot(page)
         assert dot is not None and dot.has_css_class("oe-sport-foot") and dot.get_mapped()
-        assert dot.get_ancestor(Adw.HeaderBar) is not None
+        assert dot.get_ancestor(Heading) is not None
         turn(0.1)
         pixels = colours_of(dot)
         middle = pixels[len(pixels) // 2][len(pixels[0]) // 2]
@@ -1474,39 +1775,6 @@ def test_a_dot_of_the_sport_s_colour_before_the_title_not_in_a_narrow_window(mon
         win.toplevel.set_default_size(360, 800)
         until(lambda: not dot.get_visible(), 2)
         assert not dot.get_visible()
-    finally:
-        win.toplevel.destroy()
-
-
-def tile_icon(name: str) -> str:
-    return f"io.github.tomaszbojanowski.OpenExpress-{name}-symbolic"
-
-
-@pytest.mark.parametrize(("which", "group", "icons"), [
-    ("walk", "foot", [tile_icon(n) for n in ("activity-distance", "activity-time",
-                                             "activity-speed", "activity-heart-rate",
-                                             "activity-elevation")]),
-    ("workout", "training", [tile_icon(n) for n in ("activity-time", "activity-heart-rate",
-                                                    "activity-heart-rate",
-                                                    "activity-calories")])])
-def test_the_tiles_have_the_icons_of_their_kind_in_the_sport_s_colour(monkeypatch, which, group,
-                                                                      icons):
-    """Over each tile's value; for the eye only (the value and its name say it)."""
-    from gi.repository import Gtk
-
-    from openexpress.gui.sports import COLOURS
-
-    program_style()
-    data = lapped_walk() if which == "walk" else fit_of(heart_only())
-    win, page = page_of(monkeypatch, data, sport=data.sport)
-    present(win)
-    try:
-        shown = tile_icons(page)
-        assert [icon.get_icon_name() for icon in shown] == icons
-        for icon in shown:
-            assert icon.has_css_class(f"oe-sport-{group}")
-            assert icon.get_color().equal(rgba(COLOURS[group]))
-            assert icon.get_accessible_role() == Gtk.AccessibleRole.PRESENTATION
     finally:
         win.toplevel.destroy()
 
@@ -1534,15 +1802,15 @@ def zone_section(page):
     return found[0] if found else None
 
 
-def test_the_heart_rate_zones_under_the_laps(monkeypatch):
-    """Zone 5 on top, then 4 to 1 and below zone 1: each with its bounds, its time and share,
-    and a bar of its share in the zone's colour; under the title how the device worked out the
-    bounds."""
+def test_the_heart_rate_zones_over_the_chart(monkeypatch):
+    """Under the bar of their shares, zone 5 on top, then 4 to 1 and below zone 1: each with
+    its bounds, its time and share, and a bar of its share in the zone's colour; under the
+    title how the device worked out the bounds."""
     from openexpress.gui.activity_zones import ZONE_COLOURS
 
     _win, page = page_of(monkeypatch, zoned(lapped_walk()))
     shown = zone_section(page)
-    assert shown is not None and order_of(shown) > order_of(lap_list(page))
+    assert shown is not None and order_of(shown) < order_of(chart_of(page))
     texts = labels(page)
     assert "Heart Rate Zones" in texts
     assert "Bounds from the device: % of lactate threshold (165 bpm)" in texts
@@ -1572,7 +1840,7 @@ def test_each_zone_s_colour_reads_on_the_cards_of_both_styles():
 
 def test_no_zones_without_them_in_the_file(monkeypatch):
     _win, page = page_of(monkeypatch, lapped_walk())
-    assert zone_section(page) is None and "Heart Rate Zones" not in labels(page)
+    assert zone_section(page).rows == [] and "Heart Rate Zones" not in labels(page)
 
 
 def with_effect(data, aerobic=1.6, anaerobic=0.0, load=28.4):
@@ -1590,7 +1858,7 @@ def effect_section(page):
     return found[0] if found else None
 
 
-def test_the_training_effect_under_the_zones(monkeypatch):
+def test_the_training_effect_under_the_laps(monkeypatch):
     """Aerobic and anaerobic, each its value with its word and a bar over 0-5 in the accent
     colour; the training load as a whole number, no bar."""
     from openexpress.gui.activity_colours import accent_colour
@@ -1598,7 +1866,7 @@ def test_the_training_effect_under_the_zones(monkeypatch):
     _win, page = page_of(monkeypatch, with_effect(zoned(lapped_walk()), aerobic=2.4,
                                                   anaerobic=1.2))
     shown = effect_section(page)
-    assert shown is not None and order_of(shown) > order_of(zone_section(page))
+    assert shown is not None and order_of(shown) > order_of(lap_list(page))
     assert "Training Effect" in labels(page)
     from openexpress.gui.activity_effect import EffectBar
 
@@ -1660,7 +1928,10 @@ def test_the_bar_of_the_chart_s_switch_has_no_background_under_the_pointer(monke
     win, page = page_of(monkeypatch, lapped_walk())
     present(win)
     try:
-        top = chart_of(page).get_first_child()
+        chart = chart_of(page)  # under the top of the page: scrolled up to it
+        _ok, where = chart.compute_bounds(content_of(page))
+        scrolled_of(chart).get_vadjustment().set_value(where.get_y() - 40)
+        top = chart.get_first_child()
         child = top.get_first_child()
         child.set_state_flags(Gtk.StateFlags.PRELIGHT, False)
         turn(0.2)

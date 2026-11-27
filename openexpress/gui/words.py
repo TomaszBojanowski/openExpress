@@ -992,6 +992,11 @@ def zone_shares(times) -> list[tuple[int, str]]:
             for number, seconds in enumerate(times) if number or seconds]
 
 
+def zone_share_text(number: int, share: str) -> str:
+    """A zone and its share in the legend of the bar of the zones ("Zone 1 · 6%")."""
+    return caption(_whole(zone_name(number)), share)
+
+
 def shape_only_text() -> str:
     # TRANSLATORS: over the shape of an activity's track drawn on a plain grid: there is no map
     # under it (before the yes to OpenStreetMap's map, or from the activity journal)

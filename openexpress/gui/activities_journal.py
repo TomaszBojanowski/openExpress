@@ -187,10 +187,13 @@ def journal_changed(win) -> None:
     """The Activities page drawn again as the journal's answer has it now (its card, its line,
     or what is new), when it shows the activities of the open device; nothing is read again,
     but the first activities of the page as it was when what is new was shown before (it read
-    none of them), and the whole page when its reading had failed."""
+    none of them), and the whole page when its reading had failed. The journal no longer kept,
+    the page of an activity from the journal alone goes."""
     from openexpress import activities
-    from openexpress.gui import activities_since
+    from openexpress.gui import activities_since, activity_page
 
+    if activity_journal.answered() is not True:
+        activity_page.leave_journal(win)  # an activity's page from the journal alone
     found, sec = win.activities, (win.sections or {}).get("activities")
     if win.session is None or sec is None:
         return
