@@ -335,7 +335,7 @@ class ActivityView:
         self.content.append(said)
         numbers = self._numbers(shown)
         if shown.shape:
-            card = activity_overview.ShapeCard(shown.shape)
+            card = activity_overview.ShapeCard(shown.shape, sport_group(shown.sport))
             card.set_margin_top(12)
             self.content.append(card)
         elevation, heart = self._elevation_heart_rate(shown)

@@ -481,6 +481,78 @@ def test_the_page_is_named_as_its_heading_once_read(monkeypatch):
     assert heading_of(page)[0] == "Strength training" == page.get_title()
 
 
+SPORT_OF_GROUP = {"foot": 1, "cycling": 2, "water": 5, "winter": 12, "training": 10,
+                  "others": 0}  # a FIT sport of each group of gui/sports.py
+
+
+def colours_drawn(widget) -> dict[str, int]:
+    """The widget as drawn: how many of its opaque pixels are in the colour of each group of
+    sports (cairo may round a colour by one)."""
+    from gi.repository import Gdk, Graphene, Gtk
+
+    from openexpress.gui import sports
+
+    groups = {}
+    for group, colour in sports.COLOURS.items():
+        exact = rgba(colour)
+        red, green, blue = (round(c * 255) for c in (exact.red, exact.green, exact.blue))
+        for r in (-1, 0, 1):
+            for g in (-1, 0, 1):
+                for b in (-1, 0, 1):
+                    groups[(red + r, green + g, blue + b)] = group
+    width, height = widget.get_width(), widget.get_height()
+    snapshot = Gtk.Snapshot()
+    Gtk.WidgetPaintable.new(widget).snapshot(snapshot, width, height)
+    texture = widget.get_native().get_renderer().render_texture(
+        snapshot.to_node(), Graphene.Rect().init(0, 0, width, height))
+    downloader = Gdk.TextureDownloader.new(texture)
+    downloader.set_format(Gdk.MemoryFormat.R8G8B8A8)
+    data, _stride = downloader.download_bytes()
+    data = data.get_data()
+    counts = dict.fromkeys(sports.COLOURS, 0)
+    for i in range(0, len(data), 4):
+        if data[i + 3] == 255:
+            group = groups.get((data[i], data[i + 1], data[i + 2]))
+            if group is not None:
+                counts[group] += 1
+    return counts
+
+
+@pytest.mark.parametrize("dark", [False, True])
+def test_the_shape_from_the_journal_in_the_colour_of_its_sport_as_on_its_tile(dark):
+    """The page of an activity from the journal draws its shape in the colour of its sport's
+    group (gui/sports.py), as its tile on the Activities page does: for every group, in
+    either style."""
+    from fakes import iterate
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import activities_since, activity_overview, activity_page, sports
+
+    style = Adw.StyleManager.get_default()
+    style.set_color_scheme(Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
+    try:
+        for group, sport in SPORT_OF_GROUP.items():
+            assert sports.sport_group(sport) == group
+            line = journal_line(sport=sport, sub_sport=None)
+            tile = activities_since._shape(line)
+            holder = Gtk.Window(child=tile, default_width=300, default_height=200)
+            holder.present()
+            win, _the_list = a_window(b"")
+            win.toplevel.set_default_size(600, 900)
+            win.toplevel.present()
+            activity_page.open_from_journal(win, line)
+            iterate(0.2)
+            (card,) = [w for w in descendants(shown(win))
+                       if isinstance(w, activity_overview.ShapeCard)]
+            on_tile, on_page = colours_drawn(tile), colours_drawn(card.area)
+            holder.destroy()
+            win.toplevel.destroy()
+            assert on_tile[group] > 200 and max(on_tile, key=on_tile.get) == group, on_tile
+            assert on_page[group] > 200 and max(on_page, key=on_page.get) == group, on_page
+    finally:
+        style.set_color_scheme(Adw.ColorScheme.DEFAULT)
+
+
 def test_the_bar_of_the_zones_and_its_legend_take_no_focus(monkeypatch):
     """Nothing of the bar of the zones nor of its legend (from the journal) can be done: Tab
     never stops there."""

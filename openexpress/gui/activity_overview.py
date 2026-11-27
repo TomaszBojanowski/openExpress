@@ -2,10 +2,11 @@
 details: its heading (its kind with its sub sport, when it started and on which device, a dot of
 its sport's colour before the title but in a narrow window), its numbers in a card (four on a
 line or two by two, as on the Activities page, gui/activities_since.py), the shape of its track
-on a plain grid with its start marked (the activity journal's shape; the page of a file draws
-its map on the same grid, gui/activity_map.py), its elevation (the lowest and the highest point
-beside the title, the profile under it) and its heart rate (gui/activity_zones.py). The words
-are in gui/words.py, in the units of its device; nothing here reads a file.
+in its sport's colour on a plain grid with its start marked (the activity journal's shape; the
+page of a file draws its map on the same grid, gui/activity_map.py), its elevation (the lowest
+and the highest point beside the title, the profile under it) and its heart rate
+(gui/activity_zones.py). The words are in gui/words.py, in the units of its device; nothing
+here reads a file.
 Has: no attribute of the window."""
 from __future__ import annotations
 
@@ -18,26 +19,20 @@ gi.require_version("Adw", "1")
 
 from gi.repository import Adw, Gtk  # noqa: E402 - imports must follow gi.require_version
 
-from openexpress.gui import words  # noqa: E402
+from openexpress.gui import sports, words  # noqa: E402
 from openexpress.gui.activities_since import (  # noqa: E402
     NumbersLayout,
     number_cell,
     number_markup,
 )
 from openexpress.gui.activity_colours import accent_colour  # noqa: E402
-from openexpress.gui.activity_map import (  # noqa: E402
-    START_COLOUR,
-    TRACK_COLOUR,
-    TRACK_EDGE,
-    draw_grid,
-)
+from openexpress.gui.activity_map import START_COLOUR, draw_grid  # noqa: E402
 from openexpress.gui.activity_zones import ZoneList, beside_title  # noqa: E402
 from openexpress.gui.palette import rgba  # noqa: E402
 
 SHAPE_HEIGHT = 260  # pixels of the card of a shape
 SHAPE_PADDING = 28  # pixels around the shape in its card
-SHAPE_LINE = 4.0  # pixels of the track's colour
-SHAPE_EDGE = 1.5  # pixels of its dark edge on each side
+SHAPE_LINE = 4.0  # pixels of the track's line
 START_RADIUS = 6  # pixels of the start's disc, a ring of the card's colour around it
 PROFILE_HEIGHT = 110  # pixels of the elevation's profile
 PROFILE_TOP, PROFILE_BOTTOM = 10, 12  # pixels over its highest point and under its lowest
@@ -90,7 +85,7 @@ class NumbersCard(Gtk.Box):
 
 def _draw_shape(area, cr, width: int, height: int) -> None:
     """The grid; the track's shape (0-1000 along its longer side, north up) in the middle, as
-    large as it fits, in the track's colour over a dark edge; its start marked."""
+    large as it fits, in the colour of its sport (`colour`); its start marked."""
     draw_grid(cr, width, height, area.get_color())
     points = area.points
     xs, ys = [p[0] for p in points], [p[1] for p in points]
@@ -104,14 +99,13 @@ def _draw_shape(area, cr, width: int, height: int) -> None:
     placed = [(left + x * scale, top + y * scale) for x, y in points]
     cr.set_line_cap(1)  # round
     cr.set_line_join(1)  # round
-    for colour, line in ((TRACK_EDGE, SHAPE_LINE + 2 * SHAPE_EDGE), (TRACK_COLOUR, SHAPE_LINE)):
-        fill = rgba(colour)
-        cr.set_source_rgba(fill.red, fill.green, fill.blue, 1)
-        cr.set_line_width(line)
-        cr.move_to(*placed[0])
-        for point in placed[1:]:
-            cr.line_to(*point)
-        cr.stroke()
+    colour = area.colour
+    cr.set_source_rgba(colour.red, colour.green, colour.blue, 1)
+    cr.set_line_width(SHAPE_LINE)
+    cr.move_to(*placed[0])
+    for point in placed[1:]:
+        cr.line_to(*point)
+    cr.stroke()
     x, y = placed[0]
     cr.set_source_rgba(1, 1, 1, 1)
     cr.arc(x, y, START_RADIUS + 2, 0, 2 * math.pi)
@@ -123,16 +117,18 @@ def _draw_shape(area, cr, width: int, height: int) -> None:
 
 
 class ShapeCard(Gtk.Box):
-    """The shape of the track the activity journal kept, on a plain grid with its start marked
-    and the words that there is no map under it (the journal keeps no place on Earth)."""
+    """The shape of the track the activity journal kept, in the colour of its sport's `group`
+    (gui/sports.py, as on its tile on the Activities page), on a plain grid with its start
+    marked and the words that there is no map under it (the journal keeps no place on Earth)."""
 
     __gtype_name__ = "OpenExpressShapeCard"
 
-    def __init__(self, points):
+    def __init__(self, points, group: str):
         super().__init__()
         self.area = Gtk.DrawingArea(content_height=SHAPE_HEIGHT, hexpand=True,
                                     accessible_role=Gtk.AccessibleRole.PRESENTATION)
         self.area.points = points
+        self.area.colour = rgba(sports.COLOURS[group])
         self.area.set_draw_func(_draw_shape)
         overlay = Gtk.Overlay(child=self.area)
         said = Gtk.Label(label=words.shape_only_text(), wrap=True, xalign=0,
