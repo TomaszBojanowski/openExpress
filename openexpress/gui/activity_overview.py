@@ -2,15 +2,13 @@
 details: its heading (its kind with its sub sport, when it started and on which device, a dot of
 its sport's colour before the title but in a narrow window), its numbers in a card (four on a
 line or two by two, as on the Activities page, gui/activities_since.py), the shape of its track
-in its sport's colour on a plain grid with its start marked (the activity journal's shape; the
-page of a file draws its map on the same grid, gui/activity_map.py), its elevation (the lowest
-and the highest point beside the title, the profile under it) and its heart rate
+in its sport's colour on a plain grid with its start marked as on a map (the activity journal's
+shape; the page of a file draws its map on the same grid, gui/activity_map.py), its elevation
+(the lowest and the highest point beside the title, the profile under it) and its heart rate
 (gui/activity_zones.py). The words are in gui/words.py, in the units of its device; nothing
 here reads a file.
 Has: no attribute of the window."""
 from __future__ import annotations
-
-import math
 
 import gi
 
@@ -25,14 +23,13 @@ from openexpress.gui.activities_since import (  # noqa: E402
     number_markup,
 )
 from openexpress.gui.activity_colours import accent_colour  # noqa: E402
-from openexpress.gui.activity_map import START_COLOUR, draw_grid  # noqa: E402
+from openexpress.gui.activity_map import draw_grid, draw_start  # noqa: E402
 from openexpress.gui.activity_zones import SectionHeader, ZoneList  # noqa: E402
 from openexpress.gui.palette import rgba  # noqa: E402
 
 SHAPE_HEIGHT = 260  # pixels of the card of a shape
 SHAPE_PADDING = 28  # pixels around the shape in its card
 SHAPE_LINE = 4.0  # pixels of the track's line
-START_RADIUS = 6  # pixels of the start's disc, a ring of the card's colour around it
 PROFILE_HEIGHT = 110  # pixels of the elevation's profile
 PROFILE_TOP, PROFILE_BOTTOM = 10, 12  # pixels over its highest point and under its lowest
 PROFILE_FILL = 0.18  # the strength of the accent colour under its line
@@ -84,7 +81,7 @@ class NumbersCard(Gtk.Box):
 
 def _draw_shape(area, cr, width: int, height: int) -> None:
     """The grid; the track's shape (0-1000 along its longer side, north up) in the middle, as
-    large as it fits, in the colour of its sport (`colour`); its start marked."""
+    large as it fits, in the colour of its sport (`colour`); its start marked as on a map."""
     draw_grid(cr, width, height, area.get_color())
     points = area.points
     xs, ys = [p[0] for p in points], [p[1] for p in points]
@@ -105,20 +102,14 @@ def _draw_shape(area, cr, width: int, height: int) -> None:
     for point in placed[1:]:
         cr.line_to(*point)
     cr.stroke()
-    x, y = placed[0]
-    cr.set_source_rgba(1, 1, 1, 1)
-    cr.arc(x, y, START_RADIUS + 2, 0, 2 * math.pi)
-    cr.fill()
-    start = rgba(START_COLOUR)
-    cr.set_source_rgba(start.red, start.green, start.blue, 1)
-    cr.arc(x, y, START_RADIUS, 0, 2 * math.pi)
-    cr.fill()
+    draw_start(cr, *placed[0])
 
 
 class ShapeCard(Gtk.Box):
     """The shape of the track the activity journal kept, in the colour of its sport's `group`
     (gui/sports.py, as on its tile on the Activities page), on a plain grid with its start
-    marked and the words that there is no map under it (the journal keeps no place on Earth)."""
+    marked as on a map, and the words that there is no map under it (the journal keeps no
+    place on Earth)."""
 
     __gtype_name__ = "OpenExpressShapeCard"
 

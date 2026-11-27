@@ -595,11 +595,25 @@ SPORT_OF_GROUP = {"foot": 1, "cycling": 2, "water": 5, "winter": 12, "training":
                   "others": 0}  # a FIT sport of each group of gui/sports.py
 
 
+def drawn(widget) -> bytes:
+    """The widget as drawn: its pixels, row by row, 4 bytes each (red, green, blue, alpha)."""
+    from gi.repository import Gdk, Graphene, Gtk
+
+    width, height = widget.get_width(), widget.get_height()
+    snapshot = Gtk.Snapshot()
+    Gtk.WidgetPaintable.new(widget).snapshot(snapshot, width, height)
+    texture = widget.get_native().get_renderer().render_texture(
+        snapshot.to_node(), Graphene.Rect().init(0, 0, width, height))
+    downloader = Gdk.TextureDownloader.new(texture)
+    downloader.set_format(Gdk.MemoryFormat.R8G8B8A8)
+    data, stride = downloader.download_bytes()
+    assert stride == 4 * width
+    return data.get_data()
+
+
 def colours_drawn(widget) -> dict[str, int]:
     """The widget as drawn: how many of its opaque pixels are in the colour of each group of
     sports (cairo may round a colour by one)."""
-    from gi.repository import Gdk, Graphene, Gtk
-
     from openexpress.gui import sports
 
     groups = {}
@@ -610,15 +624,7 @@ def colours_drawn(widget) -> dict[str, int]:
             for g in (-1, 0, 1):
                 for b in (-1, 0, 1):
                     groups[(red + r, green + g, blue + b)] = group
-    width, height = widget.get_width(), widget.get_height()
-    snapshot = Gtk.Snapshot()
-    Gtk.WidgetPaintable.new(widget).snapshot(snapshot, width, height)
-    texture = widget.get_native().get_renderer().render_texture(
-        snapshot.to_node(), Graphene.Rect().init(0, 0, width, height))
-    downloader = Gdk.TextureDownloader.new(texture)
-    downloader.set_format(Gdk.MemoryFormat.R8G8B8A8)
-    data, _stride = downloader.download_bytes()
-    data = data.get_data()
+    data = drawn(widget)
     counts = dict.fromkeys(sports.COLOURS, 0)
     for i in range(0, len(data), 4):
         if data[i + 3] == 255:
@@ -659,6 +665,75 @@ def test_the_shape_from_the_journal_in_the_colour_of_its_sport_as_on_its_tile(da
             win.toplevel.destroy()
             assert on_tile[group] > 200 and max(on_tile, key=on_tile.get) == group, on_tile
             assert on_page[group] > 200 and max(on_page, key=on_page.get) == group, on_page
+    finally:
+        style.set_color_scheme(Adw.ColorScheme.DEFAULT)
+
+
+@pytest.mark.parametrize("dark", [False, True])
+def test_the_start_of_a_shape_from_the_journal_is_marked_as_on_the_map(dark):
+    """The shape of an activity from the journal marks its start with the marker of the start
+    on the map of a file (gui/activity_map.py), pixel for pixel, and it is seen on the track in
+    the colour of every group of sports and on the card around it, in either style: where the
+    track leaves it, its ring differs from the track by at least 3:1 (WCAG, for what is not
+    text), and so does its outline from the card."""
+    import math
+
+    import cairo
+    from fakes import iterate
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import activity_map, activity_overview, sports
+
+    size = activity_map.END_SIZE
+    reference = cairo.ImageSurface(cairo.FORMAT_ARGB32, size, size)
+    activity_map._draw_end(None, cairo.Context(reference), size, size, "start")
+    reference.flush()
+    marker, stride = bytes(reference.get_data()), reference.get_stride()  # BGRA, premultiplied
+    style = Adw.StyleManager.get_default()
+    style.set_color_scheme(Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
+    try:
+        for group in sports.COLOURS:
+            # A straight track eastwards: its start on the left, half way down the card.
+            card = activity_overview.ShapeCard([(0, 500), (1000, 500)], group)
+            holder = Gtk.Box()
+            holder.add_css_class("background")  # the page's background under the card
+            holder.append(card)
+            window = Gtk.Window(child=holder, default_width=400, default_height=400)
+            window.present()
+            iterate(0.2)
+            width = holder.get_width()
+            data = drawn(holder)
+            bounds = card.area.compute_bounds(holder)[1]
+            x0 = round(bounds.get_x()) + activity_overview.SHAPE_PADDING
+            y0 = round(bounds.get_y()) + card.area.get_height() // 2
+            window.destroy()
+
+            def at(x: float, y: float, data=data, width=width) -> str:
+                i = (math.floor(y) * width + math.floor(x)) * 4
+                return "#" + bytes(data[i:i + 3]).hex()
+
+            unlike = 0
+            for my in range(size):
+                for mx in range(size):
+                    j = my * stride + mx * 4
+                    if marker[j + 3] == 255:
+                        want = (marker[j + 2], marker[j + 1], marker[j])
+                        got = bytes.fromhex(at(x0 - size / 2 + mx, y0 - size / 2 + my)[1:])
+                        unlike += max(abs(a - b) for a, b in zip(want, got)) > 2
+            rim = [r / 2 for r in range(size - 8, size + 1)]  # from the middle's edge out
+
+            def seen(against: str, steps, at=at, x0=x0, y0=y0, rim=rim) -> float:
+                return max(contrast(at(x0 + r * math.cos(2 * math.pi * s / 16),
+                                       y0 + r * math.sin(2 * math.pi * s / 16)), against)
+                           for s in steps for r in rim)
+
+            track, around = at(x0 + size, y0), at(x0 - size, y0)  # east: on it; west: the card
+            on_track, on_card = seen(track, [0]), seen(around, range(16))
+            colour = rgba(sports.COLOURS[group])
+            wanted = [round(c * 255) for c in (colour.red, colour.green, colour.blue)]
+            on_it = max(abs(a - b) for a, b in zip(bytes.fromhex(track[1:]), wanted)) <= 2
+            assert (group, on_it, unlike, on_track >= 3, on_card >= 3) == (
+                group, True, 0, True, True), (on_track, on_card)
     finally:
         style.set_color_scheme(Adw.ColorScheme.DEFAULT)
 

@@ -889,6 +889,15 @@ def _draw_end(_area, cr, width: int, height: int, kind: str) -> None:
     cr.restore()
 
 
+def draw_start(cr, x: float, y: float) -> None:
+    """The marker of a track's start, as on the map, its middle at (x, y): the shape of an
+    activity from the journal marks its start with it (gui/activity_overview.py)."""
+    cr.save()
+    cr.translate(x - END_SIZE / 2, y - END_SIZE / 2)
+    _draw_end(None, cr, END_SIZE, END_SIZE, "start")
+    cr.restore()
+
+
 def _marker(size: int, draw, *data) -> Shumate.Marker:
     dot = Gtk.DrawingArea(content_width=size, content_height=size)
     dot.set_draw_func(draw, *data)
