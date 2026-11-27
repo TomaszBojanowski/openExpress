@@ -1302,6 +1302,44 @@ def test_the_page_of_an_activity_from_the_journal_fits_the_narrowest_window(narr
         assert [w.get_layout().get_line_count() for w in beside] == [1, 1]
 
 
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_page_of_an_activity_in_miles_fits_the_narrowest_window(narrow_window, monkeypatch,
+                                                                    language):
+    """A device set to miles and feet, the longest numbers: its splits in miles, its details
+    and the chart in feet and miles; the page no wider than the narrowest window."""
+    import dataclasses
+
+    from fakes import RunNow
+    from gi.repository import Adw
+
+    from openexpress import fit
+    from openexpress.gui import activity_map, activity_page
+    from openexpress.gui.activity_details import DetailsList
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    read, data = _long_hike()
+    data = dataclasses.replace(data, units=fit.Units("statute", "statute", "statute"))
+    monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+    activity_map.set_tiles(False)
+    win.run_task = RunNow()
+    activity_page.open_activity(win, read)
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    rows = [w for w in descendants(page) if isinstance(w, Adw.ActionRow)]
+    assert rows[0].get_title() == {"en": "Mile 1", "pl": "Mila 1"}[language]
+    (details,) = [w for w in descendants(page) if isinstance(w, DetailsList)]
+    details.expander.set_expanded(True)
+    _iterate(0.2)
+    assert any(r.value.get_label().endswith(" ft") for r in details.rows)
+    assert _min_width(page) <= NARROWEST
+    assert page.get_width() <= NARROWEST
+
+
 PHONE_HEIGHT = 640  # a window as tall as a phone's screen, its header bar in it
 
 

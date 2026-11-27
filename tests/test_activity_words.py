@@ -423,7 +423,7 @@ DETAILS_OF = {
                     ("Best Pace", "8:52 /km"), ("Average Cadence", "104 spm (max 118)"),
                     ("Steps", "4380"), ("Heart Rate", "86–125 bpm"), ("Calories", "180 kcal"),
                     ("Temperature", "27.4 °C (25.0–29.0 °C)")],
-           "workout": [("Work Time", "24:30"), ("Rest Time", "25:00"),
+           "workout": [("Work Time", "24:30"),
                        ("Heart Rate", "92–171 bpm"), ("Temperature", "29.0 °C (27.0–31.0 °C)"),
                        ("Respiration Rate", "24 brpm (15–38)")],
            "title": "Details"},
@@ -434,7 +434,7 @@ DETAILS_OF = {
                     ("Średnia kadencja", "104 kr./min (maks. 118)"), ("Kroki", "4380"),
                     ("Tętno", "86–125 bpm"), ("Suma kalorii", "180 kcal"),
                     ("Temperatura", "27,4 °C (25,0–29,0 °C)")],
-           "workout": [("Czas ćwiczeń", "24:30"), ("Czas odpoczynku", "25:00"),
+           "workout": [("Czas ćwiczeń", "24:30"),
                        ("Tętno", "92–171 bpm"), ("Temperatura", "29,0 °C (27,0–31,0 °C)"),
                        ("Częstotliwość oddechu", "24 brpm (15–38)")],
            "title": "Szczegóły"},
@@ -442,9 +442,10 @@ DETAILS_OF = {
 
 
 def test_the_details_of_a_walk_and_of_a_strength_workout(language):
-    """In their order, only what the file gives, nothing a tile shows already: no elapsed time
-    the same as the tile's, no calories of a workout (a tile); steps and a cadence in steps a
-    minute from strides; the moving time and its pace from the records."""
+    """In their order, only what the file gives, nothing the top shows already: no elapsed time
+    the same as the tile's, no calories nor rest time of a workout (its card has them); steps
+    and a cadence in steps a minute from strides; the moving time and its pace from the
+    records."""
     w = words()
     assert w.details_title() == DETAILS_OF[language]["title"]
     assert w.activity_details(WALK, MOVING) == DETAILS_OF[language]["walk"]

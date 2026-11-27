@@ -1145,20 +1145,23 @@ def activity_detail_kinds(data, moving: float | None = None) -> list[tuple[str, 
     elevation, average moving pace (or speed), best pace (or maximum speed), cadence, steps,
     heart rate (minimum–maximum), calories, temperature, respiration rate. Only what the file
     gives: `moving` is the moving time worked out from its records (None: none); no value of
-    0; nothing a tile shows already (a time, a pace or calories the same as a tile's). In the
-    units of its device (one_activity.units_of_file)."""
+    0; nothing the top shows already (a time, a pace or calories the same as a tile's, the rest
+    time its card shows without a distance). In the units of its device
+    (one_activity.units_of_file)."""
     from openexpress.one_activity import units_of_file
 
     sport, kind = data.sport, speed_kind(data.sport)
     units = units_of_file(data)
     miles, feet = units.miles, units.feet
     tiles = dict(activity_tile_kinds(data, units))
+    if "distance" not in tiles:  # overview_numbers: the card of a workout has its rest time
+        tiles["rest time"] = _clock(data.rest_time)
     moving_speed = data.distance / moving if moving and data.distance else None
     found = [
         ("elapsed time", _clock(data.elapsed_time), "time"),
         ("moving time", _clock(moving) if "distance" in tiles else None, "time"),
         ("work time", _clock(data.active_time), "time"),
-        ("rest time", _clock(data.rest_time), None),
+        ("rest time", _clock(data.rest_time), "rest time"),
         ("descent", height_text(data.descent, feet) if data.descent else None, None),
         ("minimum elevation", height_text(data.min_altitude, feet)
          if data.min_altitude is not None else None, None),

@@ -515,6 +515,17 @@ def test_the_header_bar_keeps_the_back_arrow_and_the_export_its_title_on_the_pag
     assert header.get_show_title() and waiting.get_title() == "Hiking"
 
 
+def test_the_rest_time_of_a_strength_workout_once_in_its_card(monkeypatch):
+    """The card of a strength workout says its rest time: the details, which repeat nothing the
+    top says, leave it out."""
+    _win, page = page_of(monkeypatch, made_up(sport=TRAINING, sub_sport=20, timer_time=2700.0,
+                                              elapsed_time=2900.0, calories=320,
+                                              rest_time=600.0), sport=TRAINING)
+    assert ("10:00", "Rest Time") in numbers_of(page)
+    shown = detail_section(page)
+    assert [r.get_title() for r in shown.rows] == ["Elapsed Time"]
+
+
 def test_no_card_of_numbers_without_a_number(monkeypatch):
     """A file whose sessions give a heart rate alone: no empty card, its heart rate."""
     _win, page = page_of(monkeypatch, made_up(sport=TRAINING, avg_heart_rate=120,
