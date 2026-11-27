@@ -174,7 +174,8 @@ class ZoneShares(Gtk.Box):
         # Nothing selected and no background under the pointer (as activity_colours.plain_flow,
         # which needs this module's colours).
         legend = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=1,
-                             max_children_per_line=6, column_spacing=16, row_spacing=4)
+                             max_children_per_line=6, column_spacing=16, row_spacing=4,
+                             halign=Gtk.Align.START)
         legend.add_css_class("oe-plain")
         for number, share in zone_shares(times):
             item = Gtk.Box(spacing=6)
@@ -211,13 +212,22 @@ class ZoneList(Gtk.Box):
         rows = [self.shares] if self.shares is not None else []
         self.group = boxed_section(title, [*rows, *self.rows],
                                    zones_method_text(zones) if zones is not None else None)
-        self.said = Gtk.Label(label=caption(*said), wrap=True, xalign=1,
-                              valign=Gtk.Align.END)
-        self.said.add_css_class("dim-label")
-        self.said.add_css_class("caption")
+        self.said = beside_title(said)
         if said:
             self.group.set_header_suffix(self.said)
         self.append(self.group)
+
+
+def beside_title(said) -> Gtk.Label:
+    """The words beside the title of a section (a few short ones, "148 bpm average · 176 bpm
+    highest"): on one line while there is room for them, wrapped in a narrow window."""
+    # Its natural width unwrapped: the header of a group asks a width for its height, which
+    # would wrap a wrapping label into as many lines as the title has.
+    label = Gtk.Label(label=caption(*said), wrap=True, xalign=1, valign=Gtk.Align.END,
+                      natural_wrap_mode=Gtk.NaturalWrapMode.NONE)
+    label.add_css_class("dim-label")
+    label.add_css_class("caption")
+    return label
 
 
 def boxed_section(title: str, rows: list[Gtk.Widget],

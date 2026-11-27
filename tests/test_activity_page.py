@@ -447,6 +447,13 @@ def test_the_header_bar_keeps_the_back_arrow_and_the_export_its_title_on_the_pag
     assert header.get_show_title() and waiting.get_title() == "Hiking"
 
 
+def test_no_card_of_numbers_without_a_number(monkeypatch):
+    """A file whose sessions give a heart rate alone: no empty card, its heart rate."""
+    _win, page = page_of(monkeypatch, made_up(sport=TRAINING, avg_heart_rate=120,
+                                              max_heart_rate=150), sport=TRAINING)
+    assert modules(page)[:2] == ["heading", "heart rate"]
+
+
 def test_the_numbers_take_no_click_nor_focus(monkeypatch):
     """The card of numbers only says them: nothing in it is a button or takes the focus."""
     from gi.repository import Gtk
@@ -830,12 +837,18 @@ def no_tile_server(monkeypatch):
 
 
 def test_before_the_yes_the_track_is_on_a_plain_background_with_the_note(no_tile_server):
-    """No tile layer, so nothing is asked of OpenStreetMap; the note and its button say what
-    turning the tiles on does; no attribution without tiles."""
+    """No tile layer, so nothing is asked of OpenStreetMap: the track on a grid, the words
+    that there is no map under it; the note and its button say what turning the tiles on does;
+    no attribution without tiles."""
+    from openexpress.gui.activity_map import GridLayer
+
     win, _the_list = a_window(walk())
     page = open_page(win, read_of(sport=WALKING))
     shown = map_of(page)
     assert shown is not None and tile_layers(shown) == [] and shown.tiles is None
+    assert isinstance(shown.map.get_first_child(), GridLayer)  # the lowest layer
+    assert seen(shown.shape_only, page)
+    assert shown.shape_only.get_label() == "Shape only, no map underneath"
     assert note_shown(page) and show_the_map_button(page) is not None
     assert not shown.attribution.get_visible()
     assert no_tile_server == []
@@ -852,6 +865,7 @@ def test_show_the_map_turns_the_tiles_on_for_the_program(no_tile_server):
     shown = map_of(page)
     assert load_gui_settings().get("map_tiles") is True
     assert len(tile_layers(shown)) == 1 and not note_shown(page)
+    assert not seen(shown.shape_only, page)  # a map under the track now
     assert shown.attribution.get_visible()
     assert COPYRIGHT_URL in shown.attribution.get_label()
     assert "© OpenStreetMap contributors" in shown.attribution.get_label()
@@ -876,9 +890,11 @@ def test_the_yes_is_taken_back_in_preferences(no_tile_server):
     assert row.get_title() == "Streets and Terrain From OpenStreetMap" and row.get_active()
     assert row.get_subtitle() == ("The OpenStreetMap server learns the area of each activity "
                                   "you open")
+    assert not seen(map_of(page).shape_only, page)
     row.set_active(False)
     assert load_gui_settings().get("map_tiles") is False
     assert tile_layers(map_of(page)) == [] and note_shown(page)
+    assert seen(map_of(page).shape_only, page)
 
 
 def test_an_activity_without_positions_has_no_map():

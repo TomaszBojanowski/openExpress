@@ -31,9 +31,8 @@ from openexpress.gui.activity_map import (  # noqa: E402
     TRACK_EDGE,
     draw_grid,
 )
-from openexpress.gui.activity_zones import ZoneList  # noqa: E402
+from openexpress.gui.activity_zones import ZoneList, beside_title  # noqa: E402
 from openexpress.gui.palette import rgba  # noqa: E402
-from openexpress.i18n import caption  # noqa: E402
 
 SHAPE_HEIGHT = 260  # pixels of the card of a shape
 SHAPE_PADDING = 28  # pixels around the shape in its card
@@ -195,10 +194,7 @@ class ElevationSection(Gtk.Box):
     def __init__(self, shown):
         super().__init__(orientation=Gtk.Orientation.VERTICAL)
         self.group = Adw.PreferencesGroup(title=words.chart_series_name("elevation"))
-        self.said = Gtk.Label(label=caption(*words.elevation_range(shown)), wrap=True, xalign=1,
-                              valign=Gtk.Align.END)
-        self.said.add_css_class("dim-label")
-        self.said.add_css_class("caption")
+        self.said = beside_title(words.elevation_range(shown))
         self.group.set_header_suffix(self.said)
         self.profile = None
         if shown.profile:

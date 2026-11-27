@@ -1244,6 +1244,64 @@ def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkey
     assert page.get_width() <= NARROWEST
 
 
+def _journal_line() -> dict:
+    """A made-up line of the activity journal at its longest: a long kind, every zone, the
+    largest numbers, its shape and profile."""
+    start = int(datetime(2026, 12, 31, 23, 59).timestamp())
+    return {"v": 1, "kind": "activity", "key": "made up", "file": {"name": "a.fit", "size": 1},
+            "from": "device", "start": start, "utc_offset": 3600, "sport": 37, "sub_sport": None,
+            "timer_time": 359_999.0, "elapsed_time": 359_999.0, "distance": 1_234_567.0,
+            "ascent": 99_999, "min_altitude": -400.0, "max_altitude": 8_848.0,
+            "avg_heart_rate": 200, "max_heart_rate": 255,
+            "zones": [3600, 3600, 3600, 3600, 3600, 3600], "avg_speed": 0.2, "calories": 9_999,
+            "has_track": True, "has_heart_rate": True,
+            "units": {"distance": "metric", "elevation": "metric", "speed": "metric"},
+            "shape": {"width": 900, "height": 400,
+                      "points": [[0, 300], [250, 0], [600, 400], [1000, 100], [0, 300]]},
+            "profile": [40, 80, 8848, 150, -400]}
+
+
+@pytest.mark.parametrize("width", [NARROWEST, 1000])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_page_of_an_activity_from_the_journal_fits_the_narrowest_window(narrow_window,
+                                                                            language, width):
+    """From the journal alone, at its longest: its heading and where it comes from wrapped, its
+    shape, its numbers two by two (four on a line in a wide window), its elevation and its heart
+    rate with the legend of every zone wrapped; no GPX button."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_overview, activity_page
+    from openexpress.gui.activity_zones import ZoneList, ZoneShares
+
+    win = narrow_window(language, width=width)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_page.open_from_journal(win, _journal_line())
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    assert page.get_tag() == "activity-journal"
+    (card,) = [w for w in descendants(page) if isinstance(w, activity_overview.NumbersCard)]
+    lines = {round(c.compute_bounds(card)[1].get_y()) for c in card.cells}
+    assert len(card.cells) == 4 and len(lines) == (2 if width == NARROWEST else 1)
+    assert [w for w in descendants(page) if isinstance(w, activity_overview.ShapeCard)]
+    assert [w for w in descendants(page) if isinstance(w, activity_overview.ElevationSection)]
+    (shares,) = [w for w in descendants(page) if isinstance(w, ZoneShares)]
+    legend = [w for w in descendants(shares) if isinstance(w, Gtk.Label)]
+    assert len(legend) == 6 and all(w.get_layout().get_line_count() == 1 for w in legend)
+    assert not [w for w in descendants(page) if isinstance(w, Gtk.Button)
+                and w.get_tooltip_text() and "GPX" in w.get_tooltip_text()]
+    beside = [s.said for s in descendants(page)
+              if isinstance(s, (activity_overview.ElevationSection, ZoneList))]
+    assert len(beside) == 2
+    if width == NARROWEST:
+        assert _min_width(page) <= NARROWEST
+        assert page.get_width() <= NARROWEST
+    else:  # the words beside a title on one line, wrapped only when there is no room
+        assert [w.get_layout().get_line_count() for w in beside] == [1, 1]
+
+
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_page_device_status_opened_fits_the_narrowest_window(narrow_window, language):
     """The page with its newest crash and its details open, the kinds of file listed, Show All

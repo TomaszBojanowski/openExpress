@@ -235,12 +235,14 @@ class ActivityView:
         self.content.append(heading)
 
     def _numbers_elevation_heart_rate(self, shown, zones=None) -> tuple[int, bool, bool]:
-        """The card of numbers, the elevation and the heart rate (with the rows of `zones`):
-        how many numbers, whether there is an elevation and a heart rate."""
+        """The card of numbers (none without a number), the elevation and the heart rate (with
+        the rows of `zones`): how many numbers, whether there is an elevation and a heart
+        rate."""
         numbers = overview_numbers(shown)
-        card = activity_overview.NumbersCard(numbers)
-        card.set_margin_top(12)
-        self.content.append(card)
+        if numbers:
+            card = activity_overview.NumbersCard(numbers)
+            card.set_margin_top(12)
+            self.content.append(card)
         found = []
         for section in (activity_overview.elevation(shown),
                         activity_overview.heart_rate(shown, zones)):
