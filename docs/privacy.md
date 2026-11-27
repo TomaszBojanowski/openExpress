@@ -130,7 +130,8 @@ written for it.
   width and height of the whole in metres. No coordinate is kept, so the journal does not say
   where an activity was; a distinctive loop could in theory still be matched to a map by its
   shape and size.
-- **What it never holds:** a position on Earth, the device's serial number or Unit ID, a path.
+- **What it never holds:** where an activity was (no coordinate), the device's serial number or
+  Unit ID, a path.
   It also keeps a line for each connection: how many activities the device held, its oldest
   and its newest, and a short digest that tells one connection from the next.
 - **Where:** one file a device, `activities.jsonl` in the device's folder (see

@@ -243,7 +243,7 @@ changes anything only shows its plan until you add `--apply`. Every command:
 - Sync never deletes files from the device, and every file written to it is checked.
 - The log never has serial numbers, Unit IDs, tokens or e-mail addresses.
 - The activity journal is kept only after your yes and only on this computer: a summary and the
-  shape of each activity, never a position on Earth. Preferences turn it off or delete it.
+  shape of each activity, without its place. You can turn it off or delete it in Preferences.
 - The map of an activity asks OpenStreetMap for its streets only after you turn them on; the
   server then learns the area of each map you look at and your IP address, never the activity,
   its track or your account.
