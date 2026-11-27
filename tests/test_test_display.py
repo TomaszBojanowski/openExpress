@@ -53,3 +53,45 @@ def test_the_hidden_x_server_ends_when_pytest_dies():
     if survived:
         os.kill(pid, signal.SIGKILL)  # never left behind by this test
     assert not survived
+
+
+# A test of the window whose window is left in a reference cycle: pytest's last collection of
+# garbage, after every test, finalizes it.
+LEFT_IN_A_CYCLE = """
+import gc
+
+import pytest
+
+pytestmark = [pytest.mark.needs_display]
+
+
+def test_a_window_left_in_a_cycle():
+    from gi.repository import Gtk
+
+    gc.disable()  # as after many tests: the cycle waits for pytest's last collection
+    window = Gtk.Window()
+    window.present()
+    window.destroy()
+    cycle = [window]
+    cycle.append(cycle)
+"""
+
+
+@pytest.mark.skipif(shutil.which("Xvfb") is None, reason="no Xvfb")
+def test_a_run_whose_last_test_leaves_a_window_in_a_cycle_ends_well(tmp_path):
+    """GTK finalizing a window asks the X server; were the hidden server stopped before
+    pytest's last collection of garbage, GTK would end the process at once (exit code 1, the
+    summary lost in its buffer): a file of tests run alone, or last, must end with 0 and its
+    summary whatever its last test leaves to the collector."""
+    root = CONFTEST.parent.parent
+    test = tmp_path / "test_left_in_a_cycle.py"
+    test.write_text(LEFT_IN_A_CYCLE, encoding="utf-8")
+    env = {k: v for k, v in os.environ.items()
+           if k not in ("OPENEXPRESS_TESTS_NO_DISPLAY", "OPENEXPRESS_TESTS_ON_SCREEN")}
+    env["PYTHONPATH"] = str(CONFTEST.parent)
+    run = subprocess.run([sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+                          "-p", "conftest", "-c", str(root / "pyproject.toml"), "--rootdir",
+                          str(root), str(test)], cwd=root, capture_output=True, text=True,
+                         env=env, timeout=120, check=False)
+    last = run.stdout.strip().splitlines()[-1] if run.stdout.strip() else ""
+    assert (run.returncode, last.split(" in ")[0]) == (0, "1 passed")

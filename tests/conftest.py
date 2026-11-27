@@ -1,6 +1,7 @@
 import atexit
 import ctypes
 import functools
+import gc
 import os
 import select
 import shutil
@@ -84,8 +85,15 @@ def _start_xvfb() -> subprocess.Popen | None:
 
 
 def _stop_xvfb() -> None:
+    """The hidden X server stopped, once every object of GTK the tests left to Python's collector
+    of garbage (a window in a reference cycle) is finalized: GTK finalizing a window asks the X
+    server, and with the server gone it ends the process at once, with exit code 1 and pytest's
+    summary lost in its buffer."""
     global _xvfb
     if _xvfb is not None:
+        for _ in range(10):  # a finalized object may leave more garbage
+            if not gc.collect():
+                break
         _xvfb.terminate()
         try:
             _xvfb.wait(timeout=5)
@@ -115,6 +123,7 @@ def pytest_report_header(config):
     return f"display of the tests: {DISPLAY_OF_TESTS}"
 
 
+@pytest.hookimpl(trylast=True)  # after the other plugins have let go of what they held
 def pytest_unconfigure(config):
     _stop_xvfb()
 
