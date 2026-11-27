@@ -1,10 +1,9 @@
 """The icons of the window: the side panel's Device takes the small icon of the open device's
 kind (the shape of its tile, drawn for 16 px), Activities a runner, Courses a trail of
-switchbacks from its start;
-the tiles of an activity's page a distance between two points, a stopwatch, a speedometer, a
-heart, a flame and two peaks. Each icon of the program is drawn on the 16 px grid in
-packaging/icons and made into shapes by tools/symbolic-icons.py, and the Flatpak installs
-every one of them."""
+switchbacks from its start; the trivia of the Activities page a distance between two points or
+two peaks; a tile without a track its sport's symbol. Each icon of the program is drawn on the
+16 px grid in packaging/icons and made into shapes by tools/symbolic-icons.py, and the Flatpak
+installs every one of them."""
 
 import re
 from fnmatch import fnmatch
@@ -52,21 +51,6 @@ def test_the_small_icon_of_each_kind():
     assert [start.small_kind_icon(kind) for kind in (
         start.WATCH, start.CYCLING_COMPUTER, start.HANDHELD, start.BIKE_ACCESSORY,
         start.SCALE, None)] == [own(n) for n in (*SMALL[:4], "device-small", "device-small")]
-
-
-@pytest.mark.needs_display
-def test_the_tiles_of_an_activity_have_their_icons():
-    from openexpress.gui import activity_page
-
-    speed, heart = own("activity-speed"), own("activity-heart-rate")
-    expected = {"distance": own("activity-distance"), "time": own("activity-time"),
-                "pace": speed, "swim pace": speed, "speed": speed,
-                "average heart rate": heart, "maximum heart rate": heart,
-                "calories": own("activity-calories"), "ascent": own("activity-elevation")}
-    shown = activity_page.TILE_ICONS
-    assert shown == expected
-    for icon in activity_page.TILE_ICONS.values():
-        assert (ROOT / "openexpress" / "data" / f"{icon}.svg").is_file()
 
 
 @pytest.mark.needs_display

@@ -1,13 +1,15 @@
 """The chart of an activity's page: one of the series its records give (heart rate, elevation,
-and pace or speed by its sport; their words in gui/words.py) over the time since its first
-record. A value not given and records that stop for a while (a pause) leave a gap in the line;
-so does a stop in the pace, never a slow climb. Pace is smoothed over about 30 s of moving and
-drawn with the faster on top, its axis from the pace of most of the moving records (a value
-beyond it drawn at its edge); the points are brought down to two a pixel column without losing a
-peak; the axes have round values. Heart rate has the bands of the heart rate zones 1-5 behind
-it, in their colours (gui/activity_zones.py). A click, a drag or the keys place a cursor, its
-value said beside the switch. The numbers need no screen; the drawing is Cairo in a
-Gtk.DrawingArea.
+and pace or speed by its sport; their words in gui/words.py, in the units of its device) over
+the time since its first record. A value not given and records that stop for a while (a
+pause) leave a gap in the line; so does a stop in the pace, never a slow climb. Pace is
+smoothed over about 30 s of moving and drawn with the faster on top, its axis from the pace of
+most of the moving records (a value beyond it drawn at its edge); the points are brought down
+to two a pixel column without losing a peak; the axes have round values. Heart rate has the
+bands of the heart rate zones 1-5 behind it, in their colours (gui/activity_zones.py), each as
+tall as a line of text with its zone's name in it, at an edge, where the line does not pass,
+faint (drawn only: the screen reader has the chart's name and the value at its cursor). A click, a
+drag or the keys place a cursor, its value said beside the switch. The numbers need no screen;
+the drawing is Cairo in a Gtk.DrawingArea.
 Has: no attribute of the window; the chart's widgets keep their series and cursor themselves."""
 from __future__ import annotations
 
@@ -25,10 +27,14 @@ gi.require_version("PangoCairo", "1.0")
 
 from gi.repository import Gdk, GObject, Gtk, Pango, PangoCairo  # noqa: E402 - imports must follow gi.require_version
 
+from openexpress import since_last  # noqa: E402
 from openexpress.gui.activity_colours import accent_colour, plain_flow  # noqa: E402
 from openexpress.gui.activity_zones import ZONE_COLOURS  # noqa: E402
 from openexpress.gui.palette import rgba  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
+    METRES_A_FOOT,
+    METRES_A_MILE,
+    METRES_A_YARD,
     PACES,
     activity_clock,
     chart_accessible_name,
@@ -37,6 +43,7 @@ from openexpress.gui.words import (  # noqa: E402
     chart_tick,
     chart_unit,
     speed_kind,
+    zone_name,
 )
 
 GAP_S = 60  # records further apart than this: a pause, a gap in the line
@@ -55,6 +62,8 @@ KEY_STEP = 100  # a key moves the cursor by a hundredth of the activity
 CHART_HEIGHT = 200
 LAP_SHADE = 0.14  # the strength of the accent colour behind the lap chosen
 ZONE_SHADE = 0.13  # the strength of the zones' colours behind the line of heart rate
+TEXT_SHADE = 0.7  # the strength of the text's colour of the axes' values and times
+NAME_SHADE = 0.55  # and of the names of the zones' bands: fainter, as a dimmed label
 WHOLE = ("heart rate", "elevation")  # their axes have whole steps
 LEAST_SPAN = {"heart rate": 10, "elevation": 10, "speed": 1, "pace": 60, "swim pace": 10}
 NICE = (1, 2, 2.5, 5, 10)
@@ -68,11 +77,13 @@ class Series:
     """A series of the chart: its kind ("heart rate", "elevation", "pace", "swim pace",
     "speed"), the time of each record in seconds since the first one, and its value there in
     the unit of the axis (beats a minute, metres, seconds a kilometre or a hundred metres,
-    kilometres an hour); None: a gap."""
+    kilometres an hour; in `units`, since_last.Units, feet, seconds a mile or a hundred yards,
+    miles an hour); None: a gap."""
 
     kind: str
     times: tuple[float, ...]
     values: tuple[float | None, ...]
+    units: since_last.Units | None = None  # None: kilometres and metres
 
     @property
     def duration(self) -> float:
@@ -191,29 +202,39 @@ def _smoothed(times, speeds, stopped, counted) -> list[float | None]:
 def chart_series(data) -> list[Series]:
     """The series of an activity (fit.ActivityData) its records give, in the order of the
     switch: heart rate, elevation, then for an activity with a distance its pace (smoothed;
-    none at a stop) or its speed, by its sport."""
+    none at a stop) or its speed, by its sport; in the units of its device
+    (one_activity.units_of_file)."""
+    from openexpress.one_activity import units_of_file
+
     samples = data.samples
     if not samples:
         return []
+    units = units_of_file(data)
     origin = samples[0].time
     times = tuple(s.time - origin for s in samples)
     found = []
+    altitudes = tuple(s.altitude for s in samples)
+    if units.feet:
+        altitudes = tuple(None if v is None else v / METRES_A_FOOT for v in altitudes)
     for kind, values in (("heart rate", tuple(s.heart_rate for s in samples)),
-                         ("elevation", tuple(s.altitude for s in samples))):
+                         ("elevation", altitudes)):
         if any(v is not None for v in values):
-            found.append(Series(kind, times, values))
+            found.append(Series(kind, times, values, units))
     if _has_distance(data):
         speeds = _speeds(samples)
         kind = speed_kind(data.sport)
         if kind == "speed":
-            values = tuple(None if v is None else v * 3.6 for v in speeds)
+            hour = 3600 / METRES_A_MILE if units.miles else 3.6
+            values = tuple(None if v is None else v * hour for v in speeds)
         else:
-            per = 1000 if kind == "pace" else 100
+            per = {("pace", False): 1000, ("pace", True): METRES_A_MILE,
+                   ("swim pace", False): 100, ("swim pace", True): 100 * METRES_A_YARD}[
+                kind, units.miles]
             stopped, counted = _stops(times, speeds, [s.altitude for s in samples])
             values = tuple(None if v is None or v <= 0 else per / v
                            for v in _smoothed(times, speeds, stopped, counted))
         if any(v is not None for v in values):
-            found.append(Series(kind, times, values))
+            found.append(Series(kind, times, values, units))
     return found
 
 
@@ -432,11 +453,12 @@ def _plot(area, width: int, height: int) -> Plot:
     return Plot(left, top, right, bottom, times, values, faster_on_top(series.kind))
 
 
-def _text(area, cr, text: str, x: float, y: float, align: float, color) -> None:
+def _text(area, cr, text: str, x: float, y: float, align: float, color,
+          shade: float = TEXT_SHADE) -> None:
     """`text` at `y` (its top), `align` 0 left of `x`… 1 right of it."""
     layout = _layout(area, text)
     width = layout.get_pixel_size()[0]
-    cr.set_source_rgba(color.red, color.green, color.blue, 0.7)
+    cr.set_source_rgba(color.red, color.green, color.blue, shade)
     cr.move_to(x - width * align, y)
     PangoCairo.show_layout(cr, layout)
 
@@ -455,18 +477,17 @@ def _draw(area, cr, width: int, height: int) -> None:
         cr.set_source_rgba(accent.red, accent.green, accent.blue, LAP_SHADE)
         cr.rectangle(start, plot.top, end - start, plot.bottom - plot.top)
         cr.fill()
-    cr.set_line_width(1)
+    names = (_zone_names(area, plot, area.zones, text_height)
+             if area.zones is not None and kind == "heart rate" else [])
+    _grid(cr, plot, fg, plot.values.ticks, [box for *_place, box in names])
     for value in plot.values.ticks:
-        y = round(plot.y(value)) + 0.5
-        cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.12)
-        cr.move_to(plot.left, y)
-        cr.line_to(plot.right, y)
-        cr.stroke()
         _text(area, cr, chart_tick(kind, value, plot.values.step), plot.left - 6,
-              y - text_height / 2, 1, fg)
-    _text(area, cr, chart_unit(kind), 0, 0, 0, fg)
+              round(plot.y(value)) + 0.5 - text_height / 2, 1, fg)
+    _text(area, cr, chart_unit(kind, area.series.units), 0, 0, 0, fg)
     for at in plot.times.ticks:
         _text(area, cr, activity_clock(at), plot.x(at), plot.bottom + 4, 0.5, fg)
+    for name, x, y, align, _box in names:  # over the grid, under the line
+        _text(area, cr, name, x, y, align, fg, NAME_SHADE)
     cr.save()
     cr.rectangle(plot.left, plot.top - 2, plot.right - plot.left, plot.bottom - plot.top + 4)
     cr.clip()
@@ -525,6 +546,66 @@ def _draw_zones(cr, plot: Plot, bounds) -> None:
         cr.set_source_rgba(color.red, color.green, color.blue, ZONE_SHADE)
         cr.rectangle(plot.left, plot.y(top), plot.right - plot.left, plot.y(bottom) - plot.y(top))
         cr.fill()
+
+
+def _grid(cr, plot: Plot, fg, values, around) -> None:
+    """The faint lines of the grid at the axis' round `values`, none in the boxes `around`
+    (left, top, right, bottom: the names of the zones), which no line strikes through."""
+    cr.save()
+    if around:
+        cr.rectangle(plot.left - 1, plot.top - 1, plot.right - plot.left + 2,
+                     plot.bottom - plot.top + 2)
+        for left, top, right, bottom in around:
+            cr.rectangle(left - 2, top, right - left + 4, bottom - top)
+        cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
+        cr.clip()
+    cr.set_line_width(1)
+    cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.12)
+    for value in values:
+        y = round(plot.y(value)) + 0.5
+        cr.move_to(plot.left, y)
+        cr.line_to(plot.right, y)
+        cr.stroke()
+    cr.restore()
+
+
+def _zone_names(area, plot: Plot, bounds, text_height: float) -> list[tuple]:
+    """The name of each band of a zone as tall as a line of text ("Zone 1"), in its band, at
+    the right edge of the plot or else at the left one, as near the band's middle as the line
+    leaves room: the first place the line does not pass, else the one it passes least; a lower
+    band none. Each (name, x, y, align, box) as _text takes them, its box (left, top, right,
+    bottom) for the grid to leave out."""
+    points = [(plot.x(at), _within(plot, value)) for run in _drawn_runs(area, plot)
+              for at, value in run]
+    found = []
+    for zone, bottom, top in _zone_bands(bounds, plot.values.low, plot.values.high):
+        upper, lower = plot.y(top), plot.y(bottom)
+        if lower - upper < text_height:
+            continue
+        name = zone_name(zone)
+        width = _layout(area, name).get_pixel_size()[0]
+        middle = (upper + lower - text_height) / 2
+        room = int((lower - upper - text_height) / 2)
+        heights = [middle + shift * sign for shift in range(0, room + 1, 2)
+                   for sign in ((1,) if shift == 0 else (-1, 1))]
+        places = [(edge, y) for edge in ("right", "left") for y in heights]
+        starts = {"right": plot.right - 4 - width, "left": plot.left + 4}
+        # The heights of the line under the name at each edge, looked for once.
+        under = {edge: [at for x, at in points if start - 2 <= x <= start + width + 2]
+                 for edge, start in starts.items()}
+
+        def crossed(place, under=under) -> int:
+            edge, y = place
+            return sum(1 for at in under[edge] if y - 2 <= at <= y + text_height + 2)
+
+        edge, y = next((place for place in places if not crossed(place)), None) or min(
+            places, key=crossed)
+        box = (starts[edge], y, starts[edge] + width, y + text_height)
+        if edge == "right":
+            found.append((name, plot.right - 4, y, 1, box))
+        else:
+            found.append((name, plot.left + 4, y, 0, box))
+    return found
 
 
 def _within(plot: Plot, value: float) -> float:
@@ -633,7 +714,7 @@ class ChartArea(Gtk.DrawingArea):
         if self.cursor is None:
             return ""
         at, value = value_at(self.series, self.cursor)
-        return chart_cursor_text(at, self.series.kind, value)
+        return chart_cursor_text(at, self.series.kind, value, self.series.units)
 
 
 def _toggled(button) -> None:

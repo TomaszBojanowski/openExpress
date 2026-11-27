@@ -5,8 +5,10 @@ numbers of the new ones in a card (distance, time, ascent, how many); the trivia
 each of the newest six, with the shape of its track in the colour of its sport (gui/sports.py)
 or, without a track, its sport's symbol; or, none new, the newest three under "Latest". At the
 bottom the earlier ones still on the device and Show All, which pushes the page as it was
-(gui/activities_page.py) above it. While the journal reads the device, its progress instead
-(activities_journal.read_journal). The words are in gui/words.py; units are the device's.
+(gui/activities_page.py) above it. A tile opens the page of its activity
+(gui/activity_page.py), from its file, or from its line of the journal when the file is gone.
+While the journal reads the device, its progress instead (activities_journal.read_journal).
+The words are in gui/words.py; units are the device's.
 Has: the bar of the journal's progress on the page (activities_progress)."""
 from __future__ import annotations
 
@@ -34,6 +36,9 @@ SHAPE_HEIGHT = 96  # pixels of a tile's shape
 SHAPE_PADDING = 14
 SHAPE_LINE = 3.0
 SYMBOL_SIZE = 48  # pixels of the sport's symbol on a tile without a track
+# Pixels of the grid of tiles below which it has one tile a line, the small words of each (its
+# numbers, state and day) at the size of the page's: the narrowest window, whatever the words.
+ONE_A_LINE_BELOW = 400
 TRIVIA_ICONS = {"climbed": f"{APP_ID}-activity-elevation-symbolic",
                 "distance": f"{APP_ID}-activity-distance-symbolic"}
 # The symbol of each group of sports on a tile without a track (the program's own, in data/).
@@ -65,6 +70,10 @@ flowbox.oe-tiles > flowboxchild:focus-visible {
   border-radius: 0;
   box-shadow: none;
   outline: none;
+}
+/* One tile a line: its numbers, state and day as large as the page's words. */
+flowbox.oe-tiles.oe-one-a-line label.caption {
+  font-size: 1em;
 }
 .oe-tile-shape {
   background-color: alpha(currentColor, 0.05);
@@ -118,12 +127,13 @@ def show(win, sec, found, error: str | None = None) -> None:
         no_activities(sec)
         return
     _heading(sec, view, s)
+    known = found if error is None and found is not None and found.listing is not None else None
     if view.new:
         _numbers(sec, view)
         _trivia(sec, view)
-        _tiles(win, sec, view, found, view.new[:since_last.NEW_TILES], None)
+        _tiles(win, sec, view, known, view.new[:since_last.NEW_TILES], None)
     elif view.latest:
-        _tiles(win, sec, view, found, view.latest, words.latest_text())
+        _tiles(win, sec, view, known, view.latest, words.latest_text())
     if on_it:
         _footer(win, sec, view)
     log.info("activities page: %d new, %d with a tile, %d earlier on the device",
@@ -202,7 +212,7 @@ def _heading(sec, view, s) -> None:
     sec.group().add(box)
 
 
-def _markup(template: str, values: dict[str, str]) -> str:
+def number_markup(template: str, values: dict[str, str]) -> str:
     """A template of a number and its unit as markup: the numbers large, the rest as it is."""
     out = []
     for part in re.split(r"(\{\w+\})", template):
@@ -215,7 +225,8 @@ def _markup(template: str, values: dict[str, str]) -> str:
     return "".join(out)
 
 
-def _number(markup: str, name: str) -> Gtk.Widget:
+def number_cell(markup: str, name: str) -> Gtk.Widget:
+    """A number of a card: its value (number_markup) large over its name."""
     box = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=2, margin_top=12,
                   margin_bottom=12, margin_start=12, margin_end=12)
     value = Gtk.Label(use_markup=True, label=markup, xalign=0, wrap=True)
@@ -226,7 +237,7 @@ def _number(markup: str, name: str) -> Gtk.Widget:
     return box
 
 
-class _NumbersLayout(Gtk.LayoutManager):
+class NumbersLayout(Gtk.LayoutManager):
     """The four numbers of the card: all four on one line when they fit side by side at their
     natural width, else two lines of two in two columns (never three and one). Each column
     gets its natural width when the line has room for it, the rest in equal parts; else what
@@ -306,19 +317,19 @@ def _rectangle(x: int, y: int, width: int, height: int):
 
 def _numbers(sec, view) -> None:
     """The card of the new activities' numbers: distance, time, ascent and how many; four on
-    a line, or two by two when they do not fit (_NumbersLayout)."""
+    a line, or two by two when they do not fit (NumbersLayout)."""
     t = since_last.totals(view.new)
     grid = Gtk.Box(hexpand=True)
-    grid.set_layout_manager(_NumbersLayout())
+    grid.set_layout_manager(NumbersLayout())
     template, number = words.since_distance(t.distance, view.units.miles)
-    grid.append(_number(_markup(template, {"distance": number, "value": number}),
+    grid.append(number_cell(number_markup(template, {"distance": number, "value": number}),
                         pgettext("activity tile", "Distance")))
-    grid.append(_number(_markup("{time}", {"time": words.hours_and_minutes(t.time)}),
+    grid.append(number_cell(number_markup("{time}", {"time": words.hours_and_minutes(t.time)}),
                         pgettext("activity tile", "Time")))
     template, number = words.since_height(t.ascent, view.units.feet)
-    grid.append(_number(_markup(template, {"metres": number, "value": number}),
+    grid.append(number_cell(number_markup(template, {"metres": number, "value": number}),
                         pgettext("activity tile", "Total Ascent")))
-    grid.append(_number(_markup("{count}", {"count": str(t.count)}),
+    grid.append(number_cell(number_markup("{count}", {"count": str(t.count)}),
                         pgettext("tab", "Activities")))
     card = Gtk.Box()
     card.add_css_class("card")
@@ -413,15 +424,20 @@ def read_of(found, activity: dict):
         ascent=activity.get("ascent"), has_positions=bool(activity.get("has_track"))))
 
 
-def _open(win, read) -> None:
+def _open(win, read, activity: dict) -> None:
     from openexpress.gui import activity_page  # it imports this module
 
-    activity_page.open_activity(win, read)
+    if read is None:
+        activity_page.open_from_journal(win, activity)
+    else:
+        activity_page.open_activity(win, read)
 
 
 def _tile(win, view, found, activity: dict) -> Gtk.Widget:
     """A tile: a button that opens the page of its activity (a click, or Enter), named by its
-    kind and day; a card that opens nothing when its file is gone."""
+    kind and day: from its file, or from its line of the journal when the file is gone from the
+    device and its backups. `found`: the page's listing of them; None, not listed (its reading
+    failed): a card that opens nothing, whether the file is there not being known."""
     content = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
     content.append(_shape(activity))
     body = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4, margin_top=10,
@@ -460,24 +476,42 @@ def _tile(win, view, found, activity: dict) -> Gtk.Widget:
     bottom.append(day)
     body.append(bottom)
     content.append(body)
-    read = read_of(found, activity)
-    if read is None:
+    if found is None:
         content.add_css_class("card")
         return content
+    read = read_of(found, activity)
     tile = Gtk.Button(child=content)
     tile.add_css_class("card")
     tile.update_property([Gtk.AccessibleProperty.LABEL], [caption(kind, when)])
-    tile.connect("clicked", lambda _button: _open(win, read))
+    tile.connect("clicked", lambda _button: _open(win, read, activity))
     return tile
+
+
+class Tiles(Gtk.FlowBox):
+    """The grid of tiles: up to three a line; narrower than ONE_A_LINE_BELOW, one a line, with
+    the small words of each at the size of the page's (class oe-one-a-line). Its width alone
+    decides it, so that the page drawn again is the same."""
+
+    __gtype_name__ = "OpenExpressTiles"
+
+    def __init__(self):
+        super().__init__(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
+                         min_children_per_line=1, max_children_per_line=3, column_spacing=10,
+                         row_spacing=12, activate_on_single_click=False)
+        self.add_css_class("oe-tiles")
+
+    def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
+        one = width < ONE_A_LINE_BELOW
+        if one is not self.has_css_class("oe-one-a-line"):
+            (self.add_css_class if one else self.remove_css_class)("oe-one-a-line")
+            self.set_max_children_per_line(1 if one else 3)
+        Gtk.FlowBox.do_size_allocate(self, width, height, baseline)
 
 
 def _tiles(win, sec, view, found, activities: list[dict], title: str | None) -> None:
     """A tile for each of `activities`, newest first: three in a row in a wide window, one in
     a narrow one."""
-    flow = Gtk.FlowBox(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
-                       min_children_per_line=1, max_children_per_line=3,
-                       column_spacing=10, row_spacing=12, activate_on_single_click=False)
-    flow.add_css_class("oe-tiles")
+    flow = Tiles()
     for a in activities:
         flow.append(_tile(win, view, found, a))
     for child in _children(flow):

@@ -253,6 +253,9 @@ ALONE_ON_PURPOSE = {
         "a translation with brackets of the drive page's own words, nothing else",
     ("test_error_pages.py", "music_page", "_"):
         "a translation with brackets of the music page's own words, nothing else",
+    ("test_narrow_window.py", "words", "chart_series_name"):
+        "a long title of the elevation's section alone: the chart's switch, which does not "
+        "wrap, would widen the page",
 }
 
 

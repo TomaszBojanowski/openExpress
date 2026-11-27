@@ -281,6 +281,45 @@ def test_a_lap_whose_pace_is_its_time_leaves_it_out(sport, metres, pace):
     assert ("/km" in shown or "/100 m" in shown or "km/h" in shown) is pace
 
 
+def statute(miles=True, feet=True):
+    """The units of a device set to miles and feet (since_last.Units)."""
+    from openexpress import since_last
+
+    return since_last.Units(miles=miles, feet=feet)
+
+
+def test_the_line_of_a_lap_on_a_device_in_miles(language):
+    """Its distance in miles with two decimals, a swim in yards; a pace a mile or a hundred
+    yards; the rows of mile splits."""
+    w = words()
+    run = lap(distance=1609.344 * 1.5, timer_time=780.0, avg_speed=1609.344 * 1.5 / 780,
+              avg_heart_rate=141)
+    assert w.lap_caption(run, RUNNING, miles=True) == {
+        "en": f"1.50 mi{NB}· 13:00{NB}· 8:40 /mi{NB}· 141 bpm",
+        "pl": f"1,50 mi{NB}· 13:00{NB}· 8:40 /mi{NB}· 141 bpm"}[language]
+    swim = lap(distance=91.44 * 4, timer_time=480.0, avg_speed=91.44 * 4 / 480)
+    assert w.lap_caption(swim, SWIMMING, miles=True) == f"400 yd{NB}· 8:00{NB}· 2:00 /100 yd"
+    ride = lap(distance=16_093.44, timer_time=1800.0, avg_speed=16_093.44 / 1800)
+    assert w.lap_caption(ride, CYCLING, miles=True) == {
+        "en": f"10.00 mi{NB}· 30:00{NB}· 20.0 mph", "pl": f"10,00 mi{NB}· 30:00{NB}· 20,0 mph"}[
+        language]
+    assert w.laps_title(True, miles=True) == {"en": "Miles", "pl": "Mile"}[language]
+    assert w.laps_title(True) == {"en": "Kilometres", "pl": "Kilometry"}[language]
+    assert w.laps_title(False, miles=True) == {"en": "Laps", "pl": "Okrążenia"}[language]
+    assert w.mile_title(3) == {"en": "Mile 3", "pl": "Mila 3"}[language]
+
+
+@pytest.mark.parametrize(("sport", "metres", "pace"), [
+    (11, 1609.344, False), (11, 1000.0, True), (5, 91.44, False), (5, 100.0, True),
+    (2, 1609.344, True)])
+def test_a_lap_whose_pace_is_its_time_leaves_it_out_in_miles(sport, metres, pace):
+    """On a device in miles: a lap shown as 1.00 mi at a pace a mile (100 yd at a pace of 100
+    yd in a swim) has its pace for its time; 1 km (0.62 mi) or 100 m (109 yd) keeps it."""
+    lap = fit.Lap(1_700_000_000, 600.0, 600.0, metres, metres / 600, 120)
+    shown = words().lap_caption(lap, sport, miles=True)
+    assert ("/mi" in shown or "/100 yd" in shown or "mph" in shown) is pace
+
+
 def test_a_ride_has_its_speed_worked_out_when_its_session_does_not_say_it():
     ride = activity(sport=CYCLING, timer_time=3600.0, distance=30_000.0)
     assert tiles(words(), ride) == [("30.00 km", "Distance"), ("1:00:00", "Time"),
@@ -314,6 +353,25 @@ def test_the_names_and_units_of_the_chart(language):
     assert w.no_chart_text() == {
         "en": "No heart rate, elevation or speed in this activity",
         "pl": f"Brak tętna, wysokości i{NB}prędkości w{NB}tej aktywności"}[language]
+
+
+def test_the_units_of_the_chart_on_a_device_in_miles(language):
+    """Feet on a device set to feet, a pace a mile or a hundred yards and miles an hour on one
+    set to miles; each of the two on its own."""
+    w = words()
+    assert [w.chart_unit(kind, statute()) for kind in KINDS] == [
+        "bpm", "ft", "min/mi", "min/100 yd", "mph"]
+    assert [w.chart_unit(kind, statute(miles=False)) for kind in KINDS] == [
+        "bpm", "ft", "min/km", "min/100 m", "km/h"]
+    assert [w.chart_unit(kind, statute(feet=False)) for kind in KINDS] == [
+        "bpm", "m", "min/mi", "min/100 yd", "mph"]
+    at = w.chart_cursor_text
+    assert at(1880, "elevation", 1352.4, statute()) == f"31:20{NB}· 1352 ft"
+    assert at(1880, "pace", 499, statute()) == f"31:20{NB}· 8:19 /mi"
+    assert at(1880, "swim pace", 114, statute()) == f"31:20{NB}· 1:54 /100 yd"
+    assert at(1880, "speed", 15.14, statute()) == {"en": f"31:20{NB}· 15.1 mph",
+                                                   "pl": f"31:20{NB}· 15,1 mph"}[language]
+    assert at(1880, "heart rate", 152, statute()) == f"31:20{NB}· 152 bpm"
 
 
 def test_the_values_on_the_axes(language):
@@ -365,7 +423,7 @@ DETAILS_OF = {
                     ("Best Pace", "8:52 /km"), ("Average Cadence", "104 spm (max 118)"),
                     ("Steps", "4380"), ("Heart Rate", "86–125 bpm"), ("Calories", "180 kcal"),
                     ("Temperature", "27.4 °C (25.0–29.0 °C)")],
-           "workout": [("Work Time", "24:30"), ("Rest Time", "25:00"),
+           "workout": [("Work Time", "24:30"),
                        ("Heart Rate", "92–171 bpm"), ("Temperature", "29.0 °C (27.0–31.0 °C)"),
                        ("Respiration Rate", "24 brpm (15–38)")],
            "title": "Details"},
@@ -376,7 +434,7 @@ DETAILS_OF = {
                     ("Średnia kadencja", "104 kr./min (maks. 118)"), ("Kroki", "4380"),
                     ("Tętno", "86–125 bpm"), ("Suma kalorii", "180 kcal"),
                     ("Temperatura", "27,4 °C (25,0–29,0 °C)")],
-           "workout": [("Czas ćwiczeń", "24:30"), ("Czas odpoczynku", "25:00"),
+           "workout": [("Czas ćwiczeń", "24:30"),
                        ("Tętno", "92–171 bpm"), ("Temperatura", "29,0 °C (27,0–31,0 °C)"),
                        ("Częstotliwość oddechu", "24 brpm (15–38)")],
            "title": "Szczegóły"},
@@ -384,13 +442,32 @@ DETAILS_OF = {
 
 
 def test_the_details_of_a_walk_and_of_a_strength_workout(language):
-    """In their order, only what the file gives, nothing a tile shows already: no elapsed time
-    the same as the tile's, no calories of a workout (a tile); steps and a cadence in steps a
-    minute from strides; the moving time and its pace from the records."""
+    """In their order, only what the file gives, nothing the top shows already: no elapsed time
+    the same as the tile's, no calories nor rest time of a workout (its card has them); steps
+    and a cadence in steps a minute from strides; the moving time and its pace from the
+    records."""
     w = words()
     assert w.details_title() == DETAILS_OF[language]["title"]
     assert w.activity_details(WALK, MOVING) == DETAILS_OF[language]["walk"]
     assert w.activity_details(WORKOUT_DETAILS) == DETAILS_OF[language]["workout"]
+
+
+def test_the_details_on_a_device_in_miles(language):
+    """A walk from a device set to miles and feet: its descent and elevations in feet, its
+    paces a mile; the rest as on any device."""
+    import dataclasses
+
+    w = words()
+    walk = dataclasses.replace(WALK, units=fit.Units("statute", "statute", "statute"))
+    found = dict(w.activity_detail_kinds(walk, MOVING))
+    assert (found["descent"], found["minimum elevation"], found["maximum elevation"]) == (
+        "39 ft", "64 ft", "102 ft")
+    assert (found["moving pace"], found["best pace"]) == ("19:53 /mi", "14:16 /mi")
+    metric = dict(w.activity_detail_kinds(WALK, MOVING))
+    same = {"elapsed time", "moving time", "cadence", "steps", "heart rate", "calories",
+            "temperature"}
+    assert {k: v for k, v in found.items() if k in same} == {
+        k: v for k, v in metric.items() if k in same}
 
 
 def test_no_details_but_those_the_file_gives():

@@ -702,7 +702,8 @@ def stalled_session(usb, name, stalled=False):
     None: not known), whether it stalled, and its device's name."""
     storage = types.SimpleNamespace(usb=usb, device_uri=f"mtp://Made_Up_{len(name)}/",
                                     stalled=stalled)
-    return device_session(storage=storage, device=types.SimpleNamespace(description=name))
+    return device_session(storage=storage,
+                          device=types.SimpleNamespace(description=name, unit_id=None))
 
 
 def tells_stalls(win, monkeypatch, connected=()):
@@ -743,6 +744,47 @@ def window(**changes):
     for name, value in changes.items():
         setattr(win, name, value)
     return win
+
+
+def widget_tree(w, opaque: tuple = ()) -> dict:
+    """One widget and all under it: its type, CSS classes, what it says and shows, whether it
+    is visible and takes clicks; of a widget of the types `opaque` (another library's, whose
+    inner widgets change with its version), the widget alone."""
+    from gi.repository import Adw, Gtk
+
+    said: dict = {"type": w.__gtype__.name, "css": sorted(w.get_css_classes())}
+    if not w.get_visible():
+        said["hidden"] = True
+    if not w.get_sensitive():
+        said["insensitive"] = True
+    if w.get_tooltip_text():
+        said["tooltip"] = w.get_tooltip_text()
+    if isinstance(w, Gtk.Label):
+        said["label"] = w.get_label()
+    elif isinstance(w, Gtk.Button):
+        said["label"] = w.get_label()
+        said["icon"] = w.get_icon_name()
+    elif isinstance(w, Gtk.Image):
+        said["icon"] = w.get_icon_name()
+    if isinstance(w, Adw.PreferencesRow):
+        said["title"] = w.get_title()
+    if isinstance(w, Adw.ActionRow):
+        said["subtitle"] = w.get_subtitle()
+        said["activatable"] = w.get_activatable()
+    if isinstance(w, Adw.PreferencesGroup):
+        said["title"], said["description"] = w.get_title(), w.get_description()
+    if isinstance(w, Adw.StatusPage):
+        said["title"], said["description"] = w.get_title(), w.get_description()
+        said["icon"] = w.get_icon_name()
+    if isinstance(w, opaque):
+        return said
+    children, child = [], w.get_first_child()
+    while child is not None:
+        children.append(widget_tree(child, opaque))
+        child = child.get_next_sibling()
+    if children:
+        said["children"] = children
+    return said
 
 
 def window_picture(win, path) -> None:

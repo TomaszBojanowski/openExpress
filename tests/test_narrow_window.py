@@ -906,6 +906,68 @@ def test_a_tile_its_title_its_numbers_then_its_state_and_day(narrow_window, cloc
     assert with_state == 1
 
 
+def _font_size(label) -> int:
+    return label.get_pango_context().get_font_description().get_size()
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("width", [NARROWEST, 1000])
+def test_one_tile_a_line_has_its_numbers_state_and_day_at_the_page_s_size(narrow_window, clock,
+                                                                           language, width):
+    """The narrowest window, one tile a line: its numbers, its state and its day in the size of
+    the page's words, as its title; three tiles a line in a wide window, smaller."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress import sync
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    win = narrow_window(language, width=width)
+    key = _fill(win, "activities")
+    unit_id = win.session.device.unit_id
+    _journal_of(unit_id, datetime(2026, 10, 15, 9, 0))
+    state = sync.SyncState(unit_id)
+    state.mark_completed(sync.ACTIVITY_TYPE, "activity-4.fit")
+    state.save()
+    win.session.journal_done = True
+    win.activities.storage = win.session.storage
+    win.sections[key].clear()
+    win.sections[key].loaded = True
+    MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.3)
+    (tiles,) = [w for g in win.sections[key].groups for w in descendants(g)
+                if isinstance(w, Gtk.FlowBox)]
+    shown, child = [], tiles.get_first_child()
+    while child is not None:
+        shown.append(child)
+        child = child.get_next_sibling()
+    columns = {round(c.compute_bounds(tiles)[1].get_x()) for c in shown[:3]}
+    assert len(columns) == (1 if width == NARROWEST else 3)
+    small = 0
+    for tile in shown:
+        title, *words_ = [w for w in descendants(tile) if isinstance(w, Gtk.Label)
+                          and w.get_label()]
+        assert words_
+        for said in words_:
+            if width == NARROWEST:
+                assert _font_size(said) == _font_size(title), said.get_label()
+            else:
+                small += _font_size(said) < _font_size(title)
+    assert width == NARROWEST or small == sum(
+        len([w for w in descendants(t) if isinstance(w, Gtk.Label) and w.get_label()]) - 1
+        for t in shown)
+
+
 @pytest.mark.journal_answer
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_card_of_numbers_is_four_in_a_row_or_two_by_two(narrow_window, clock, language):
@@ -1114,20 +1176,20 @@ def _zone_bounds_break_between_words(zones) -> None:
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkeypatch, language,
                                                            sport, tiles):
-    """Its tiles two by two, the damaged file said under them, the map with its note and
-    button (or its attribution), the chart with its switch and the value at its cursor, its
-    kilometres, its heart rate zones and training effect, its details open (their longest
-    values), its sport and start in the header bar with the GPX button."""
+    """Its heading (the dot of its sport hidden), the damaged file said under it, the map with
+    its note and button (or its attribution), its numbers two by two, its elevation, its heart
+    rate with the bar of its zones and their rows, the chart with its switch and the value at
+    its cursor, its kilometres, training effect, its details open (their longest values), the
+    GPX button in the header bar."""
     from fakes import RunNow
-    from gi.repository import Adw, Gtk
+    from gi.repository import Gtk
 
-    from openexpress.gui import activity_map, activity_page
+    from openexpress.gui import activity_map, activity_overview, activity_page
     from openexpress.gui.activity_chart import ActivityChart
     from openexpress.gui.activity_details import DetailsList
     from openexpress.gui.activity_effect import EffectList
     from openexpress.gui.activity_laps import LapList
-    from openexpress.gui.activity_zones import ZoneList
-    from openexpress.gui.words import activity_start as read_start
+    from openexpress.gui.activity_zones import ZoneList, ZoneShares
 
     win = narrow_window(language)
     win.set_default_size(NARROWEST, 800)
@@ -1145,10 +1207,12 @@ def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkey
     _iterate(0.3)
     page = win.navigation.get_visible_page()
     assert page.get_tag() == "activity"
-    shown = [w.get_label() for w in descendants(page) if isinstance(w, Gtk.Label)]
-    assert {"99:59:59", "9999 m"} <= set(shown) and len(
-        [w for w in descendants(page) if isinstance(w, Gtk.FlowBoxChild)
-         and w.get_child().has_css_class("card")]) == 5
+    shown = [w.get_text() for w in descendants(page) if isinstance(w, Gtk.Label)]
+    assert {"99:59:59", "9999\u00a0m"} <= set(shown)
+    (card,) = [w for w in descendants(page) if isinstance(w, activity_overview.NumbersCard)]
+    lines = {round(c.compute_bounds(card)[1].get_y()) for c in card.cells}
+    assert len(card.cells) == 4 and len(lines) == 2  # two by two
+    assert [w for w in descendants(page) if isinstance(w, activity_overview.ElevationSection)]
     assert len([w for w in descendants(page) if isinstance(w, Gtk.ToggleButton)]) == 3
     (chart,) = [w for w in descendants(page) if isinstance(w, ActivityChart)]
     chart.area.place(180_000)
@@ -1165,18 +1229,297 @@ def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkey
     assert [w for w in descendants(page) if isinstance(w, LapList)]  # its kilometres: no laps kept
     (zones,) = [w for w in descendants(page) if isinstance(w, ZoneList)]  # the longest words
     _zone_bounds_break_between_words(zones)
+    assert [w for w in descendants(zones) if isinstance(w, ZoneShares)]
     assert [w for w in descendants(page) if isinstance(w, EffectList)]  # the scale's longest words
     (details,) = [w for w in descendants(page) if isinstance(w, DetailsList)]  # open, every row
     details.expander.set_expanded(True)
     assert len(details.rows) == LONG_DETAILS - (sport == CYCLING)
     _iterate(0.2)
     (dot,) = [w for w in descendants(page) if w.has_css_class("oe-sport-dot")]
-    assert not dot.get_visible()  # not in a narrow window: the start under the title stays whole
-    (start,) = [w for w in descendants(page) if isinstance(w, Gtk.Label) and w.get_mapped()
-                and w.get_ancestor(Adw.WindowTitle) and w.get_label() == read_start(read)]
-    assert not start.get_layout().is_ellipsized()
+    assert not dot.get_visible()  # not in a narrow window: the title has the whole width
+    (heading,) = [w for w in descendants(page) if isinstance(w, activity_overview.Heading)]
+    assert all(not w.get_layout().is_ellipsized() for w in descendants(heading)
+               if isinstance(w, Gtk.Label))
     assert _min_width(page) <= NARROWEST
     assert page.get_width() <= NARROWEST
+
+
+def _journal_line() -> dict:
+    """A made-up line of the activity journal at its longest: a long kind, every zone, the
+    largest numbers, its shape and profile."""
+    start = int(datetime(2026, 12, 31, 23, 59).timestamp())
+    return {"v": 1, "kind": "activity", "key": "made up", "file": {"name": "a.fit", "size": 1},
+            "from": "device", "start": start, "utc_offset": 3600, "sport": 37, "sub_sport": None,
+            "timer_time": 359_999.0, "elapsed_time": 359_999.0, "distance": 1_234_567.0,
+            "ascent": 99_999, "min_altitude": -400.0, "max_altitude": 8_848.0,
+            "avg_heart_rate": 200, "max_heart_rate": 255,
+            "zones": [3600, 3600, 3600, 3600, 3600, 3600], "avg_speed": 0.2, "calories": 9_999,
+            "has_track": True, "has_heart_rate": True,
+            "units": {"distance": "metric", "elevation": "metric", "speed": "metric"},
+            "shape": {"width": 900, "height": 400,
+                      "points": [[0, 300], [250, 0], [600, 400], [1000, 100], [0, 300]]},
+            "profile": [40, 80, 8848, 150, -400]}
+
+
+@pytest.mark.parametrize("width", [NARROWEST, 1000])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_page_of_an_activity_from_the_journal_fits_the_narrowest_window(narrow_window,
+                                                                            language, width):
+    """From the journal alone, at its longest: its heading and where it comes from wrapped, its
+    shape, its numbers two by two (four on a line in a wide window), its elevation and its heart
+    rate with the legend of every zone wrapped; no GPX button."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_overview, activity_page
+    from openexpress.gui.activity_zones import ZoneList, ZoneShares
+
+    win = narrow_window(language, width=width)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_page.open_from_journal(win, _journal_line())
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    assert page.get_tag() == "activity-journal"
+    (card,) = [w for w in descendants(page) if isinstance(w, activity_overview.NumbersCard)]
+    lines = {round(c.compute_bounds(card)[1].get_y()) for c in card.cells}
+    assert len(card.cells) == 4 and len(lines) == (2 if width == NARROWEST else 1)
+    assert [w for w in descendants(page) if isinstance(w, activity_overview.ShapeCard)]
+    assert [w for w in descendants(page) if isinstance(w, activity_overview.ElevationSection)]
+    (shares,) = [w for w in descendants(page) if isinstance(w, ZoneShares)]
+    legend = [w for w in descendants(shares) if isinstance(w, Gtk.Label)]
+    assert len(legend) == 6 and all(w.get_layout().get_line_count() == 1 for w in legend)
+    assert not [w for w in descendants(page) if isinstance(w, Gtk.Button)
+                and w.get_tooltip_text() and "GPX" in w.get_tooltip_text()]
+    beside = [s.said for s in descendants(page)
+              if isinstance(s, (activity_overview.ElevationSection, ZoneList))]
+    assert len(beside) == 2
+    if width == NARROWEST:
+        assert _min_width(page) <= NARROWEST
+        assert page.get_width() <= NARROWEST
+    else:  # the words beside a title on one line, wrapped only when there is no room
+        assert [w.get_layout().get_line_count() for w in beside] == [1, 1]
+
+
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_page_of_an_activity_in_miles_fits_the_narrowest_window(narrow_window, monkeypatch,
+                                                                    language):
+    """A device set to miles and feet, the longest numbers: its splits in miles, its details
+    and the chart in feet and miles; the page no wider than the narrowest window."""
+    import dataclasses
+
+    from fakes import RunNow
+    from gi.repository import Adw
+
+    from openexpress import fit
+    from openexpress.gui import activity_map, activity_page
+    from openexpress.gui.activity_details import DetailsList
+
+    win = narrow_window(language)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    read, data = _long_hike()
+    data = dataclasses.replace(data, units=fit.Units("statute", "statute", "statute"))
+    monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+    activity_map.set_tiles(False)
+    win.run_task = RunNow()
+    activity_page.open_activity(win, read)
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    rows = [w for w in descendants(page) if isinstance(w, Adw.ActionRow)]
+    assert rows[0].get_title() == {"en": "Mile 1", "pl": "Mila 1"}[language]
+    (details,) = [w for w in descendants(page) if isinstance(w, DetailsList)]
+    details.expander.set_expanded(True)
+    _iterate(0.2)
+    assert any(r.value.get_label().endswith(" ft") for r in details.rows)
+    assert _min_width(page) <= NARROWEST
+    assert page.get_width() <= NARROWEST
+
+
+BELOW_ZONE_1 = {("en", "file"): "The whole time below Zone 1 (below 219 bpm)",
+                ("pl", "file"): "Cały czas poniżej strefy 1 (poniżej 219 bpm)",
+                ("en", "journal"): "The whole time below Zone 1",
+                ("pl", "journal"): "Cały czas poniżej strefy 1"}
+
+
+@pytest.mark.parametrize("kind", ["file", "journal"])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_whole_time_below_zone_1_fits_the_narrowest_window(narrow_window, monkeypatch,
+                                                               language, kind):
+    """All the time below zone 1: its one sentence (with where zone 1 begins from a file,
+    without it from the journal) wraps in the narrowest window."""
+    import dataclasses
+
+    from fakes import RunNow
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_map, activity_page
+    from openexpress.gui.activity_zones import ZoneList
+
+    win = narrow_window(language, width=NARROWEST)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_map.set_tiles(False)
+    if kind == "file":
+        read, data = _long_hike()
+        data = dataclasses.replace(data, zones=dataclasses.replace(
+            data.zones, times=(359_999, 0, 0, 0, 0, 0)))
+        monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+        win.run_task = RunNow()
+        activity_page.open_activity(win, read)
+    else:
+        activity_page.open_from_journal(win, {**_journal_line(),
+                                              "zones": [359_999, 0, 0, 0, 0, 0]})
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    (zones,) = [w for w in descendants(page) if isinstance(w, ZoneList)]
+    said = [w.get_label() for w in descendants(zones) if isinstance(w, Gtk.Label)
+            and not w.is_ancestor(zones.header)]
+    assert said == [BELOW_ZONE_1[language, kind]]
+    assert _min_width(page) <= NARROWEST
+    assert page.get_width() <= NARROWEST
+
+
+PHONE_HEIGHT = 640  # a window as tall as a phone's screen, its header bar in it
+
+
+@pytest.mark.parametrize("kind", ["file", "journal"])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_numbers_of_an_activity_are_seen_without_scrolling(narrow_window, monkeypatch,
+                                                               language, kind):
+    """The narrowest window, as tall as a phone: the card of numbers right under the heading
+    (and the line of where the page comes from), the whole of it seen before the page is
+    scrolled; the map, or the journal's shape, under it."""
+    from fakes import RunNow
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_map, activity_overview, activity_page
+
+    win = narrow_window(language, width=NARROWEST)
+    win.set_default_size(NARROWEST, PHONE_HEIGHT)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_map.set_tiles(False)
+    if kind == "file":
+        read, data = _long_hike()
+        monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+        win.run_task = RunNow()
+        activity_page.open_activity(win, read)
+    else:
+        activity_page.open_from_journal(win, _journal_line())
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    (scrolled,) = [w for w in descendants(page) if isinstance(w, Gtk.ScrolledWindow)
+                   and w.get_mapped()]
+    (card,) = [w for w in descendants(page) if isinstance(w, activity_overview.NumbersCard)]
+    below = activity_map.ActivityMap if kind == "file" else activity_overview.ShapeCard
+    (under,) = [w for w in descendants(page) if isinstance(w, below)]
+    assert card.get_next_sibling() is under
+    assert scrolled.get_vadjustment().get_value() == 0
+    _found, seen = card.compute_bounds(scrolled)
+    assert seen.get_y() >= 0
+    assert seen.get_y() + seen.get_height() <= scrolled.get_height()
+
+
+def _open_long_hike(narrow_window, monkeypatch, language, width):
+    """The window of this width with the page of _long_hike open (no tiles under its map)."""
+    from fakes import RunNow
+
+    from openexpress.gui import activity_map, activity_page
+
+    win = narrow_window(language, width=width)
+    win.set_default_size(width, 800)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_map.set_tiles(False)
+    read, data = _long_hike()
+    monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+    win.run_task = RunNow()
+    activity_page.open_activity(win, read)
+    _iterate(0.3)
+    return win.navigation.get_visible_page()
+
+
+def _beside_or_under(section, title: str) -> str:
+    """How the header of a section shows the words beside its title (section.said): "beside"
+    its title and description, none of them wrapped nor cut; or "under" them, at their start,
+    only when they do not fit on one line side by side."""
+    from gi.repository import Gtk
+
+    shown = [w for w in descendants(section) if isinstance(w, Gtk.Label) and w.get_mapped()]
+    (head,) = [w for w in shown if w.get_label() == title]
+    lead = [head, *(w for w in shown if w.get_label().startswith(("Bounds", "Granice")))]
+    said = section.said
+
+    def box(widget):
+        return widget.compute_bounds(section)[1]
+
+    assert not head.get_layout().is_ellipsized()
+    words = box(said)
+    if words.get_y() >= max(box(w).get_y() + box(w).get_height() for w in lead) - 0.5:
+        assert abs(words.get_x() - box(head).get_x()) <= 1  # at the start
+        natural = (max(w.measure(Gtk.Orientation.HORIZONTAL, -1)[1] for w in lead)
+                   + said.measure(Gtk.Orientation.HORIZONTAL, -1)[1])
+        assert natural > section.get_width() - 24  # no room for both, a gap between
+        return "under"
+    assert said.get_layout().get_line_count() == 1
+    for w in lead:
+        assert w.get_layout().get_line_count() == 1
+        assert words.get_x() >= box(w).get_x() + w.get_layout().get_pixel_size()[0]
+    return "beside"
+
+
+@pytest.mark.parametrize("width", [NARROWEST, 480, 640])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_words_beside_a_section_s_title_go_under_it_without_room(narrow_window, monkeypatch,
+                                                                     language, width):
+    """The headers of the heart rate zones (how the bounds were worked out, and the average and
+    highest heart rate) and of the elevation (its lowest and highest point): side by side while
+    both fit on one line, else one under the other; never both wrapped side by side."""
+    from openexpress.gui import activity_overview
+    from openexpress.gui.activity_zones import ZoneList
+
+    page = _open_long_hike(narrow_window, monkeypatch, language, width)
+    (zones,) = [w for w in descendants(page) if isinstance(w, ZoneList)]
+    (elevation,) = [w for w in descendants(page)
+                    if isinstance(w, activity_overview.ElevationSection)]
+    titles = {"en": ("Heart Rate Zones", "Elevation"), "pl": ("Strefy tętna", "Wysokość")}
+    found = (_beside_or_under(zones, titles[language][0]),
+             _beside_or_under(elevation, titles[language][1]))
+    if width == NARROWEST:  # the bounds' words are long: under, in either language
+        assert found[0] == "under"
+
+
+@pytest.mark.parametrize("width", [NARROWEST, 480, 640])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_a_long_title_of_the_elevation_has_its_words_under_it(narrow_window, monkeypatch,
+                                                              language, width):
+    """A long translation of "Elevation" in the title of its section (the chart's switch keeps
+    its own, which does not wrap): the title whole, wrapped when it must be, and its lowest
+    and highest point under it unless both fit on one line (at 640 px in English)."""
+    from openexpress.gui import activity_overview, words
+
+    long_title = "Elevation above the sea along the whole of the track"
+    real = words.chart_series_name
+    monkeypatch.setattr(words, "chart_series_name",
+                        lambda kind: long_title if kind == "elevation" else real(kind))
+    page = _open_long_hike(narrow_window, monkeypatch, language, width)
+    (elevation,) = [w for w in descendants(page)
+                    if isinstance(w, activity_overview.ElevationSection)]
+    found = _beside_or_under(elevation, long_title)
+    if width < 640:
+        assert found == "under"
 
 
 @pytest.mark.parametrize("language", ["en", "pl"])

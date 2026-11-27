@@ -4,6 +4,7 @@ use them too."""
 from __future__ import annotations
 
 import math
+import re
 from dataclasses import replace
 from datetime import datetime
 from typing import NamedTuple
@@ -615,12 +616,17 @@ def upload_state_text(state: str) -> str:
     return pgettext("upload state", "Not uploaded yet")
 
 
+METRES_A_MILE = 1609.344
+METRES_A_YARD = 0.9144
+METRES_A_FOOT = 0.3048
+
+
 def since_distance(metres: float, miles: bool) -> tuple[str, str]:
     """A distance of the page since the last connection, as a template and its number: one
     decimal, in kilometres or in miles ("{distance} km", "53.0")."""
     if miles:
         # TRANSLATORS: a distance in miles on the Activities page ("33.0 mi")
-        return _("{value} mi"), decimal(f"{metres / 1609.344:.1f}")
+        return _("{value} mi"), decimal(f"{metres / METRES_A_MILE:.1f}")
     return _("{distance} km"), decimal(f"{metres / 1000:.1f}")
 
 
@@ -629,7 +635,7 @@ def since_height(metres: float, feet: bool) -> tuple[str, str]:
     metres or feet ("{metres} m", "893")."""
     if feet:
         # TRANSLATORS: an ascent in feet on the Activities page ("2930 ft")
-        return _("{value} ft"), whole(round(metres / 0.3048))
+        return _("{value} ft"), whole(round(metres / METRES_A_FOOT))
     return _("{metres} m"), whole(round(metres))
 
 
@@ -738,22 +744,31 @@ def activity_clock(seconds: float) -> str:
     return f"{hours}:{minutes:02}:{secs:02}" if hours else f"{minutes}:{secs:02}"
 
 
-def activity_distance(metres: float | None, sport: int | None) -> str | None:
+def activity_distance(metres: float | None, sport: int | None,
+                      miles: bool = False) -> str | None:
     """A distance: in kilometres with two decimals ("10.24 km"), a swim in whole metres ("1500
-    m"); None for none or 0 m (a workout may record 0 m)."""
+    m"); on a device in `miles`, in miles ("6.36 mi") and yards ("1640 yd"); None for none or
+    0 m (a workout may record 0 m)."""
     if not metres or metres <= 0:
         return None
+    if miles:
+        template, number = _overview_distance(metres, sport, miles)
+        return template.format(value=number)
     if sport == _SWIMMING:
         return metres_text(metres)
     # TRANSLATORS: a distance in kilometres on the page of an activity ("10.24 km")
     return _("{distance} km").format(distance=decimal(f"{metres / 1000:.2f}"))
 
 
-def activity_pace(speed: float | None, sport: int | None) -> str | None:
+def activity_pace(speed: float | None, sport: int | None, miles: bool = False) -> str | None:
     """How fast, from a speed in metres a second, as the sport tells it (speed_kind): "5:10
-    /km", "2:05 /100 m" or "24.3 km/h"; None for none or 0."""
+    /km", "2:05 /100 m" or "24.3 km/h"; on a device in `miles`, "8:19 /mi", "1:54 /100 yd" or
+    "15.1 mph"; None for none or 0."""
     if not speed or speed <= 0:
         return None
+    if miles:
+        _kind, template, number = _overview_speed(speed, sport, miles)
+        return template.format(pace=number, speed=number)
     kind = speed_kind(sport)
     if kind == "pace":
         return _pace_text(kind, 1000 / speed)
@@ -762,9 +777,16 @@ def activity_pace(speed: float | None, sport: int | None) -> str | None:
     return _pace_text(kind, speed * 3.6)
 
 
-def _pace_text(kind: str, value: float) -> str:
+def _pace_text(kind: str, value: float, miles: bool = False) -> str:
     """A pace (`value`: the seconds a kilometre takes, a hundred metres of a swim) or a speed
-    (kilometres an hour) in its unit."""
+    (kilometres an hour) in its unit; on a device in `miles`, of a mile, a hundred yards, miles
+    an hour."""
+    if miles:
+        if kind == "pace":
+            return _("{pace} /mi").format(pace=activity_clock(value))
+        if kind == "swim pace":
+            return _("{pace} /100 yd").format(pace=activity_clock(value))
+        return _("{speed} mph").format(speed=decimal(f"{value:.1f}"))
     if kind == "pace":
         # TRANSLATORS: a pace, the time a kilometre takes ("5:10 /km")
         return _("{pace} /km").format(pace=activity_clock(value))
@@ -798,11 +820,19 @@ def calories_text(kcal: int | None) -> str | None:
     return _("{calories} kcal").format(calories=whole(kcal))
 
 
-def ascent_text(metres: int | None) -> str | None:
-    """A total ascent in whole metres: "740 m"; None for none or 0, as the list leaves it out."""
+def ascent_text(metres: int | None, feet: bool = False) -> str | None:
+    """A total ascent in whole metres, or feet on a device in `feet`: "740 m"; None for none or
+    0, as the list leaves it out."""
     if not metres or metres <= 0:
         return None
-    return metres_text(metres)
+    return height_text(metres, feet)
+
+
+def height_text(metres: float, feet: bool = False) -> str:
+    """A height or an ascent in whole metres ("740 m"), or feet on a device in `feet` ("2428
+    ft")."""
+    template, number = since_height(metres, feet)
+    return template.format(metres=number, value=number)
 
 
 def tile_name(kind: str) -> str:
@@ -822,29 +852,192 @@ def tile_name(kind: str) -> str:
     return names[kind]
 
 
-def activity_tile_kinds(data) -> list[tuple[str, str]]:
+def activity_tile_kinds(data, units=None) -> list[tuple[str, str]]:
     """The tiles on top of an activity's page (fit.ActivityData), each (kind, value): with a
     distance its distance, time, pace or speed, average heart rate and ascent; without one (a
     workout, also one of 0 m) its time, average and maximum heart rate, calories and ascent. A
     value not given leaves its tile out, an ascent of 0 m too; the time is the timer's, the
-    elapsed standing in; a speed its sessions do not give is worked out."""
+    elapsed standing in; a speed its sessions do not give is worked out. In `units`
+    (since_last.Units; None: kilometres and metres)."""
     sport = data.sport
+    miles, feet = (units.miles, units.feet) if units is not None else (False, False)
     time = data.timer_time if data.timer_time is not None else data.elapsed_time
     clock = activity_clock(time) if time is not None else None
-    distance = activity_distance(data.distance, sport)
+    distance = activity_distance(data.distance, sport, miles)
     if distance:
         speed = data.avg_speed
         if speed is None and time:
             speed = data.distance / time
         tiles = [("distance", distance), ("time", clock),
-                 (speed_kind(sport), activity_pace(speed, sport)),
+                 (speed_kind(sport), activity_pace(speed, sport, miles)),
                  ("average heart rate", heart_rate_text(data.avg_heart_rate)),
-                 ("ascent", ascent_text(data.ascent))]
+                 ("ascent", ascent_text(data.ascent, feet))]
     else:
         tiles = [("time", clock), ("average heart rate", heart_rate_text(data.avg_heart_rate)),
                  ("maximum heart rate", heart_rate_text(data.max_heart_rate)),
-                 ("calories", calories_text(data.calories)), ("ascent", ascent_text(data.ascent))]
+                 ("calories", calories_text(data.calories)),
+                 ("ascent", ascent_text(data.ascent, feet))]
     return [(kind, value) for kind, value in tiles if value]
+
+
+# --- the top of an activity's page: its numbers in the units of its device -------------------
+
+
+
+def overview_title(shown) -> str:
+    """The title of an activity's page (one_activity.Overview): its kind with its sub sport."""
+    from openexpress.activities import kind_name
+
+    return kind_name(shown.sport, shown.sub_sport)
+
+
+def overview_when(shown, device: str) -> str:
+    """Under the title: the day in digits, the time on the clock the device had where it was,
+    and the device ("2026-11-21 · 09:14 · fēnix 8")."""
+    from openexpress.one_activity import started
+
+    when = started(shown)
+    if when is None:
+        return caption(device)
+    return caption(when.strftime(_("%Y-%m-%d")), when.strftime("%H:%M"), device)
+
+
+def _overview_distance(metres: float, sport: int | None, miles: bool) -> tuple[str, str]:
+    """A distance of the top of an activity's page, as a template and its number: two decimals
+    of a kilometre or of a mile, a swim in whole metres or yards."""
+    if sport == _SWIMMING:
+        if miles:
+            # TRANSLATORS: the distance of a swim in yards on the page of an activity ("1500 yd")
+            return _("{value} yd"), whole(round(metres / METRES_A_YARD))
+        return _("{metres} m"), whole(round(metres))
+    if miles:
+        return _("{value} mi"), decimal(f"{metres / METRES_A_MILE:.2f}")
+    return _("{distance} km"), decimal(f"{metres / 1000:.2f}")
+
+
+def _overview_speed(speed: float, sport: int | None, miles: bool) -> tuple[str, str, str]:
+    """How fast (metres a second) as the sport tells it, as its kind (speed_kind), a template
+    and its number: "8:02" a kilometre or a mile, "2:00" a hundred metres or yards, "24.3" km/h
+    or mph."""
+    kind = speed_kind(sport)
+    if kind == "pace":
+        if miles:
+            # TRANSLATORS: a pace, the time a mile takes ("12:56 /mi")
+            return kind, _("{pace} /mi"), activity_clock(METRES_A_MILE / speed)
+        return kind, _("{pace} /km"), activity_clock(1000 / speed)
+    if kind == "swim pace":
+        if miles:
+            # TRANSLATORS: a pace of a swim, the time a hundred yards take ("2:00 /100 yd")
+            return kind, _("{pace} /100 yd"), activity_clock(100 * METRES_A_YARD / speed)
+        return kind, _("{pace} /100 m"), activity_clock(100 / speed)
+    if miles:
+        # TRANSLATORS: a speed in miles an hour ("24.9 mph")
+        return kind, _("{speed} mph"), decimal(f"{speed * 3600 / METRES_A_MILE:.1f}")
+    return kind, _("{speed} km/h"), decimal(f"{speed * 3.6:.1f}")
+
+
+def overview_numbers(shown) -> list[tuple[str, str, dict[str, str]]]:
+    """The numbers on top of an activity's page (one_activity.Overview), each its name, its
+    template and the values of the template (the number and its unit kept on one line): with a
+    distance its distance, time, pace or speed and ascent; without one (a workout, also one of
+    0 m) its time, calories, rest time and ascent; in the units of its device. One not given
+    is left out, an ascent of 0 m too."""
+    found: list[tuple[str, str, dict[str, str]]] = []
+
+    def add(name: str, template: str, value: str) -> None:
+        # The one field of the template, whatever its name in the translation.
+        found.append((name, _whole(template),
+                      dict.fromkeys(re.findall(r"\{(\w+)\}", template), value)))
+
+    sport, units = shown.sport, shown.units
+    if shown.distance and shown.distance > 0:
+        template, number = _overview_distance(shown.distance, sport, units.miles)
+        add(tile_name("distance"), template, number)
+    if shown.time is not None:
+        add(tile_name("time"), "{time}", activity_clock(shown.time))
+    if shown.distance and shown.distance > 0:
+        if shown.speed:
+            kind, template, number = _overview_speed(shown.speed, sport, units.miles)
+            add(tile_name(kind), template, number)
+    else:
+        if shown.calories is not None:
+            add(tile_name("calories"), _("{calories} kcal"), whole(shown.calories))
+        if shown.rest_time:
+            add(detail_name("rest time"), "{time}", activity_clock(shown.rest_time))
+    if shown.ascent and shown.ascent > 0:
+        template, number = since_height(shown.ascent, units.feet)
+        add(tile_name("ascent"), template, number)
+    return found
+
+
+def elevation_range(shown) -> list[str]:
+    """The lowest and the highest point of an activity, in the units of its device ("38 m
+    lowest", "212 m highest"); none when either is not known."""
+    if shown.lowest is None or shown.highest is None:
+        return []
+    said = []
+    for point, words_ in ((shown.lowest, "lowest"), (shown.highest, "highest")):
+        template, number = since_height(point, shown.units.feet)
+        height = _whole(template.format(metres=number, value=number))
+        if words_ == "lowest":
+            # TRANSLATORS: beside the title of the elevation of an activity: its lowest point
+            # ("38 m lowest")
+            said.append(pgettext("elevation", "{height} lowest").format(height=height))
+        else:
+            # TRANSLATORS: beside the title of the elevation of an activity: its highest point
+            # ("212 m highest")
+            said.append(pgettext("elevation", "{height} highest").format(height=height))
+    return said
+
+
+def heart_rate_words(shown) -> list[str]:
+    """The average and the highest heart rate of an activity ("148 bpm average", "176 bpm
+    highest"), each when known."""
+    said = []
+    if shown.avg_heart_rate is not None:
+        # TRANSLATORS: beside the title of the heart rate zones: the average heart rate of the
+        # activity ("148 bpm average")
+        said.append(pgettext("heart rate", "{rate} average").format(
+            rate=_whole(heart_rate_text(shown.avg_heart_rate))))
+    if shown.max_heart_rate is not None:
+        # TRANSLATORS: beside the title of the heart rate zones: the highest heart rate of the
+        # activity ("176 bpm highest")
+        said.append(pgettext("heart rate", "{rate} highest").format(
+            rate=_whole(heart_rate_text(shown.max_heart_rate))))
+    return said
+
+
+def percent_text(percent: int) -> str:
+    # TRANSLATORS: a share in percent ("38%"), under the bar of the heart rate zones
+    return _("{percent}%").format(percent=percent)
+
+
+def zone_shares(times) -> list[tuple[int, str]]:
+    """Each zone (1 to 5; 0, the time below zone 1, first and only when there is some) with its
+    share of the time in all ("38%"); none when no time is kept."""
+    total = sum(times)
+    if not total:
+        return []
+    return [(number, percent_text(round(seconds / total * 100)))
+            for number, seconds in enumerate(times) if number or seconds]
+
+
+def zone_share_text(number: int, share: str) -> str:
+    """A zone and its share in the legend of the bar of the zones ("Zone 1 · 6%")."""
+    return caption(_whole(zone_name(number)), share)
+
+
+def shape_only_text() -> str:
+    # TRANSLATORS: over the shape of an activity's track drawn on a plain grid: there is no map
+    # under it (before the yes to OpenStreetMap's map, or from the activity journal)
+    return _("Shape only, no map underneath")
+
+
+def from_journal_text() -> str:
+    # TRANSLATORS: on the page of an activity whose file is gone: what the page shows comes from
+    # the activity journal of this computer
+    return _("The file of this activity is no longer on the device or in its backups; this is "
+             "what the activity journal kept")
 
 
 # FIT sports whose cadence is in steps a minute (two steps a stride): those read with a pace a
@@ -952,24 +1145,32 @@ def activity_detail_kinds(data, moving: float | None = None) -> list[tuple[str, 
     elevation, average moving pace (or speed), best pace (or maximum speed), cadence, steps,
     heart rate (minimum–maximum), calories, temperature, respiration rate. Only what the file
     gives: `moving` is the moving time worked out from its records (None: none); no value of
-    0; nothing a tile shows already (a time, a pace or calories the same as a tile's)."""
+    0; nothing the top shows already (a time, a pace or calories the same as a tile's, the rest
+    time its card shows without a distance). In the units of its device
+    (one_activity.units_of_file)."""
+    from openexpress.one_activity import units_of_file
+
     sport, kind = data.sport, speed_kind(data.sport)
-    tiles = dict(activity_tile_kinds(data))
+    units = units_of_file(data)
+    miles, feet = units.miles, units.feet
+    tiles = dict(activity_tile_kinds(data, units))
+    if "distance" not in tiles:  # overview_numbers: the card of a workout has its rest time
+        tiles["rest time"] = _clock(data.rest_time)
     moving_speed = data.distance / moving if moving and data.distance else None
     found = [
         ("elapsed time", _clock(data.elapsed_time), "time"),
         ("moving time", _clock(moving) if "distance" in tiles else None, "time"),
         ("work time", _clock(data.active_time), "time"),
-        ("rest time", _clock(data.rest_time), None),
-        ("descent", metres_text(data.descent) if data.descent else None, None),
-        ("minimum elevation",
-         metres_text(data.min_altitude) if data.min_altitude is not None else None, None),
-        ("maximum elevation",
-         metres_text(data.max_altitude) if data.max_altitude is not None else None, None),
+        ("rest time", _clock(data.rest_time), "rest time"),
+        ("descent", height_text(data.descent, feet) if data.descent else None, None),
+        ("minimum elevation", height_text(data.min_altitude, feet)
+         if data.min_altitude is not None else None, None),
+        ("maximum elevation", height_text(data.max_altitude, feet)
+         if data.max_altitude is not None else None, None),
         ("moving speed" if kind == "speed" else "moving pace",
-         activity_pace(moving_speed, sport) if "distance" in tiles else None, kind),
+         activity_pace(moving_speed, sport, miles) if "distance" in tiles else None, kind),
         ("maximum speed" if kind == "speed" else "best pace",
-         activity_pace(data.max_speed, sport), None),
+         activity_pace(data.max_speed, sport, miles), None),
         ("cadence", _cadence_text(data), None),
         ("steps", whole(round(2 * data.cycles))
          if data.cycles and sport in _STEP_CADENCE else None, None),
@@ -995,12 +1196,16 @@ def lap_title(number: int) -> str:
     return _("Lap {number}").format(number=number)
 
 
-def laps_title(kilometres: bool) -> str:
-    """The title of the laps of an activity's page: its device's laps, or the kilometres
-    worked out from its records when the device kept none."""
+def laps_title(splits: bool, miles: bool = False) -> str:
+    """The title of the laps of an activity's page: its device's laps, or the kilometres (on a
+    device in `miles`, the miles) worked out from its records when the device kept none."""
+    if splits and miles:
+        # TRANSLATORS: title of the list of mile splits worked out from an activity's records,
+        # shown in place of "Laps" on a device set to miles (not the unit)
+        return _("Miles")
     # TRANSLATORS: title of the list of kilometre splits worked out from an activity's records,
     # shown in place of "Laps" (not the unit)
-    return (_("Kilometres") if kilometres
+    return (_("Kilometres") if splits
             # TRANSLATORS: title of the list of an activity's laps as its device recorded them
             else _("Laps"))
 
@@ -1012,25 +1217,35 @@ def kilometre_title(number: int) -> str:
     return _("Kilometre {number}").format(number=number)
 
 
-def _pace_is_time(distance: str | None, sport: int | None) -> bool:
+def mile_title(number: int) -> str:
+    """The title of the row of a mile worked out from the records: "Mile 1"."""
+    # TRANSLATORS: the title of the row of a mile on the page of an activity whose device, set
+    # to miles, kept no laps
+    return _("Mile {number}").format(number=number)
+
+
+def _pace_is_time(distance: str | None, sport: int | None, miles: bool = False) -> bool:
     """Whether a lap shown with this distance has its time for its pace: shown as 1.00 km at
-    a pace a kilometre, or as 100 m at a pace of 100 m (a swim)."""
+    a pace a kilometre, or as 100 m at a pace of 100 m (a swim); on a device in `miles`, as
+    1.00 mi or 100 yd."""
     kind = speed_kind(sport)
     if kind == "pace":
-        return distance == activity_distance(1000, sport)
-    return kind == "swim pace" and distance == activity_distance(100, sport)
+        return distance == activity_distance(METRES_A_MILE if miles else 1000, sport, miles)
+    return kind == "swim pace" and distance == activity_distance(
+        100 * METRES_A_YARD if miles else 100, sport, miles)
 
 
-def lap_caption(lap, sport: int | None) -> str:
+def lap_caption(lap, sport: int | None, miles: bool = False) -> str:
     """The line of a lap (fit.Lap): its distance, its time (the timer's, the elapsed standing
     in), how fast (its average speed, else worked out; no pace that is its time) and its
-    average heart rate; only what it gives."""
+    average heart rate; only what it gives; in miles on a device in `miles`."""
     time = lap.timer_time if lap.timer_time is not None else lap.elapsed_time
     speed = lap.avg_speed
     if speed is None and lap.distance and time:
         speed = lap.distance / time
-    distance = activity_distance(lap.distance, sport)
-    fast = activity_pace(speed, sport) if distance and not _pace_is_time(distance, sport) else None
+    distance = activity_distance(lap.distance, sport, miles)
+    fast = (activity_pace(speed, sport, miles)
+            if distance and not _pace_is_time(distance, sport, miles) else None)
     parts = [distance, activity_clock(time) if time is not None else None, fast,
              heart_rate_text(lap.avg_heart_rate)]
     return caption(*(part for part in parts if part))
@@ -1051,6 +1266,19 @@ def zone_name(number: int) -> str:
         return _("Below Zone 1")
     # TRANSLATORS: a heart rate zone ("Zone 3")
     return _("Zone {number}").format(number=number)
+
+
+def all_below_zone_1_text(bound: int | None = None) -> str:
+    """The whole time of an activity below zone 1, no second in zones 1 to 5 (a slow walk): one
+    sentence instead of the bar and the rows of the zones; with `bound`, the heart rate where
+    zone 1 begins (from a file: the activity journal keeps no bounds)."""
+    if bound is None:
+        # TRANSLATORS: the section of the heart rate zones of an activity whose whole time was
+        # below zone 1 (a slow walk), said instead of the bar and the rows of the zones
+        return _("The whole time below Zone 1")
+    # TRANSLATORS: as "The whole time below Zone 1", with the heart rate where zone 1 begins
+    # ({rate}: "118 bpm")
+    return _("The whole time below Zone 1 (below {rate})").format(rate=heart_rate_text(bound))
 
 
 def zone_range(bounds, number: int) -> str:
@@ -1187,8 +1415,19 @@ def chart_series_name(kind: str) -> str:
     return names[kind]
 
 
-def chart_unit(kind: str) -> str:
-    """The unit of a series, once on top of the axis of its values."""
+def chart_unit(kind: str, units=None) -> str:
+    """The unit of a series, once on top of the axis of its values; in `units`
+    (since_last.Units; None: kilometres and metres)."""
+    if units is not None and units.feet and kind == "elevation":
+        # TRANSLATORS: the unit on top of the axis of the chart of an activity, on a device set
+        # to feet and miles
+        return pgettext("chart unit", "ft")
+    if units is not None and units.miles and kind in ("pace", "swim pace", "speed"):
+        # TRANSLATORS: the units on top of the axis of the chart of an activity, on a device
+        # set to miles: a pace a mile, a pace a hundred yards, miles an hour
+        a_mile = pgettext("chart unit", "min/mi")
+        return {"pace": a_mile, "swim pace": pgettext("chart unit", "min/100 yd"),
+                "speed": pgettext("chart unit", "mph")}[kind]
     units = {
         # TRANSLATORS: the unit on top of the axis of the chart of an activity
         "heart rate": pgettext("chart unit", "bpm"),
@@ -1224,21 +1463,24 @@ def chart_tick(kind: str, value: float, step: float) -> str:
     return str(round(value))
 
 
-def chart_value_text(kind: str, value: float) -> str:
+def chart_value_text(kind: str, value: float, units=None) -> str:
     """A value of a series where the cursor is: "152 bpm", "412 m", "5:10 /km", "2:05 /100 m",
-    "24.3 km/h"."""
+    "24.3 km/h"; in `units` (since_last.Units; None: kilometres and metres), "1352 ft", "8:19
+    /mi", "1:54 /100 yd", "15.1 mph"."""
     if kind == "heart rate":
         return heart_rate_text(round(value))
     if kind == "elevation":  # as the axis has it: no thousands apart, a hyphen below zero
+        if units is not None and units.feet:
+            return _("{value} ft").format(value=round(value))
         return _("{metres} m").format(metres=round(value))
-    return _pace_text(kind, value)
+    return _pace_text(kind, value, units is not None and units.miles)
 
 
-def chart_cursor_text(seconds: float, kind: str, value: float | None) -> str:
+def chart_cursor_text(seconds: float, kind: str, value: float | None, units=None) -> str:
     """The line beside the chart's switch while its cursor is placed: the time since the start
     and the value there ("31:20 · 152 bpm"), or that there is none (a gap, a pause)."""
     # TRANSLATORS: beside the chart of an activity, where its cursor is on a gap or a pause
-    shown = _("no reading") if value is None else chart_value_text(kind, value)
+    shown = _("no reading") if value is None else chart_value_text(kind, value, units)
     return caption(activity_clock(seconds), shown)
 
 

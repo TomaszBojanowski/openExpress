@@ -210,8 +210,8 @@ def test_back_from_the_page_of_an_activity_to_the_activities_page(device_window,
 
     win = device_window(width=width)
     page = _activity_page(win, device_root)
-    assert {"12.40 km", "Distance", "740 m"} <= {w.get_label() for w in descendants(page)
-                                                if isinstance(w, Gtk.Label)}
+    assert {"12.40\u00a0km", "Distance", "740\u00a0m"} <= {w.get_text() for w in descendants(page)
+                                                          if isinstance(w, Gtk.Label)}
     _back(win)
     assert _stack(win) == ["start", "device"]
     assert win.pages.get_visible_child_name() == "activities"

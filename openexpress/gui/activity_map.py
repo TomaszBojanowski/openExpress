@@ -5,7 +5,8 @@ where the chart's cursor is. The mouse wheel scrolls the page over it; Ctrl and 
 buttons, a double click or a pinch zoom it. Streets and terrain under it come from
 OpenStreetMap's tile server only after a yes given once for the program (gui.json "map_tiles":
 on the page or in Preferences, taken back there); until then the track is on a plain
-background, with a note of what the server would learn and a button. The tiles are asked by
+background (a grid, with the words that there is no map under the track), with a note of
+what the server would learn and a button. The tiles are asked by
 openExpress itself, with its own User-Agent, at most DOWNLOADS at a time and only those the map
 shows (its view is set, never flown to), kept in the program's cache (cache.CATEGORIES "tiles")
 as long as the server allows, at most CACHE_LIMIT, and drawn by openExpress (TileLayer: each
@@ -48,6 +49,7 @@ from openexpress.gui.activity_chart import nearest  # noqa: E402
 from openexpress.gui.gui_settings import load_gui_settings, update_gui_settings  # noqa: E402
 from openexpress.gui.palette import GREEN, rgba  # noqa: E402
 from openexpress.gui.window_tasks import switch_saved  # noqa: E402
+from openexpress.gui.words import shape_only_text  # noqa: E402
 from openexpress.i18n import _  # noqa: E402
 
 log = logging.getLogger(__name__)
@@ -86,6 +88,9 @@ CHOSEN_WIDTH = 6  # pixels of the track's colour where a lap is chosen
 FADED = 0.5  # the strength of the rest of the track then
 HINT_S = 1.5  # how long the map says that Ctrl and the wheel zoom it
 ZOOM_MS = 200  # the flight of the zoom buttons, as libshumate's own zoom
+GRID_PX = 40  # pixels between two lines of the plain background's grid
+GRID_LINE = 0.09  # the strength of the text's colour of its lines
+GRID_FILL = 0.035  # and of the background under them
 
 
 def available() -> bool:
@@ -664,7 +669,46 @@ def _runs(points, inside, wanted: bool) -> list[list]:
     return runs
 
 
+def draw_grid(cr, width: float, height: float, colour, dx: float = 0, dy: float = 0) -> None:
+    """A plain background: faintly the colour of the text, with lines every GRID_PX pixels,
+    shifted by `dx` and `dy` (a map's grid moves with its view)."""
+    cr.set_source_rgba(colour.red, colour.green, colour.blue, GRID_FILL)
+    cr.rectangle(0, 0, width, height)
+    cr.fill()
+    cr.set_source_rgba(colour.red, colour.green, colour.blue, GRID_LINE)
+    cr.set_line_width(1)
+    x = dx % GRID_PX
+    while x < width:
+        cr.move_to(round(x) + 0.5, 0)
+        cr.line_to(round(x) + 0.5, height)
+        x += GRID_PX
+    y = dy % GRID_PX
+    while y < height:
+        cr.move_to(0, round(y) + 0.5)
+        cr.line_to(width, round(y) + 0.5)
+        y += GRID_PX
+    cr.stroke()
+
+
 if Shumate is not None:
+    class GridLayer(Shumate.Layer):
+        """The plain background under the track (draw_grid), moving with the map's view; the
+        tiles, after the yes, cover it."""
+
+        __gtype_name__ = "OpenExpressGridLayer"
+
+        def __init__(self, viewport):
+            super().__init__(viewport=viewport)
+            viewport.connect("notify", _view_changed, weakref.ref(self))
+
+        def do_snapshot(self, snapshot) -> None:
+            width, height = self.get_width(), self.get_height()
+            if width <= 0 or height <= 0:
+                return
+            _scale, dx, dy = view_offset(self.get_viewport(), width, height)
+            cr = snapshot.append_cairo(Graphene.Rect().init(0, 0, width, height))
+            draw_grid(cr, width, height, self.get_color(), dx, dy)
+
     class TrackLayer(Shumate.Layer):
         """The track, drawn by openExpress: its colour over a dark edge, or each piece in the
         colour of the point it starts at (`colours`, gui/activity_colours.py) over the edge of
@@ -842,6 +886,15 @@ def _draw_end(_area, cr, width: int, height: int, kind: str) -> None:
         color = rgba(START_COLOUR)
         cr.set_source_rgba(color.red, color.green, color.blue, 1)
         cr.paint()
+    cr.restore()
+
+
+def draw_start(cr, x: float, y: float) -> None:
+    """The marker of a track's start, as on the map, its middle at (x, y): the shape of an
+    activity from the journal marks its start with it (gui/activity_overview.py)."""
+    cr.save()
+    cr.translate(x - END_SIZE / 2, y - END_SIZE / 2)
+    _draw_end(None, cr, END_SIZE, END_SIZE, "start")
     cr.restore()
 
 
@@ -1042,6 +1095,7 @@ class ActivityMap(MapView):
         self.track = track
         self.map.update_property([Gtk.AccessibleProperty.LABEL], [_("Map of the track")])
         viewport = self.map.get_viewport()
+        self.map.add_layer(GridLayer(viewport))
         self.path = TrackLayer(viewport, track)
         self.map.add_layer(self.path)
         self.lowest = self.path
@@ -1082,6 +1136,14 @@ class ActivityMap(MapView):
             zoom.append(button)
         self.overlay.add_overlay(self.hint)
         self.overlay.add_overlay(zoom)
+        # Over the grid while no tile is under the track.
+        self.shape_only = Gtk.Label(label=shape_only_text(), wrap=True, xalign=0,
+                                    halign=Gtk.Align.START, valign=Gtk.Align.START,
+                                    margin_top=10, margin_start=12, margin_end=60,
+                                    can_target=False)
+        self.shape_only.add_css_class("caption")
+        self.shape_only.add_css_class("dim-label")
+        self.overlay.add_overlay(self.shape_only)
         self.series = None  # the chart's series the track is coloured by
         self.legend = activity_colours.TrackLegend()
         self.legend.switch.connect("notify::active", _colours_switched)
@@ -1100,6 +1162,11 @@ class ActivityMap(MapView):
         self.note.append(button)
         self.append(self.note)
         self._below()
+
+    def show_tiles(self, on: bool) -> None:
+        """The tiles under the track, or the grid with the words that there is no map."""
+        MapView.show_tiles(self, on)
+        self.shape_only.set_visible(self.tiles is None)
 
     def colour_by(self, series) -> None:
         """The track coloured by this series of the chart (gui/activity_colours.py) while the
