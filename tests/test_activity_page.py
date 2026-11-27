@@ -404,6 +404,44 @@ def test_the_time_below_zone_1_on_the_bar_only_when_there_is_some(monkeypatch):
     assert shares.bar.parts == [(0, 0.5), (1, 0.5), (2, 0.0), (3, 0.0), (4, 0.0), (5, 0.0)]
 
 
+def words_under_the_header(section) -> list[str]:
+    """The words of a section of the top but those of its header."""
+    from gi.repository import Gtk
+
+    return [w.get_label() for w in descendants(section) if isinstance(w, Gtk.Label)
+            and not w.is_ancestor(section.header)]
+
+
+def test_the_whole_time_below_zone_1_said_in_one_sentence(monkeypatch):
+    """No second in zones 1 to 5 (a slow walk): no bar and no rows of five zones of no time,
+    one sentence with where zone 1 begins instead; the header (how the bounds were worked out,
+    the average and highest heart rate) as ever."""
+    from openexpress.gui.activity_zones import SharesBar, ZoneRow
+
+    _win, page = page_of(monkeypatch, zoned(lapped_walk(), times=(2490, 0, 0, 0, 0, 0)))
+    zones = zone_section(page)
+    assert section_words(zones) == ("Heart Rate Zones",
+                                    f"105{NB}bpm average{NB}· 120{NB}bpm highest")
+    assert zones.header.description.get_label() == ("Bounds from the device: % of lactate "
+                                                    "threshold (165 bpm)")
+    assert not [w for w in descendants(zones) if isinstance(w, (SharesBar, ZoneRow))]
+    assert words_under_the_header(zones) == ["The whole time below Zone 1 (below 120 bpm)"]
+
+
+def test_from_the_journal_the_whole_time_below_zone_1_without_its_bound():
+    """The journal keeps no bounds of the zones: the same sentence, without where zone 1
+    begins; no bar and no legend of five zones of no time."""
+    from openexpress.gui import activity_page
+    from openexpress.gui.activity_zones import SharesBar, ZoneShares
+
+    win, _the_list = a_window(b"")
+    activity_page.open_from_journal(win, journal_line(zones=[2490, 0, 0, 0, 0, 0]))
+    zones = zone_section(shown(win))
+    assert section_words(zones)[0] == "Heart Rate Zones"
+    assert not [w for w in descendants(zones) if isinstance(w, (SharesBar, ZoneShares))]
+    assert words_under_the_header(zones) == ["The whole time below Zone 1"]
+
+
 def test_without_a_track_the_numbers_first(monkeypatch):
     """A workout: no shape, its numbers under its heading."""
     win, _the_list = a_window(workout())

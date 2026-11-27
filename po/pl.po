@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 18:41+0100\n"
+"POT-Creation-Date: 2026-11-27 21:39+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -12053,6 +12053,20 @@ msgstr "Poniżej strefy 1"
 #, python-brace-format
 msgid "Zone {number}"
 msgstr "Strefa {number}"
+
+#. TRANSLATORS: the section of the heart rate zones of an activity whose whole time was
+#. below zone 1 (a slow walk), said instead of the bar and the rows of the zones
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "The whole time below Zone 1"
+msgstr "Cały czas poniżej strefy 1"
+
+#. TRANSLATORS: as "The whole time below Zone 1", with the heart rate where zone 1 begins
+#. ({rate}: "118 bpm")
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "The whole time below Zone 1 (below {rate})"
+msgstr "Cały czas poniżej strefy 1 (poniżej {rate})"
 
 #. TRANSLATORS: the heart rates below zone 1 (made up: "below 118 bpm")
 #: openexpress/gui/words.py

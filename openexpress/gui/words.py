@@ -1268,6 +1268,19 @@ def zone_name(number: int) -> str:
     return _("Zone {number}").format(number=number)
 
 
+def all_below_zone_1_text(bound: int | None = None) -> str:
+    """The whole time of an activity below zone 1, no second in zones 1 to 5 (a slow walk): one
+    sentence instead of the bar and the rows of the zones; with `bound`, the heart rate where
+    zone 1 begins (from a file: the activity journal keeps no bounds)."""
+    if bound is None:
+        # TRANSLATORS: the section of the heart rate zones of an activity whose whole time was
+        # below zone 1 (a slow walk), said instead of the bar and the rows of the zones
+        return _("The whole time below Zone 1")
+    # TRANSLATORS: as "The whole time below Zone 1", with the heart rate where zone 1 begins
+    # ({rate}: "118 bpm")
+    return _("The whole time below Zone 1 (below {rate})").format(rate=heart_rate_text(bound))
+
+
 def zone_range(bounds, number: int) -> str:
     """The heart rates of a zone (0: below zone 1) from the bounds the device keeps
     (fit.HeartRateZones), as Garmin Connect shows them: each bound is the first beat of the

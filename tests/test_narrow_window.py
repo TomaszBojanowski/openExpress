@@ -1340,6 +1340,53 @@ def test_the_page_of_an_activity_in_miles_fits_the_narrowest_window(narrow_windo
     assert page.get_width() <= NARROWEST
 
 
+BELOW_ZONE_1 = {("en", "file"): "The whole time below Zone 1 (below 219 bpm)",
+                ("pl", "file"): "Cały czas poniżej strefy 1 (poniżej 219 bpm)",
+                ("en", "journal"): "The whole time below Zone 1",
+                ("pl", "journal"): "Cały czas poniżej strefy 1"}
+
+
+@pytest.mark.parametrize("kind", ["file", "journal"])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_whole_time_below_zone_1_fits_the_narrowest_window(narrow_window, monkeypatch,
+                                                               language, kind):
+    """All the time below zone 1: its one sentence (with where zone 1 begins from a file,
+    without it from the journal) wraps in the narrowest window."""
+    import dataclasses
+
+    from fakes import RunNow
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_map, activity_page
+    from openexpress.gui.activity_zones import ZoneList
+
+    win = narrow_window(language, width=NARROWEST)
+    win.set_default_size(NARROWEST, 800)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_map.set_tiles(False)
+    if kind == "file":
+        read, data = _long_hike()
+        data = dataclasses.replace(data, zones=dataclasses.replace(
+            data.zones, times=(359_999, 0, 0, 0, 0, 0)))
+        monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+        win.run_task = RunNow()
+        activity_page.open_activity(win, read)
+    else:
+        activity_page.open_from_journal(win, {**_journal_line(),
+                                              "zones": [359_999, 0, 0, 0, 0, 0]})
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    (zones,) = [w for w in descendants(page) if isinstance(w, ZoneList)]
+    said = [w.get_label() for w in descendants(zones) if isinstance(w, Gtk.Label)
+            and not w.is_ancestor(zones.header)]
+    assert said == [BELOW_ZONE_1[language, kind]]
+    assert _min_width(page) <= NARROWEST
+    assert page.get_width() <= NARROWEST
+
+
 PHONE_HEIGHT = 640  # a window as tall as a phone's screen, its header bar in it
 
 

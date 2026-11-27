@@ -4,8 +4,9 @@ zones as its device worked them out (fit.HeartRateZones), zone 5 on top, then 4 
 time below zone 1, each with its bounds, its time and share, and a bar of its share (they say
 the bar's colours); under the title how the bounds were worked out. From the activity journal
 (which keeps the time in each zone, never their bounds) the bar alone, with a legend of each
-zone and its share under it; a file with a heart rate but no zones, its average and highest
-alone. The zones' colours read on the cards of the light style and of the dark one alike (a
+zone and its share under it; the whole time below zone 1 (no second in zones 1 to 5), one
+sentence instead of the bar and the rows; a file with a heart rate but no zones, its average and
+highest alone. The zones' colours read on the cards of the light style and of the dark one alike (a
 contrast of 3:1 and a margin with both); the chart of heart rate draws its bands in them
 (gui/activity_chart.py). The header of a section of the top (SectionHeader: the title, a
 description under it and the words beside them, or under them in a narrow window) is here too.
@@ -24,6 +25,7 @@ from gi.repository import Adw, Gdk, Gtk, Pango  # noqa: E402 - imports must foll
 
 from openexpress.gui.palette import BLUE, GREEN, GREY, rgba  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
+    all_below_zone_1_text,
     detail_name,
     zone_name,
     zone_range,
@@ -210,7 +212,9 @@ class ZoneList(Gtk.Box):
     worked out under it, the average and highest heart rate beside them, `said`); the bar of
     the shares of `times` (the seconds below zone 1, then in zones 1 to 5; those of `zones`
     when not given) and the rows of `zones` (fit.HeartRateZones) under it, or without them its
-    legend. No time in any zone: titled the heart rate, its average and highest alone."""
+    legend. The whole time below zone 1: one sentence (`below`) instead of them, with where zone
+    1 begins when `zones` says it. No time in any zone: titled the heart rate, its average and
+    highest alone."""
 
     __gtype_name__ = "OpenExpressZoneList"
 
@@ -218,18 +222,24 @@ class ZoneList(Gtk.Box):
         super().__init__(orientation=Gtk.Orientation.VERTICAL,
                          accessible_role=Gtk.AccessibleRole.GROUP)
         times = tuple(zones.times) if zones is not None and times is None else times
+        below_only = bool(times) and times[0] > 0 and not any(times[1:])
+        self.below = None
+        if below_only:
+            self.below = Gtk.Label(label=all_below_zone_1_text(
+                zones.bounds[0] if zones is not None else None), wrap=True, xalign=0,
+                margin_top=12, margin_bottom=12, margin_start=12, margin_end=12)
         self.rows = ([ZoneRow(number, zones) for number in reversed(range(len(zones.times)))]
-                     if zones is not None else [])
-        self.shares = (ZoneShares(times, legend=not self.rows) if times and sum(times) > 0
-                       else None)
-        title = zones_title() if self.shares is not None or self.rows else detail_name(
-            "heart rate")
+                     if zones is not None and not below_only else [])
+        self.shares = (ZoneShares(times, legend=not self.rows)
+                       if times and sum(times) > 0 and not below_only else None)
+        title = (zones_title() if self.shares is not None or self.rows or below_only
+                 else detail_name("heart rate"))
         self.header = SectionHeader(title, zones_method_text(zones) if zones is not None
                                     else None, said)
         self.said = self.header.said
         self.update_property([Gtk.AccessibleProperty.LABEL], [title])
         self.append(self.header)
-        rows = [self.shares] if self.shares is not None else []
+        rows = [w for w in (self.below, self.shares) if w is not None]
         if rows or self.rows:
             self.append(boxed_list([*rows, *self.rows]))
 
