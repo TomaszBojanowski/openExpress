@@ -870,7 +870,7 @@ def test_a_tile_whose_file_is_gone_opens_the_page_from_the_journal(tmp_path, cap
     assert page.get_tag() == "activity-journal" and page.get_title() == "Strength training"
     found, buttons = journal_page(win)
     assert found == ["heading", FROM_JOURNAL, "numbers"] and buttons == []
-    said = [r.getMessage() for r in caplog.records]
+    said = [r.getMessage() for r in caplog.records if r.name == "openexpress.gui.activity_page"]
     assert said == [("activity page: from the activity journal, 1 numbers, no shape, no "
                      "elevation, no heart rate")]
     win.navigation.pop()
