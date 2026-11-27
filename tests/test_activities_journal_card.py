@@ -9,7 +9,9 @@ Made-up files only; a folder stands for the device."""
 import json
 import logging
 import os
+import re
 import types
+from pathlib import Path
 
 import pytest
 from conftest import DEVICE_XML
@@ -93,7 +95,7 @@ def test_fresh_data_of_the_program_without_the_answer_show_the_card(tmp_path, re
         win, section = the_page(tmp_path / str(_drawn))
         assert "Keep an Activity Journal?" in labels(section)
         assert win.activities_note is None
-        assert "An activity journal shows your weeks and your year" not in labels(section)
+        assert "An activity journal shows what is new since the last connection" not in labels(section)
 
 
 def test_keep_a_journal_saves_the_yes_and_reads_the_device(tmp_path, reading, caplog):
@@ -114,7 +116,7 @@ def test_not_now_saves_the_no_and_the_line_comes(tmp_path, reading, caplog):
     assert answer_saved() is False and reading == []
     assert "Keep an Activity Journal?" not in labels(section)
     assert section.groups[-1] is win.activities_note
-    assert "An activity journal shows your weeks and your year" in labels(section)
+    assert "An activity journal shows what is new since the last connection" in labels(section)
     assert "activity journal: off" in caplog.text
 
 
@@ -179,7 +181,7 @@ def answer(value) -> None:
     s.save()
 
 
-LINE = ["An activity journal shows your weeks and your year", "Preferences"]
+LINE = ["An activity journal shows what is new since the last connection", "Preferences"]
 OTHER_ACCOUNT = ["The activity journal is not kept for a device on another Garmin Connect account"]
 
 
@@ -275,3 +277,27 @@ def test_try_again_after_the_page_failed_draws_it_anew(tmp_path, reading, caplog
     assert section.stack.get_visible_child_name() == "content"
     assert section.groups[-1] is win.activities_note and texts_of(win.activities_note) == LINE
     button(section, "Show 1 More")
+
+
+# The modules of the Activities page and of an activity's page, and the words they share.
+PAGES = ("activities_journal.py", "activities_since.py", "activities_page.py", "activity_page.py",
+         "activity_overview.py", "activity_zones.py", "activity_chart.py", "activity_laps.py",
+         "activity_details.py", "activity_colours.py", "activity_map.py", "words.py")
+NOT_YET = re.compile(r"\b(weeks?|years?|calendar|records)\b", re.IGNORECASE)
+
+
+def test_no_text_of_the_activities_promises_what_is_not_there():
+    """The pages of the activities show what is new since the connection before this one and
+    each activity, nothing of weeks or a year: none of their texts promises weeks, a year,
+    records or a calendar."""
+    template = (Path(__file__).resolve().parent.parent / "po" / "openexpress.pot").read_text(
+        encoding="utf-8")
+    promised = []
+    for block in template.split("\n\n"):
+        where = " ".join(re.findall(r"^#: (.*)$", block, re.MULTILINE))
+        if "msgid " not in block or not any(f"gui/{page}" in where for page in PAGES):
+            continue
+        said = "".join(re.findall(r'"(.*)"', block[block.index("msgid "):].split("msgstr")[0]))
+        if NOT_YET.search(said):
+            promised.append(said)
+    assert promised == []

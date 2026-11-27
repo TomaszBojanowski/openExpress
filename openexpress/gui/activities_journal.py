@@ -84,12 +84,12 @@ def card(win, sec) -> None:
     title = Gtk.Label(label=_("Keep an Activity Journal?"), wrap=True, xalign=0)
     title.add_css_class("title-4")
     box.append(title)
-    # TRANSLATORS: text of the card about the activity journal; "your weeks and your year":
-    # what the Activities page will show of them
+    # TRANSLATORS: text of the card about the activity journal; "the device's last connection":
+    # the one before the device is plugged in now
     text = _("openExpress can keep a summary and the shape of each activity on this computer, "
-             "so that the Activities page shows your weeks and your year even after the device "
-             "deletes old files. Nothing is sent anywhere. You can turn it off or delete it in "
-             "Preferences.")
+             "so that the Activities page shows what is new since the device's last connection "
+             "and keeps your activities after the device deletes old files. Nothing is sent "
+             "anywhere. You can turn it off or delete it in Preferences.")
     box.append(Gtk.Label(label=text, wrap=True, xalign=0))
     # TRANSLATORS: button of the card about the activity journal: the no
     later = Gtk.Button(label=_("Not Now"))
@@ -122,7 +122,8 @@ def line(win, sec) -> None:
     if said is False:
         # TRANSLATORS: line at the very bottom of the Activities page after the no to the
         # activity journal, beside the button Preferences
-        text, preferences = _("An activity journal shows your weeks and your year"), True
+        text = _("An activity journal shows what is new since the last connection")
+        preferences = True
     elif said is True and _another_account(win):
         # TRANSLATORS: line at the very bottom of the Activities page of a device on another
         # Garmin Connect account than the one signed in

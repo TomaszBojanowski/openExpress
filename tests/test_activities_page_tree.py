@@ -367,10 +367,10 @@ def texts(tree: dict) -> list[str]:
 
 CARD = ["Keep an Activity Journal?",
         ("openExpress can keep a summary and the shape of each activity on this computer, so "
-         "that the Activities page shows your weeks and your year even after the device "
-         "deletes old files. Nothing is sent anywhere. You can turn it off or delete it in "
-         "Preferences."), "Not Now", "Keep a Journal"]
-LINE = ["An activity journal shows your weeks and your year", "Preferences"]
+         "that the Activities page shows what is new since the device's last connection and "
+         "keeps your activities after the device deletes old files. Nothing is sent anywhere. "
+         "You can turn it off or delete it in Preferences."), "Not Now", "Keep a Journal"]
+LINE = ["An activity journal shows what is new since the last connection", "Preferences"]
 OTHER_ACCOUNT = [("The activity journal is not kept for a device on another Garmin Connect "
                   "account")]
 SHOWN_AS_BEFORE = ("loading", "error", "keeps-none")  # no content: nothing added
