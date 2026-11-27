@@ -100,8 +100,10 @@ readable only by you, each kind within its limit, the oldest removed first:
 ## Activities
 
 - The **Activities** page and `openexpress activities` read the activity files of the device and
-  of its backups only when you open the page or run the command. What they say (sport, start,
-  time, distance, ascent) is kept in memory while the device is open, never on disk.
+  of its backups when you open the page or run the command. What the list says (sport, start,
+  time, distance, ascent) is kept in memory while the device is open, never on disk. Only the
+  activity journal (below), after your yes, reads the new files at each connection and keeps a
+  summary of each on disk.
 - A GPX file is written only where you save it. It holds the positions, elevation and time of
   the activity and nothing of the device.
 - The dry run of `openexpress sync` downloads the files waiting in Garmin Connect into memory to
@@ -112,8 +114,9 @@ readable only by you, each kind within its limit, the oldest removed first:
 ### The activity journal
 
 Devices keep a limited number of activities and delete the oldest themselves (an Edge 1050
-keeps about 200). So that the Activities page can show your activities after that, openExpress
-can keep an activity journal on this computer, only after your yes: the card on the Activities
+keeps about 200). So that your activities are kept after that, and the Activities page can show
+what is new since the device's last connection, openExpress can keep an activity journal on this
+computer, only after your yes: the card on the Activities
 page, the switch **Keep an Activity Journal** in Preferences, or
 `openexpress setup --activity-journal on`. Until you answer, and after a no, nothing is read or
 written for it.
@@ -129,7 +132,7 @@ written for it.
   shape and size.
 - **What it never holds:** a position on Earth, the device's serial number or Unit ID, a path.
   It also keeps a line for each connection: how many activities the device held, its oldest
-  and its newest.
+  and its newest, and a short digest that tells one connection from the next.
 - **Where:** one file a device, `activities.jsonl` in the device's folder (see
   [What is kept of each device](#what-is-kept-of-each-device)), readable only by you. Like the
   rest of that folder it goes into backups of your home folder.

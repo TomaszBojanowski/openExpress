@@ -445,44 +445,101 @@ fēnix 8.
 
 ## Activities
 
-The Activities page and `openexpress activities` list the activities of the connected device,
+The Activities page and `openexpress activities` show the activities of the connected device,
 over MTP or as a USB drive, and of its backups (`Garmin/Backups` in your Documents folder, or
-`--backups DIR`): the newest 30 first, then 30 more with **Show 30 More** (`--limit N`,
-`--all`). Each has its sport, start, time (pauses left out), distance, ascent and where it was
-read: the device, or the backup of a date for one the device no longer has. The page reads the
-files when you open it, never when a device connects. A file the device was still writing
-when it was connected says so (unplug the device and plug it in again, then open the page again),
-as do a damaged file and a file that is no FIT file.
+`--backups DIR`).
 
-A click on an activity (or Enter) opens its page, which reads its file again:
+### The activity journal
 
-- On top: its distance, time, pace or speed, average heart rate and ascent (a workout without a
-  distance: its time, average and maximum heart rate, calories and ascent), each only when the
-  file gives it.
+The first time you open the Activities page, a card asks **Keep an Activity Journal?**
+
+- **Keep a Journal** is your yes: openExpress reads the activity files of the device once
+  (*Reading the activities of this device…*) and keeps a summary and the shape of each on this
+  computer. From then on it adds the new ones whenever the device is opened in the window, after
+  a background sync and after `openexpress sync --apply`. Nothing is sent anywhere. What the
+  journal holds, and what it never holds: [The activity journal](privacy.md#the-activity-journal).
+- **Not Now**, and every visit before you answer: nothing is read or written for a journal, and
+  the page lists the activities as before (below). After **Not Now** a line at the bottom of
+  the page says what a journal shows, with a button to Preferences.
+
+In Preferences → **Activity Journal**, **Keep an Activity Journal** turns it on or off (off keeps
+what it holds) and **Delete the Activity Journal** deletes the journal of every device, after
+asking. **Forget Device** deletes the journal of that device. No journal is kept for a device on
+another Garmin Connect account than the one signed in; the page says so at its bottom. On the
+command line: `openexpress setup --activity-journal on` (or `off`), and `openexpress activities
+journal`, which tells how many activities the journal of the connected device holds, since when,
+its gaps and its size (`--all`: of every device; `--delete --apply` deletes it).
+
+### What is new
+
+With the journal kept, the page shows what is new since the device's connection before this
+one:
+
+- on top how many new activities and since when (*Since yesterday*, a day's name, a date), and
+  when the last sync uploaded to Garmin Connect, if it did after that connection;
+- their distance, time, ascent and number in a card, and, when they climbed or went far enough,
+  a comparison with a landmark (*That is the Eiffel Tower 2.1 times.*);
+- a tile for each of the newest six: the shape of its track in the colour of its sport (or its
+  sport's symbol), its numbers, *Uploaded* or *Not uploaded yet* as this computer's syncs know
+  it, and its day. With nothing new, the newest three under **Latest**;
+- at the bottom how many earlier activities the device holds, and **Show All**, the list below.
+
+The first time, the page says *Activity journal started* and how many activities were read, from
+which date. When older activities left the device before the journal could read them, it says
+that too.
+
+### The list
+
+**Show All**, and the page without a journal, list the activities: the newest 30 first, then 30
+more with **Show 30 More** (`--limit N`, `--all`). Each has its sport, start, time (pauses left
+out), distance, ascent and where it was read: the device, or the backup of a date for one the
+device no longer has. The list reads the files when you open it. A file the device was still
+writing when it was connected says so (unplug the device and plug it in again, then open the page
+again), as do a damaged file and a file that is no FIT file.
+
+### The page of an activity
+
+A tile or a row (a click, or Enter) opens the page of the activity, read from its file:
+
+- On top its kind (with its sub sport, such as *Trail running*), when it started and on which
+  device, and its numbers in a card: distance, time, pace or speed and ascent; a workout without
+  a distance: its time, calories, rest time and ascent. Each only when the file gives it.
 - An activity with positions has a map of its track, its start and finish marked, the track
   coloured by what the chart shows: from blue (low, or a slow pace) to red (high, or a fast
-  pace), with the legend and the **Colours** switch under the map. Streets and terrain come
-  from OpenStreetMap only once you turn them on, with **Show the Map** or in Preferences →
-  **Activity Maps** ([Activity maps from OpenStreetMap](privacy.md#activity-maps-from-openstreetmap)); until then the
-  track is drawn on a plain background. Ctrl + scroll or the buttons on the map zoom it.
-- The chart shows heart rate, elevation and pace or speed, one at a time, and the place of its
-  cursor is marked on the map.
-- The laps (the device's, or each kilometre when the device kept no laps): choose one to see it
+  pace), with the legend and the **Colours** switch under the map. Streets and terrain come from
+  OpenStreetMap only once you turn them on, with **Show the Map** or in Preferences → **Activity
+  Maps** ([Activity maps from OpenStreetMap](privacy.md#activity-maps-from-openstreetmap)); until
+  then the track is drawn on a plain grid. Ctrl + scroll or the buttons on the map zoom it.
+- Its elevation: the lowest and the highest point, and its profile along the distance.
+- Its heart rate: the average and the highest, and the zones as the device worked them out, a bar
+  of the share of each and a row for each with its bounds, time and share. When the whole time
+  was below zone 1, one sentence says so instead.
+- The chart shows heart rate, elevation and pace or speed, one at a time; behind the heart rate,
+  the bands of the zones, each named when it is tall enough. The place of its cursor is marked
+  on the map.
+- The laps: the device's or, when it kept none and the activity is at least two kilometres
+  long, each kilometre (each mile from two miles, on a device set to miles). Choose one to see it
   on the map and on the chart.
-- The heart rate zones as the device worked them out, with the time in each; the training
-  effect and training load.
-- In a row that opens, the details: elapsed and moving time, descent, elevation, best pace,
-  cadence, steps, heart rate, temperature and more, only those the file gives.
+- The training effect and training load, then, in a row that opens, the details: elapsed and
+  moving time, descent, elevation, best pace, cadence, steps, temperature and more, only those
+  the file gives.
 
-The moving time, the average moving pace, the temperatures with their decimal, the rest time of
-a strength workout and the kilometres of an activity without the device's own laps are worked
-out by openExpress from what the device recorded, so they may differ slightly from Garmin
-Connect's; the other values come from the summary the device wrote into its file.
+The page is in the units the device shows: kilometres or miles, metres or feet. The moving time,
+the average moving pace, the temperatures with their decimal, the rest time of a strength workout
+and the kilometres or miles of an activity without the device's own laps are worked out by
+openExpress from what the device recorded, so they may differ slightly from Garmin Connect's; the
+other values come from the summary the device wrote into its file.
 
 <p align="center">
   <img src="screenshots/activity.png" width="800"
-       alt="The page of a hike: its summary, its track on a map coloured by elevation and its elevation profile">
+       alt="The page of a made-up trail run: its kind, date and device, its distance, time, pace and ascent, and its track on a plain grid coloured by heart rate">
 </p>
+
+When the file of an activity is no longer on the device or in its backups, its tile opens what
+the journal kept, and a line on the page says so: its numbers, the shape of its track on a plain
+grid in the colour of its sport, its start marked, its elevation profile, and its heart rate with
+the share of each zone (the journal keeps no bounds of the zones). Without the file there is no
+map, chart, laps, details or GPX.
 
 The export button of an activity, or `openexpress activities export NAME… --apply`, writes it
 as a GPX 1.1 file named `YYYY-MM-DD HH.MM Sport.gpx`: each point with its position, elevation
@@ -496,9 +553,9 @@ manufacturer, product and creation time, its messages and whether it is whole. T
 of a fēnix 8.
 
 <p align="center">
-  <img src="screenshots/activities.png" width="700" alt="Activities">
+  <img src="screenshots/activities.png" width="700"
+       alt="The Activities page of a made-up watch with its journal kept: what is new since the connection before this one, its numbers and a tile for each new activity">
 </p>
-
 ## Device Status
 
 The Device Status page, last in the side panel, tells what needs attention on the connected

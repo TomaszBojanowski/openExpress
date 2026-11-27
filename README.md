@@ -19,7 +19,7 @@
 <p align="center">
   <picture>
     <source media="(prefers-color-scheme: dark)" srcset="docs/screenshots/activity.png">
-    <img alt="openExpress – the page of a hike: its track on a map coloured by elevation, and its elevation profile" src="docs/screenshots/activity-light.png" width="800">
+    <img alt="openExpress – the page of a made-up trail run: its kind, date and device, its distance, time, pace and ascent, and its track on a plain grid coloured by heart rate" src="docs/screenshots/activity-light.png" width="800">
   </picture>
 </p>
 
@@ -54,9 +54,11 @@ was checked on other devices is in the table below. Other Garmin devices that co
 - Installs, updates and removes Connect IQ apps, turns them on or off and puts them back in
   order – also on watches that hide their app folder, such as the fēnix 8.
 - Copies music, podcasts and audiobooks, with playlists.
-- Shows the activities of the device and of its backups, each on its own page: the track on a
-  map coloured by heart rate, pace or elevation (streets from OpenStreetMap once you turn them
-  on), charts, laps, heart rate zones, training effect and details. Exports them as GPX.
+- Shows the activities of the device and of its backups and, with an activity journal kept on
+  this computer after your yes, what is new since the last connection. Each activity has its own
+  page in the units of the device: its numbers, the track on a map coloured by heart rate, pace
+  or elevation (streets from OpenStreetMap once you turn them on), elevation, heart rate zones,
+  charts, laps, training effect and details. Exports them as GPX.
 - Shows what any FIT file holds, and what a sync will write to the device.
 - Shows what needs attention on the device: its crashes, its software updates and what takes
   its space; frees up space taken by older memory dumps and updates it did not install.
@@ -82,7 +84,7 @@ was checked on other devices is in the table below. Other Garmin devices that co
 
 <p align="center">
   <img src="docs/screenshots/activities.png" width="700"
-       alt="The Activities page: activities of a fēnix 8 with their sport, time, distance and ascent">
+       alt="The Activities page of a made-up watch with its journal kept: what is new since the connection before this one, its numbers and a tile for each new activity">
 </p>
 
 <p align="center">
@@ -240,6 +242,8 @@ changes anything only shows its plan until you add `--apply`. Every command:
   the copies of its diagnostic files stay on this computer.
 - Sync never deletes files from the device, and every file written to it is checked.
 - The log never has serial numbers, Unit IDs, tokens or e-mail addresses.
+- The activity journal is kept only after your yes and only on this computer: a summary and the
+  shape of each activity, never a position on Earth. Preferences turn it off or delete it.
 - The map of an activity asks OpenStreetMap for its streets only after you turn them on; the
   server then learns the area of each map you look at and your IP address, never the activity,
   its track or your account.

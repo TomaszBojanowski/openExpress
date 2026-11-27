@@ -135,31 +135,37 @@ where the user lives. Without the map, the program sends nothing about activitie
 
 ## 4. The look and the flow
 
-The page, from top to bottom (D22): the header bar (back, a dot of the sport's colour before the
-title, GPX), the tiles with their icons, the map with its legend under it (with positions), the
-chart, the laps (or kilometres), the heart rate zones, the training effect and load, the
-details (closed). Each part only when the file has its data; a section without data is not
-shown, not empty.
+The page, from top to bottom (D22): the header bar (back, GPX), the heading (a dot of the sport's
+colour, the kind with its sub sport, when it started and on which device), the card of its
+numbers, the map with its legend under it (with positions), the elevation, the heart rate zones,
+the chart, the laps (or kilometres), the training effect and load, the details (closed). Each
+part only when the file has its data; a section without data is not shown, not empty. All of it
+is in the units the device shows.
 
 ```
- ← ● Walk · Sat 7 Mar, 10:12                                [GPX]
- ┌ ⌖ 3.25 km ┐ ┌ ◷ 40:00 ┐ ┌ ◔ 12:17 /km ┐ ┌ ♥ 108 bpm ┐ ┌ ˄ 12 m ┐
+ ←                                                          [GPX]
+ ● Trail running
+   2026-11-21 · 09:14 · fēnix 8
+ ┌ 21.30 km      2:51:08      8:02 /km      640 m ┐
  ┌───────────────────────────────────────── [+] ┐
  │ the track coloured by heart rate, a lap      │
  │ chosen: thick, the rest thin and faded  [−]  │
  │                © OpenStreetMap contributors  │
  └──────────────────────────────────────────────┘
  Track colour: heart rate  94 ▬▬▬▬▬ 118 bpm        Colours [on]
+ Elevation                           38 m lowest · 212 m highest
+ ┌ the profile along the distance ┐
+ Heart Rate Zones                   148 bpm average · 176 bpm highest
+   Bounds from the device: % of lactate threshold (… bpm)
+   ▬▬▬▬ the share of each zone in its colour ▬▬▬▬
+   Zone 5  above … bpm                              0:00 · 0%
+   …
+   Below Zone 1  below … bpm                      38:24 · 96%
  [ Heart rate | Elevation | Pace ]          15:00 · 101 bpm
- ┌ the chart, the chosen lap a band behind it ┐
+ ┌ the chart, the bands of the zones named, the chosen lap a band behind it ┐
  Laps
    Lap 1   1.00 km · 12:42 · 110 bpm
    Lap 2   1.00 km · 12:20 · 101 bpm                     ✓
- Heart Rate Zones        Bounds from the device: % of lactate threshold (… bpm)
-   Zone 5  above … bpm                              0:00 · 0%
-   ▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬▬
-   …
-   Below Zone 1  below … bpm                      38:24 · 96%
  Training Effect
    Aerobic                                  1.6 · Minor benefit
    Anaerobic                                    0.0 · No benefit
@@ -167,25 +173,26 @@ shown, not empty.
  Details ▾
 ```
 
-- A click on a row of the Activities page opens the activity in the same window, a back arrow
-  and a GPX icon in the header bar. The row is activatable (a chevron); its export button stays.
-- The tiles: with a distance, distance, time, average pace and average heart rate. Most
-  activities of some users are workouts without one: their tiles are time, average and maximum
-  heart rate and calories (D11), not four dashes. The total ascent, when there is one, adds a
-  fifth.
-- The map, then the chart with Heart rate / Elevation / Pace and the value at the cursor. The
-  map only for an activity with positions (no empty map for a treadmill, a pool, a trainer or a
-  workout); the switch only lists what the file has; "Pace" is "Speed" for a ride (D12).
+- A click on a row of the list, or on a tile of what is new, opens the activity in the same
+  window, a back arrow and a GPX icon in the header bar.
+- The numbers: with a distance, distance, time, pace or speed and ascent. Most activities of
+  some users are workouts without one: their numbers are time, calories, rest time and ascent
+  (D11), not dashes. Four on a line, two by two when they do not fit.
+- The map, then the elevation and the heart rate, then the chart with Heart rate / Elevation /
+  Pace and the value at the cursor. The map only for an activity with positions (no empty map
+  for a treadmill, a pool, a trainer or a workout); the switch only lists what the file has;
+  "Pace" is "Speed" for a ride (D12).
 - Clicking or dragging on the chart moves a marker on the map, and the arrow keys move the
   cursor too (the chart takes the focus), so that it works without a mouse.
 - The laps: a list of rows that wrap (D7, D20), each with its distance, time, pace and heart
   rate; a click highlights the lap, a second click takes it off.
 
-A workout without positions: the tiles (time, heart rate average and maximum, calories), the
-chart of heart rate, its laps; no map, no space for one.
+A workout without positions: the numbers (time, calories, rest time, ascent), the heart rate
+zones, the chart of heart rate, its laps; no map, no space for one.
 
-In a narrow window (from 360 px) everything is one column; the tiles two by two; the chart keeps
-its height and narrows; the lap rows wrap.
+In a narrow window (from 360 px) everything is one column; the numbers two by two; the chart
+keeps its height and narrows; the lap rows wrap; the words beside a section's title go under it
+when both do not fit.
 
 ## 5. Decisions
 
@@ -662,11 +669,16 @@ its height and narrows; the lap rows wrap.
 - 21c. The map takes the wheel only after a click on it, until the pointer leaves.
   - − A state the user does not see.
 
-### D22: the order of the page — chosen: 22a
+### D22: the order of the page — chosen: 22c (22a before the page's new look)
 
-- 22a. As section 4 shows it (recommended; chosen): what the activity was first (tiles, map,
-  chart, laps), how hard it was after (zones, effect), the rest last and closed.
+- 22a. What the activity was first (tiles, map, chart, laps), how hard it was after (zones,
+  effect), the rest last and closed.
 - 22b. Zones and effect before the map.
+- 22c. As section 4 shows it (chosen with the page's new look, the same for every activity, also
+  for one the activity journal alone keeps): the heading and the card of numbers on top, so
+  that the numbers are seen without scrolling also in a narrow window; then the map, the
+  elevation and the heart rate zones, the activity at a glance; then the chart and the laps,
+  the analysis in time; the training effect and the details last.
 
 ## 6. Texts (English, Polish)
 
