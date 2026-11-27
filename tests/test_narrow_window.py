@@ -906,6 +906,68 @@ def test_a_tile_its_title_its_numbers_then_its_state_and_day(narrow_window, cloc
     assert with_state == 1
 
 
+def _font_size(label) -> int:
+    return label.get_pango_context().get_font_description().get_size()
+
+
+@pytest.mark.journal_answer
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize("width", [NARROWEST, 1000])
+def test_one_tile_a_line_has_its_numbers_state_and_day_at_the_page_s_size(narrow_window, clock,
+                                                                           language, width):
+    """The narrowest window, one tile a line: its numbers, its state and its day in the size of
+    the page's words, as its title; three tiles a line in a wide window, smaller."""
+    from datetime import datetime
+
+    from gi.repository import Gtk
+
+    from openexpress import sync
+    from openexpress.gui.app import MainWindow
+    from openexpress.settings import Settings
+
+    clock.current = datetime(2026, 10, 21, 12, 0)
+    s = Settings.load()
+    s.activity_journal = True
+    s.save()
+    win = narrow_window(language, width=width)
+    key = _fill(win, "activities")
+    unit_id = win.session.device.unit_id
+    _journal_of(unit_id, datetime(2026, 10, 15, 9, 0))
+    state = sync.SyncState(unit_id)
+    state.mark_completed(sync.ACTIVITY_TYPE, "activity-4.fit")
+    state.save()
+    win.session.journal_done = True
+    win.activities.storage = win.session.storage
+    win.sections[key].clear()
+    win.sections[key].loaded = True
+    MainWindow.show_activities(win, win.activities)
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section(key)
+    _iterate(0.3)
+    (tiles,) = [w for g in win.sections[key].groups for w in descendants(g)
+                if isinstance(w, Gtk.FlowBox)]
+    shown, child = [], tiles.get_first_child()
+    while child is not None:
+        shown.append(child)
+        child = child.get_next_sibling()
+    columns = {round(c.compute_bounds(tiles)[1].get_x()) for c in shown[:3]}
+    assert len(columns) == (1 if width == NARROWEST else 3)
+    small = 0
+    for tile in shown:
+        title, *words_ = [w for w in descendants(tile) if isinstance(w, Gtk.Label)
+                          and w.get_label()]
+        assert words_
+        for said in words_:
+            if width == NARROWEST:
+                assert _font_size(said) == _font_size(title), said.get_label()
+            else:
+                small += _font_size(said) < _font_size(title)
+    assert width == NARROWEST or small == sum(
+        len([w for w in descendants(t) if isinstance(w, Gtk.Label) and w.get_label()]) - 1
+        for t in shown)
+
+
 @pytest.mark.journal_answer
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_card_of_numbers_is_four_in_a_row_or_two_by_two(narrow_window, clock, language):

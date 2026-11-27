@@ -554,7 +554,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -1194,7 +1194,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -1544,7 +1544,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -1894,7 +1894,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -2390,7 +2390,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -3561,7 +3561,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -4020,7 +4020,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -4781,7 +4781,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -5719,7 +5719,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -6608,7 +6608,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -7527,7 +7527,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -8446,7 +8446,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"
@@ -8959,7 +8959,7 @@
           "hidden": true
          },
          {
-          "type": "GtkFlowBox",
+          "type": "OpenExpressTiles",
           "css": [
            "horizontal",
            "oe-tiles"

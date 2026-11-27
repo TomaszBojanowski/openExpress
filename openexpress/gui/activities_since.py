@@ -34,6 +34,9 @@ SHAPE_HEIGHT = 96  # pixels of a tile's shape
 SHAPE_PADDING = 14
 SHAPE_LINE = 3.0
 SYMBOL_SIZE = 48  # pixels of the sport's symbol on a tile without a track
+# Pixels of the grid of tiles below which it has one tile a line, the small words of each (its
+# numbers, state and day) at the size of the page's: the narrowest window, whatever the words.
+ONE_A_LINE_BELOW = 400
 TRIVIA_ICONS = {"climbed": f"{APP_ID}-activity-elevation-symbolic",
                 "distance": f"{APP_ID}-activity-distance-symbolic"}
 # The symbol of each group of sports on a tile without a track (the program's own, in data/).
@@ -65,6 +68,10 @@ flowbox.oe-tiles > flowboxchild:focus-visible {
   border-radius: 0;
   box-shadow: none;
   outline: none;
+}
+/* One tile a line: its numbers, state and day as large as the page's words. */
+flowbox.oe-tiles.oe-one-a-line label.caption {
+  font-size: 1em;
 }
 .oe-tile-shape {
   background-color: alpha(currentColor, 0.05);
@@ -471,13 +478,31 @@ def _tile(win, view, found, activity: dict) -> Gtk.Widget:
     return tile
 
 
+class Tiles(Gtk.FlowBox):
+    """The grid of tiles: up to three a line; narrower than ONE_A_LINE_BELOW, one a line, with
+    the small words of each at the size of the page's (class oe-one-a-line). Its width alone
+    decides it, so that the page drawn again is the same."""
+
+    __gtype_name__ = "OpenExpressTiles"
+
+    def __init__(self):
+        super().__init__(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
+                         min_children_per_line=1, max_children_per_line=3, column_spacing=10,
+                         row_spacing=12, activate_on_single_click=False)
+        self.add_css_class("oe-tiles")
+
+    def do_size_allocate(self, width: int, height: int, baseline: int) -> None:
+        one = width < ONE_A_LINE_BELOW
+        if one is not self.has_css_class("oe-one-a-line"):
+            (self.add_css_class if one else self.remove_css_class)("oe-one-a-line")
+            self.set_max_children_per_line(1 if one else 3)
+        Gtk.FlowBox.do_size_allocate(self, width, height, baseline)
+
+
 def _tiles(win, sec, view, found, activities: list[dict], title: str | None) -> None:
     """A tile for each of `activities`, newest first: three in a row in a wide window, one in
     a narrow one."""
-    flow = Gtk.FlowBox(homogeneous=True, selection_mode=Gtk.SelectionMode.NONE,
-                       min_children_per_line=1, max_children_per_line=3,
-                       column_spacing=10, row_spacing=12, activate_on_single_click=False)
-    flow.add_css_class("oe-tiles")
+    flow = Tiles()
     for a in activities:
         flow.append(_tile(win, view, found, a))
     for child in _children(flow):
