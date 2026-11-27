@@ -1345,6 +1345,97 @@ def test_the_numbers_of_an_activity_are_seen_without_scrolling(narrow_window, mo
     assert seen.get_y() + seen.get_height() <= scrolled.get_height()
 
 
+def _open_long_hike(narrow_window, monkeypatch, language, width):
+    """The window of this width with the page of _long_hike open (no tiles under its map)."""
+    from fakes import RunNow
+
+    from openexpress.gui import activity_map, activity_page
+
+    win = narrow_window(language, width=width)
+    win.set_default_size(width, 800)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_map.set_tiles(False)
+    read, data = _long_hike()
+    monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+    win.run_task = RunNow()
+    activity_page.open_activity(win, read)
+    _iterate(0.3)
+    return win.navigation.get_visible_page()
+
+
+def _beside_or_under(section, title: str) -> str:
+    """How the header of a section shows the words beside its title (section.said): "beside"
+    its title and description, none of them wrapped nor cut; or "under" them, at their start,
+    only when they do not fit on one line side by side."""
+    from gi.repository import Gtk
+
+    shown = [w for w in descendants(section) if isinstance(w, Gtk.Label) and w.get_mapped()]
+    (head,) = [w for w in shown if w.get_label() == title]
+    lead = [head, *(w for w in shown if w.get_label().startswith(("Bounds", "Granice")))]
+    said = section.said
+
+    def box(widget):
+        return widget.compute_bounds(section)[1]
+
+    assert not head.get_layout().is_ellipsized()
+    words = box(said)
+    if words.get_y() >= max(box(w).get_y() + box(w).get_height() for w in lead) - 0.5:
+        assert abs(words.get_x() - box(head).get_x()) <= 1  # at the start
+        natural = (max(w.measure(Gtk.Orientation.HORIZONTAL, -1)[1] for w in lead)
+                   + said.measure(Gtk.Orientation.HORIZONTAL, -1)[1])
+        assert natural > section.get_width() - 24  # no room for both, a gap between
+        return "under"
+    assert said.get_layout().get_line_count() == 1
+    for w in lead:
+        assert w.get_layout().get_line_count() == 1
+        assert words.get_x() >= box(w).get_x() + w.get_layout().get_pixel_size()[0]
+    return "beside"
+
+
+@pytest.mark.parametrize("width", [NARROWEST, 480, 640])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_words_beside_a_section_s_title_go_under_it_without_room(narrow_window, monkeypatch,
+                                                                     language, width):
+    """The headers of the heart rate zones (how the bounds were worked out, and the average and
+    highest heart rate) and of the elevation (its lowest and highest point): side by side while
+    both fit on one line, else one under the other; never both wrapped side by side."""
+    from openexpress.gui import activity_overview
+    from openexpress.gui.activity_zones import ZoneList
+
+    page = _open_long_hike(narrow_window, monkeypatch, language, width)
+    (zones,) = [w for w in descendants(page) if isinstance(w, ZoneList)]
+    (elevation,) = [w for w in descendants(page)
+                    if isinstance(w, activity_overview.ElevationSection)]
+    titles = {"en": ("Heart Rate Zones", "Elevation"), "pl": ("Strefy tętna", "Wysokość")}
+    found = (_beside_or_under(zones, titles[language][0]),
+             _beside_or_under(elevation, titles[language][1]))
+    if width == NARROWEST:  # the bounds' words are long: under, in either language
+        assert found[0] == "under"
+
+
+@pytest.mark.parametrize("width", [NARROWEST, 480, 640])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_a_long_title_of_the_elevation_has_its_words_under_it(narrow_window, monkeypatch,
+                                                              language, width):
+    """A long translation of "Elevation": the title whole, wrapped when it must be, and its
+    lowest and highest point under it unless both fit on one line (at 640 px in English)."""
+    from openexpress.gui import activity_overview, words
+
+    long_title = "Elevation above the sea along the whole of the track"
+    real = words.chart_series_name
+    monkeypatch.setattr(words, "chart_series_name",
+                        lambda kind: long_title if kind == "elevation" else real(kind))
+    page = _open_long_hike(narrow_window, monkeypatch, language, width)
+    (elevation,) = [w for w in descendants(page)
+                    if isinstance(w, activity_overview.ElevationSection)]
+    found = _beside_or_under(elevation, long_title)
+    if width < 640:
+        assert found == "under"
+
+
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_page_device_status_opened_fits_the_narrowest_window(narrow_window, language):
     """The page with its newest crash and its details open, the kinds of file listed, Show All

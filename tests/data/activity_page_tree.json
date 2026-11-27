@@ -410,10 +410,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Elevation",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -422,78 +422,35 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Elevation"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "95 m lowest · 105 m highest"
-            }
-           ]
-          },
-          {
-           "type": "GtkBox",
-           "css": [
-            "vertical"
-           ],
-           "children": [
-            {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            },
-            {
-             "type": "GtkBox",
-             "css": [
-              "card",
-              "horizontal"
-             ],
-             "children": [
-              {
-               "type": "OpenExpressProfileArea",
-               "css": []
-              }
-             ]
-            }
-           ]
+           "label": "Elevation"
           }
          ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "95 m lowest · 105 m highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkBox",
+       "css": [
+        "card",
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "OpenExpressProfileArea",
+         "css": []
         }
        ]
       }
@@ -506,10 +463,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate Zones",
-       "description": "Bounds from the device: % of lactate threshold (165 bpm)",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -518,361 +475,328 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate Zones"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "label": "Bounds from the device: % of lactate threshold (165 bpm)"
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "105 bpm average · 120 bpm highest"
-            }
-           ]
+           "label": "Heart Rate Zones"
           },
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
+           "css": [
+            "body",
+            "dim-label"
+           ],
+           "label": "Bounds from the device: % of lactate threshold (165 bpm)"
+          }
+         ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "105 bpm average · 120 bpm highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkListBox",
+       "css": [
+        "boxed-list"
+       ],
+       "children": [
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneShares",
            "css": [
             "vertical"
            ],
            "children": [
             {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            },
+             "type": "OpenExpressSharesBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
             {
-             "type": "GtkListBox",
+             "type": "GtkBox",
              "css": [
-              "boxed-list"
+              "horizontal"
              ],
              "children": [
               {
-               "type": "GtkListBoxRow",
+               "type": "GtkLabel",
                "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneShares",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "OpenExpressSharesBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "label": "Zone 5"
               },
               {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 5"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "above 177 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "6:40 · 4%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "above 177 bpm"
               },
               {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 4"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "165–177 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "35:00 · 21%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 3"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "155–164 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "1:03:20 · 38%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 2"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "140–154 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "51:40 · 31%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 1"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "120–139 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "10:00 · 6%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Below Zone 1"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "below 120 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "0:00 · 0%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "6:40 · 4%"
               }
              ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 4"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "165–177 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "35:00 · 21%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 3"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "155–164 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "1:03:20 · 38%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 2"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "140–154 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "51:40 · 31%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 1"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "120–139 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "10:00 · 6%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Below Zone 1"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "below 120 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "0:00 · 0%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
             }
            ]
           }
@@ -2572,10 +2496,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Elevation",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -2584,78 +2508,35 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Elevation"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "312 ft lowest · 344 ft highest"
-            }
-           ]
-          },
-          {
-           "type": "GtkBox",
-           "css": [
-            "vertical"
-           ],
-           "children": [
-            {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            },
-            {
-             "type": "GtkBox",
-             "css": [
-              "card",
-              "horizontal"
-             ],
-             "children": [
-              {
-               "type": "OpenExpressProfileArea",
-               "css": []
-              }
-             ]
-            }
-           ]
+           "label": "Elevation"
           }
          ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "312 ft lowest · 344 ft highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkBox",
+       "css": [
+        "card",
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "OpenExpressProfileArea",
+         "css": []
         }
        ]
       }
@@ -2668,10 +2549,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate Zones",
-       "description": "Bounds from the device: % of lactate threshold (165 bpm)",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -2680,361 +2561,328 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate Zones"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "label": "Bounds from the device: % of lactate threshold (165 bpm)"
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "105 bpm average · 120 bpm highest"
-            }
-           ]
+           "label": "Heart Rate Zones"
           },
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
+           "css": [
+            "body",
+            "dim-label"
+           ],
+           "label": "Bounds from the device: % of lactate threshold (165 bpm)"
+          }
+         ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "105 bpm average · 120 bpm highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkListBox",
+       "css": [
+        "boxed-list"
+       ],
+       "children": [
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneShares",
            "css": [
             "vertical"
            ],
            "children": [
             {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            },
+             "type": "OpenExpressSharesBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
             {
-             "type": "GtkListBox",
+             "type": "GtkBox",
              "css": [
-              "boxed-list"
+              "horizontal"
              ],
              "children": [
               {
-               "type": "GtkListBoxRow",
+               "type": "GtkLabel",
                "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneShares",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "OpenExpressSharesBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "label": "Zone 5"
               },
               {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 5"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "above 177 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "6:40 · 4%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "above 177 bpm"
               },
               {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 4"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "165–177 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "35:00 · 21%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 3"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "155–164 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "1:03:20 · 38%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 2"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "140–154 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "51:40 · 31%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 1"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "120–139 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "10:00 · 6%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Below Zone 1"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "below 120 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "0:00 · 0%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "6:40 · 4%"
               }
              ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 4"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "165–177 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "35:00 · 21%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 3"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "155–164 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "1:03:20 · 38%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 2"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "140–154 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "51:40 · 31%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 1"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "120–139 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "10:00 · 6%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Below Zone 1"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "below 120 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "0:00 · 0%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
             }
            ]
           }
@@ -4734,10 +4582,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Elevation",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -4746,78 +4594,35 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Elevation"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "95 m lowest · 105 m highest"
-            }
-           ]
-          },
-          {
-           "type": "GtkBox",
-           "css": [
-            "vertical"
-           ],
-           "children": [
-            {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            },
-            {
-             "type": "GtkBox",
-             "css": [
-              "card",
-              "horizontal"
-             ],
-             "children": [
-              {
-               "type": "OpenExpressProfileArea",
-               "css": []
-              }
-             ]
-            }
-           ]
+           "label": "Elevation"
           }
          ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "95 m lowest · 105 m highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkBox",
+       "css": [
+        "card",
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "OpenExpressProfileArea",
+         "css": []
         }
        ]
       }
@@ -6164,10 +5969,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -6176,65 +5981,22 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "130 bpm average · 150 bpm highest"
-            }
-           ]
-          },
-          {
-           "type": "GtkBox",
-           "css": [
-            "vertical"
-           ],
-           "children": [
-            {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            }
-           ]
+           "label": "Heart Rate"
           }
          ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "130 bpm average · 150 bpm highest"
         }
        ]
       }
@@ -6619,10 +6381,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate Zones",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -6631,363 +6393,320 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate Zones"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "112 bpm average · 151 bpm highest"
-            }
-           ]
-          },
+           "label": "Heart Rate Zones"
+          }
+         ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "112 bpm average · 151 bpm highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkListBox",
+       "css": [
+        "boxed-list"
+       ],
+       "children": [
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
           {
-           "type": "GtkBox",
+           "type": "OpenExpressZoneShares",
            "css": [
             "vertical"
            ],
            "children": [
             {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            },
+             "type": "OpenExpressSharesBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
             {
-             "type": "GtkListBox",
+             "type": "GtkBox",
              "css": [
-              "boxed-list"
+              "horizontal"
              ],
              "children": [
               {
-               "type": "GtkListBoxRow",
+               "type": "GtkLabel",
                "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneShares",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "OpenExpressSharesBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "label": "Zone 5"
               },
               {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 5"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "above 177 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "0:00 · 0%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "above 177 bpm"
               },
               {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 4"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "165–177 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "0:00 · 0%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 3"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "155–164 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "5:00 · 11%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 2"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "140–154 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "20:00 · 44%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Zone 1"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "120–139 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "15:00 · 33%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
-              },
-              {
-               "type": "GtkListBoxRow",
-               "css": [],
-               "children": [
-                {
-                 "type": "OpenExpressZoneRow",
-                 "css": [
-                  "vertical"
-                 ],
-                 "children": [
-                  {
-                   "type": "GtkBox",
-                   "css": [
-                    "horizontal"
-                   ],
-                   "children": [
-                    {
-                     "type": "GtkLabel",
-                     "css": [],
-                     "label": "Below Zone 1"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "caption",
-                      "dim-label"
-                     ],
-                     "label": "below 120 bpm"
-                    },
-                    {
-                     "type": "GtkLabel",
-                     "css": [
-                      "numeric"
-                     ],
-                     "label": "5:00 · 11%"
-                    }
-                   ]
-                  },
-                  {
-                   "type": "OpenExpressZoneBar",
-                   "css": []
-                  }
-                 ]
-                }
-               ]
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "0:00 · 0%"
               }
              ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 4"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "165–177 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "0:00 · 0%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 3"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "155–164 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "5:00 · 11%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 2"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "140–154 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "20:00 · 44%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Zone 1"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "120–139 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "15:00 · 33%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
+            }
+           ]
+          }
+         ]
+        },
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
+          {
+           "type": "OpenExpressZoneRow",
+           "css": [
+            "vertical"
+           ],
+           "children": [
+            {
+             "type": "GtkBox",
+             "css": [
+              "horizontal"
+             ],
+             "children": [
+              {
+               "type": "GtkLabel",
+               "css": [],
+               "label": "Below Zone 1"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "caption",
+                "dim-label"
+               ],
+               "label": "below 120 bpm"
+              },
+              {
+               "type": "GtkLabel",
+               "css": [
+                "numeric"
+               ],
+               "label": "5:00 · 11%"
+              }
+             ]
+            },
+            {
+             "type": "OpenExpressZoneBar",
+             "css": []
             }
            ]
           }
@@ -7430,10 +7149,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -7442,65 +7161,22 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "112 bpm average · 151 bpm highest"
-            }
-           ]
-          },
-          {
-           "type": "GtkBox",
-           "css": [
-            "vertical"
-           ],
-           "children": [
-            {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            }
-           ]
+           "label": "Heart Rate"
           }
          ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "112 bpm average · 151 bpm highest"
         }
        ]
       }
@@ -7974,10 +7650,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -7986,65 +7662,22 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "128 bpm average · 165 bpm highest"
-            }
-           ]
-          },
-          {
-           "type": "GtkBox",
-           "css": [
-            "vertical"
-           ],
-           "children": [
-            {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            }
-           ]
+           "label": "Heart Rate"
           }
          ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "128 bpm average · 165 bpm highest"
         }
        ]
       }
@@ -9008,10 +8641,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Elevation",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -9020,78 +8653,35 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Elevation"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "38 m lowest · 212 m highest"
-            }
-           ]
-          },
-          {
-           "type": "GtkBox",
-           "css": [
-            "vertical"
-           ],
-           "children": [
-            {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
-            },
-            {
-             "type": "GtkBox",
-             "css": [
-              "card",
-              "horizontal"
-             ],
-             "children": [
-              {
-               "type": "OpenExpressProfileArea",
-               "css": []
-              }
-             ]
-            }
-           ]
+           "label": "Elevation"
           }
          ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "38 m lowest · 212 m highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkBox",
+       "css": [
+        "card",
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "OpenExpressProfileArea",
+         "css": []
         }
        ]
       }
@@ -9104,10 +8694,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate Zones",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -9116,215 +8706,172 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate Zones"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "148 bpm average · 176 bpm highest"
-            }
-           ]
-          },
+           "label": "Heart Rate Zones"
+          }
+         ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "148 bpm average · 176 bpm highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkListBox",
+       "css": [
+        "boxed-list"
+       ],
+       "children": [
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
           {
-           "type": "GtkBox",
+           "type": "OpenExpressZoneShares",
            "css": [
             "vertical"
            ],
            "children": [
             {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
+             "type": "OpenExpressSharesBar",
+             "css": []
             },
             {
-             "type": "GtkListBox",
+             "type": "GtkFlowBox",
              "css": [
-              "boxed-list"
+              "horizontal",
+              "oe-plain"
              ],
              "children": [
               {
-               "type": "GtkListBoxRow",
+               "type": "GtkFlowBoxChild",
                "css": [],
                "children": [
                 {
-                 "type": "OpenExpressZoneShares",
+                 "type": "GtkBox",
                  "css": [
-                  "vertical"
+                  "horizontal"
                  ],
                  "children": [
                   {
-                   "type": "OpenExpressSharesBar",
+                   "type": "GtkDrawingArea",
                    "css": []
                   },
                   {
-                   "type": "GtkFlowBox",
+                   "type": "GtkLabel",
                    "css": [
-                    "horizontal",
-                    "oe-plain"
+                    "caption"
                    ],
-                   "children": [
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 1 · 6%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 2 · 31%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 3 · 38%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 4 · 21%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 5 · 4%"
-                        }
-                       ]
-                      }
-                     ]
-                    }
-                   ]
+                   "label": "Zone 1 · 6%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 2 · 31%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 3 · 38%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 4 · 21%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 5 · 4%"
                   }
                  ]
                 }
@@ -9464,10 +9011,10 @@
      ],
      "children": [
       {
-       "type": "AdwPreferencesGroup",
-       "css": [],
-       "title": "Heart Rate Zones",
-       "description": "",
+       "type": "OpenExpressSectionHeader",
+       "css": [
+        "horizontal"
+       ],
        "children": [
         {
          "type": "GtkBox",
@@ -9476,215 +9023,172 @@
          ],
          "children": [
           {
-           "type": "GtkBox",
+           "type": "GtkLabel",
            "css": [
-            "header",
-            "horizontal",
-            "single-line"
+            "h4",
+            "heading"
            ],
-           "children": [
-            {
-             "type": "GtkBox",
-             "css": [
-              "labels",
-              "vertical"
-             ],
-             "children": [
-              {
-               "type": "GtkLabel",
-               "css": [
-                "h4",
-                "heading"
-               ],
-               "label": "Heart Rate Zones"
-              },
-              {
-               "type": "GtkLabel",
-               "css": [
-                "body",
-                "dimmed"
-               ],
-               "hidden": true,
-               "label": ""
-              }
-             ]
-            },
-            {
-             "type": "GtkLabel",
-             "css": [
-              "caption",
-              "dim-label"
-             ],
-             "label": "148 bpm average · 176 bpm highest"
-            }
-           ]
-          },
+           "label": "Heart Rate Zones"
+          }
+         ]
+        },
+        {
+         "type": "GtkLabel",
+         "css": [
+          "caption",
+          "dim-label"
+         ],
+         "label": "148 bpm average · 176 bpm highest"
+        }
+       ]
+      },
+      {
+       "type": "GtkListBox",
+       "css": [
+        "boxed-list"
+       ],
+       "children": [
+        {
+         "type": "GtkListBoxRow",
+         "css": [],
+         "children": [
           {
-           "type": "GtkBox",
+           "type": "OpenExpressZoneShares",
            "css": [
             "vertical"
            ],
            "children": [
             {
-             "type": "GtkListBox",
-             "css": [
-              "boxed-list"
-             ],
-             "hidden": true
+             "type": "OpenExpressSharesBar",
+             "css": []
             },
             {
-             "type": "GtkListBox",
+             "type": "GtkFlowBox",
              "css": [
-              "boxed-list"
+              "horizontal",
+              "oe-plain"
              ],
              "children": [
               {
-               "type": "GtkListBoxRow",
+               "type": "GtkFlowBoxChild",
                "css": [],
                "children": [
                 {
-                 "type": "OpenExpressZoneShares",
+                 "type": "GtkBox",
                  "css": [
-                  "vertical"
+                  "horizontal"
                  ],
                  "children": [
                   {
-                   "type": "OpenExpressSharesBar",
+                   "type": "GtkDrawingArea",
                    "css": []
                   },
                   {
-                   "type": "GtkFlowBox",
+                   "type": "GtkLabel",
                    "css": [
-                    "horizontal",
-                    "oe-plain"
+                    "caption"
                    ],
-                   "children": [
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 1 · 6%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 2 · 31%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 3 · 38%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 4 · 21%"
-                        }
-                       ]
-                      }
-                     ]
-                    },
-                    {
-                     "type": "GtkFlowBoxChild",
-                     "css": [],
-                     "children": [
-                      {
-                       "type": "GtkBox",
-                       "css": [
-                        "horizontal"
-                       ],
-                       "children": [
-                        {
-                         "type": "GtkDrawingArea",
-                         "css": []
-                        },
-                        {
-                         "type": "GtkLabel",
-                         "css": [
-                          "caption"
-                         ],
-                         "label": "Zone 5 · 4%"
-                        }
-                       ]
-                      }
-                     ]
-                    }
-                   ]
+                   "label": "Zone 1 · 6%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 2 · 31%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 3 · 38%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 4 · 21%"
+                  }
+                 ]
+                }
+               ]
+              },
+              {
+               "type": "GtkFlowBoxChild",
+               "css": [],
+               "children": [
+                {
+                 "type": "GtkBox",
+                 "css": [
+                  "horizontal"
+                 ],
+                 "children": [
+                  {
+                   "type": "GtkDrawingArea",
+                   "css": []
+                  },
+                  {
+                   "type": "GtkLabel",
+                   "css": [
+                    "caption"
+                   ],
+                   "label": "Zone 5 · 4%"
                   }
                  ]
                 }

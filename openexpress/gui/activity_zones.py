@@ -5,9 +5,10 @@ time below zone 1, each with its bounds, its time and share, and a bar of its sh
 the bar's colours); under the title how the bounds were worked out. From the activity journal
 (which keeps the time in each zone, never their bounds) the bar alone, with a legend of each
 zone and its share under it; a file with a heart rate but no zones, its average and highest
-alone. The zones' colours read on the cards of the light
-style and of the dark one alike (a contrast of 3:1 and a margin with both); the chart of heart
-rate draws its bands in them (gui/activity_chart.py).
+alone. The zones' colours read on the cards of the light style and of the dark one alike (a
+contrast of 3:1 and a margin with both); the chart of heart rate draws its bands in them
+(gui/activity_chart.py). The header of a section of the top (SectionHeader: the title, a
+description under it and the words beside them, or under them in a narrow window) is here too.
 Has: no attribute of the window; the list keeps its rows."""
 from __future__ import annotations
 
@@ -40,6 +41,12 @@ BAR_HEIGHT = 8
 SHARES_HEIGHT = 12  # pixels of the bar of every zone's share
 GAP = 2  # pixels between two zones on it
 DOT = 8  # pixels of a zone's dot in the legend
+# The header of a section, placed as libadwaita's group (1.10) places its own.
+HEADER_GAP = 12  # pixels at least between a title or its description and the words beside it
+LABELS_SPACING = 6  # pixels between the title, its description and the words under them
+SINGLE_LINE = 34  # pixels of the line of a title without a description
+UNDER_TITLE = 6  # pixels from a title without a description to what follows it
+UNDER_DESCRIPTION = 12  # pixels from a description to what follows it
 
 
 def rounded_bar(cr, width: float, height: float) -> None:
@@ -199,16 +206,17 @@ class ZoneShares(Gtk.Box):
 
 
 class ZoneList(Gtk.Box):
-    """The section of the heart rate: its title, the average and highest heart rate beside it
-    (`said`), how the bounds were worked out under it; the bar of the shares of `times` (the
-    seconds below zone 1, then in zones 1 to 5; those of `zones` when not given) and the rows of
-    `zones` (fit.HeartRateZones) under it, or without them its legend. No time in any zone:
-    titled the heart rate, its average and highest alone."""
+    """The section of the heart rate: its header (SectionHeader: its title, how the bounds were
+    worked out under it, the average and highest heart rate beside them, `said`); the bar of
+    the shares of `times` (the seconds below zone 1, then in zones 1 to 5; those of `zones`
+    when not given) and the rows of `zones` (fit.HeartRateZones) under it, or without them its
+    legend. No time in any zone: titled the heart rate, its average and highest alone."""
 
     __gtype_name__ = "OpenExpressZoneList"
 
     def __init__(self, zones=None, times=None, said: list[str] | tuple = ()):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL,
+                         accessible_role=Gtk.AccessibleRole.GROUP)
         times = tuple(zones.times) if zones is not None and times is None else times
         self.rows = ([ZoneRow(number, zones) for number in reversed(range(len(zones.times)))]
                      if zones is not None else [])
@@ -216,25 +224,125 @@ class ZoneList(Gtk.Box):
                        else None)
         title = zones_title() if self.shares is not None or self.rows else detail_name(
             "heart rate")
+        self.header = SectionHeader(title, zones_method_text(zones) if zones is not None
+                                    else None, said)
+        self.said = self.header.said
+        self.update_property([Gtk.AccessibleProperty.LABEL], [title])
+        self.append(self.header)
         rows = [self.shares] if self.shares is not None else []
-        self.group = boxed_section(title, [*rows, *self.rows],
-                                   zones_method_text(zones) if zones is not None else None)
-        self.said = beside_title(said)
-        if said:
-            self.group.set_header_suffix(self.said)
-        self.append(self.group)
+        if rows or self.rows:
+            self.append(boxed_list([*rows, *self.rows]))
 
 
-def beside_title(said) -> Gtk.Label:
-    """The words beside the title of a section (a few short ones, "148 bpm average · 176 bpm
-    highest"): on one line while there is room for them, wrapped in a narrow window."""
-    # Its natural width unwrapped: the header of a group asks a width for its height, which
-    # would wrap a wrapping label into as many lines as the title has.
-    label = Gtk.Label(label=caption(*said), wrap=True, xalign=1, valign=Gtk.Align.END,
-                      natural_wrap_mode=Gtk.NaturalWrapMode.NONE)
-    label.add_css_class("dim-label")
-    label.add_css_class("caption")
-    return label
+def _natural(widget) -> int:
+    return widget.measure(Gtk.Orientation.HORIZONTAL, -1)[1]
+
+
+def _rectangle(x: int, y: int, width: int, height: int) -> Gdk.Rectangle:
+    found = Gdk.Rectangle()
+    found.x, found.y, found.width, found.height = x, y, width, height
+    return found
+
+
+class BesideOrUnder(Gtk.LayoutManager):
+    """The header of a section (SectionHeader): its title with the description under it
+    (`lead`), and the words beside them (`said`) at the end, on the line of the last of them,
+    while both fit side by side at their natural width; else the words under them, at their
+    start. A title alone is in the middle of a line as tall as libadwaita's."""
+
+    __gtype_name__ = "OpenExpressBesideOrUnder"
+
+    @staticmethod
+    def beside(widget, width: int) -> bool:
+        """Whether the words go beside the title at `width` (-1: any)."""
+        return width < 0 or _natural(widget.lead) + HEADER_GAP + _natural(widget.said) <= width
+
+    def do_get_request_mode(self, widget):
+        return Gtk.SizeRequestMode.HEIGHT_FOR_WIDTH
+
+    def _placed(self, widget, width: int):
+        """Where the lead and the words go at `width`, each (x, y, width, height), the words
+        None when there are none; and the height of it all."""
+        lead, said = widget.lead, widget.said
+        vertical = Gtk.Orientation.VERTICAL
+        if not said.should_layout():
+            tall = lead.measure(vertical, width)[1]
+            whole = max(tall, widget.least)
+            return (0, (whole - tall) // 2, width, tall), None, whole
+        if self.beside(widget, width):
+            # The gap is in the lead's room: its words end before it.
+            said_w = _natural(said)
+            lead_w = width - said_w if width >= 0 else _natural(lead)
+            lead_h = lead.measure(vertical, lead_w)[1]
+            said_h = said.measure(vertical, said_w)[1]
+            whole = max(lead_h, said_h, widget.least)
+            return ((0, (whole - lead_h) // 2, lead_w, lead_h),
+                    (width - said_w, whole - said_h, said_w, said_h), whole)
+        lead_h = lead.measure(vertical, width)[1]
+        said_w = min(_natural(said), width)
+        said_h = said.measure(vertical, said_w)[1]
+        return ((0, 0, width, lead_h), (0, lead_h + LABELS_SPACING, said_w, said_h),
+                lead_h + LABELS_SPACING + said_h)
+
+    def do_measure(self, widget, orientation, for_size):
+        lead, said = widget.lead, widget.said
+        if orientation == Gtk.Orientation.HORIZONTAL:
+            least, natural = lead.measure(orientation, -1)[:2]
+            if said.should_layout():
+                least = max(least, said.measure(orientation, -1)[0])
+                natural += HEADER_GAP + _natural(said)
+            return least, natural, -1, -1
+        whole = self._placed(widget, for_size)[2]
+        return whole, whole, -1, -1
+
+    def do_allocate(self, widget, width, height, baseline):
+        lead, words, _whole = self._placed(widget, width)
+        widget.lead.size_allocate(_rectangle(*lead), -1)
+        if words is not None:
+            widget.said.size_allocate(_rectangle(*words), -1)
+
+
+class SectionHeader(Gtk.Box):
+    """The header of a section of an activity's page: its title (`title`, wrapped rather than
+    cut), the description under it (`description`, None without one) and the words beside them
+    (`said`: a few short ones, "148 bpm average · 176 bpm highest"; hidden without), under
+    them when they do not fit side by side (BesideOrUnder); placed as libadwaita's group places
+    its header, and as far from what follows."""
+
+    __gtype_name__ = "OpenExpressSectionHeader"
+
+    def __init__(self, title: str, description: str | None = None,
+                 said: list[str] | tuple = ()):
+        super().__init__()
+        self.set_layout_manager(BesideOrUnder())
+        self.lead = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=LABELS_SPACING)
+        self.title = Gtk.Label(label=title, wrap=True, xalign=0)
+        self.title.add_css_class("heading")
+        self.title.add_css_class("h4")
+        self.lead.append(self.title)
+        self.description = None
+        if description:
+            self.description = Gtk.Label(label=description, wrap=True,
+                                         wrap_mode=Pango.WrapMode.WORD_CHAR, xalign=0)
+            self.description.add_css_class("body")
+            self.description.add_css_class("dim-label")
+            self.lead.append(self.description)
+        self.append(self.lead)
+        self.said = Gtk.Label(label=caption(*said), wrap=True, xalign=0, visible=bool(said))
+        self.said.add_css_class("dim-label")
+        self.said.add_css_class("caption")
+        self.append(self.said)
+        self.least = SINGLE_LINE if self.description is None else 0
+        self.set_margin_bottom(UNDER_TITLE if self.description is None else UNDER_DESCRIPTION)
+
+
+def boxed_list(rows: list[Gtk.Widget]) -> Gtk.ListBox:
+    """`rows` in a boxed list, none of them activatable."""
+    listed = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
+    listed.add_css_class("boxed-list")
+    for row in rows:
+        listed.append(Gtk.ListBoxRow(child=row, activatable=False))
+    return listed
 
 
 def boxed_section(title: str, rows: list[Gtk.Widget],
@@ -244,11 +352,6 @@ def boxed_section(title: str, rows: list[Gtk.Widget],
     group = Adw.PreferencesGroup(title=title)
     if description:
         group.set_description(description)
-    if not rows:
-        return group
-    listed = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
-    listed.add_css_class("boxed-list")
-    for row in rows:
-        listed.append(Gtk.ListBoxRow(child=row, activatable=False))
-    group.add(listed)
+    if rows:
+        group.add(boxed_list(rows))
     return group

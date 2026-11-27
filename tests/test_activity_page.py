@@ -324,7 +324,7 @@ def numbers_of(page) -> list[tuple[str, str]]:
 
 def section_words(section) -> tuple[str, str]:
     """The title of a section of the top and the words beside it."""
-    return section.group.get_title(), section.said.get_label()
+    return section.header.title.get_label(), section.said.get_label()
 
 
 def walk_on_top(**fields):
@@ -479,6 +479,56 @@ def test_the_page_is_named_as_its_heading_once_read(monkeypatch):
     _win, page = page_of(monkeypatch, made_up(sport=TRAINING, sub_sport=20, timer_time=600.0),
                          sport=TRAINING)
     assert heading_of(page)[0] == "Strength training" == page.get_title()
+
+
+@pytest.mark.parametrize("description", [None, "Bounds from the device: your own"],
+                         ids=["title", "description"])
+def test_a_section_s_header_with_room_is_placed_as_libadwaita_s(description):
+    """With room for its words beside the title, a section's own header puts its title, its
+    description, the words and what follows it where libadwaita's group puts its header (its
+    suffix) and its rows."""
+    from fakes import iterate
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui.activity_zones import SectionHeader
+    from openexpress.i18n import caption
+
+    said = ("148 bpm average", "176 bpm highest")
+    group = Adw.PreferencesGroup(title="Heart Rate Zones", description=description)
+    suffix = Gtk.Label(label=caption(*said), valign=Gtk.Align.END)
+    suffix.add_css_class("caption")
+    group.set_header_suffix(suffix)
+    theirs_after = Gtk.Box(height_request=50)
+    group.add(theirs_after)
+    ours = Gtk.Box(orientation=Gtk.Orientation.VERTICAL)
+    header = SectionHeader("Heart Rate Zones", description, said)
+    ours.append(header)
+    ours.append(Gtk.Box(height_request=50))
+    windows = [Gtk.Window(child=w, default_width=800, default_height=300) for w in (group, ours)]
+    for shown_window in windows:
+        shown_window.present()
+    iterate(0.3)
+
+    def places(root, title, words, after):
+        found = []
+        for w in (title, words, after):
+            bounds = w.compute_bounds(root)[1]
+            found.append((round(bounds.get_x()), round(bounds.get_y()),
+                          round(bounds.get_x() + bounds.get_width())))
+        return found
+
+    (title,) = [w for w in descendants(group) if isinstance(w, Gtk.Label)
+                and w.get_label() == "Heart Rate Zones"]
+    theirs = places(group, title, suffix, theirs_after)
+    mine = places(ours, header.title, header.said, ours.get_last_child())
+    if description:
+        (theirs_said,) = [w for w in descendants(group) if isinstance(w, Gtk.Label)
+                          and w.get_label() == description]
+        theirs.append(round(theirs_said.compute_bounds(group)[1].get_y()))
+        mine.append(round(header.description.compute_bounds(ours)[1].get_y()))
+    for shown_window in windows:
+        shown_window.destroy()
+    assert mine == theirs
 
 
 SPORT_OF_GROUP = {"foot": 1, "cycling": 2, "water": 5, "winter": 12, "training": 10,

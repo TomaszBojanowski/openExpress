@@ -15,9 +15,8 @@ import math
 import gi
 
 gi.require_version("Gtk", "4.0")
-gi.require_version("Adw", "1")
 
-from gi.repository import Adw, Gtk  # noqa: E402 - imports must follow gi.require_version
+from gi.repository import Gtk  # noqa: E402 - imports must follow gi.require_version
 
 from openexpress.gui import sports, words  # noqa: E402
 from openexpress.gui.activities_since import (  # noqa: E402
@@ -27,7 +26,7 @@ from openexpress.gui.activities_since import (  # noqa: E402
 )
 from openexpress.gui.activity_colours import accent_colour  # noqa: E402
 from openexpress.gui.activity_map import START_COLOUR, draw_grid  # noqa: E402
-from openexpress.gui.activity_zones import ZoneList, beside_title  # noqa: E402
+from openexpress.gui.activity_zones import SectionHeader, ZoneList  # noqa: E402
 from openexpress.gui.palette import rgba  # noqa: E402
 
 SHAPE_HEIGHT = 260  # pixels of the card of a shape
@@ -182,16 +181,20 @@ class ProfileArea(Gtk.DrawingArea):
 
 
 class ElevationSection(Gtk.Box):
-    """The elevation: its title, the lowest and the highest point beside it (`said`), the
-    profile under it in a card (`profile`, None without one)."""
+    """The elevation: its header (SectionHeader: its title, the lowest and the highest point
+    beside it or under it, `said`), the profile under it in a card (`profile`, None without
+    one)."""
 
     __gtype_name__ = "OpenExpressElevationSection"
 
     def __init__(self, shown):
-        super().__init__(orientation=Gtk.Orientation.VERTICAL)
-        self.group = Adw.PreferencesGroup(title=words.chart_series_name("elevation"))
-        self.said = beside_title(words.elevation_range(shown))
-        self.group.set_header_suffix(self.said)
+        super().__init__(orientation=Gtk.Orientation.VERTICAL,
+                         accessible_role=Gtk.AccessibleRole.GROUP)
+        title = words.chart_series_name("elevation")
+        self.header = SectionHeader(title, None, words.elevation_range(shown))
+        self.said = self.header.said
+        self.update_property([Gtk.AccessibleProperty.LABEL], [title])
+        self.append(self.header)
         self.profile = None
         if shown.profile:
             self.profile = ProfileArea(shown.profile)
@@ -199,8 +202,7 @@ class ElevationSection(Gtk.Box):
             card.add_css_class("card")
             card.set_overflow(Gtk.Overflow.HIDDEN)
             card.append(self.profile)
-            self.group.add(card)
-        self.append(self.group)
+            self.append(card)
 
 
 def elevation(shown) -> ElevationSection | None:
