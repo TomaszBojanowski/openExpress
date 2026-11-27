@@ -1420,8 +1420,9 @@ def test_the_words_beside_a_section_s_title_go_under_it_without_room(narrow_wind
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_a_long_title_of_the_elevation_has_its_words_under_it(narrow_window, monkeypatch,
                                                               language, width):
-    """A long translation of "Elevation": the title whole, wrapped when it must be, and its
-    lowest and highest point under it unless both fit on one line (at 640 px in English)."""
+    """A long translation of "Elevation" in the title of its section (the chart's switch keeps
+    its own, which does not wrap): the title whole, wrapped when it must be, and its lowest
+    and highest point under it unless both fit on one line (at 640 px in English)."""
     from openexpress.gui import activity_overview, words
 
     long_title = "Elevation above the sea along the whole of the track"
