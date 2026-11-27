@@ -1302,6 +1302,49 @@ def test_the_page_of_an_activity_from_the_journal_fits_the_narrowest_window(narr
         assert [w.get_layout().get_line_count() for w in beside] == [1, 1]
 
 
+PHONE_HEIGHT = 640  # a window as tall as a phone's screen, its header bar in it
+
+
+@pytest.mark.parametrize("kind", ["file", "journal"])
+@pytest.mark.parametrize("language", ["en", "pl"])
+def test_the_numbers_of_an_activity_are_seen_without_scrolling(narrow_window, monkeypatch,
+                                                               language, kind):
+    """The narrowest window, as tall as a phone: the card of numbers right under the heading
+    (and the line of where the page comes from), the whole of it seen before the page is
+    scrolled; the map, or the journal's shape, under it."""
+    from fakes import RunNow
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_map, activity_overview, activity_page
+
+    win = narrow_window(language, width=NARROWEST)
+    win.set_default_size(NARROWEST, PHONE_HEIGHT)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_map.set_tiles(False)
+    if kind == "file":
+        read, data = _long_hike()
+        monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+        win.run_task = RunNow()
+        activity_page.open_activity(win, read)
+    else:
+        activity_page.open_from_journal(win, _journal_line())
+    _iterate(0.3)
+    page = win.navigation.get_visible_page()
+    (scrolled,) = [w for w in descendants(page) if isinstance(w, Gtk.ScrolledWindow)
+                   and w.get_mapped()]
+    (card,) = [w for w in descendants(page) if isinstance(w, activity_overview.NumbersCard)]
+    below = activity_map.ActivityMap if kind == "file" else activity_overview.ShapeCard
+    (under,) = [w for w in descendants(page) if isinstance(w, below)]
+    assert card.get_next_sibling() is under
+    assert scrolled.get_vadjustment().get_value() == 0
+    _found, seen = card.compute_bounds(scrolled)
+    assert seen.get_y() >= 0
+    assert seen.get_y() + seen.get_height() <= scrolled.get_height()
+
+
 @pytest.mark.parametrize("language", ["en", "pl"])
 def test_the_page_device_status_opened_fits_the_narrowest_window(narrow_window, language):
     """The page with its newest crash and its details open, the kinds of file listed, Show All

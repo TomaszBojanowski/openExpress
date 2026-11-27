@@ -898,8 +898,8 @@ def test_a_tile_of_a_listing_that_failed_opens_nothing(tmp_path, monkeypatch):
 
 
 def test_the_page_from_the_journal_of_an_activity_with_a_track(tmp_path):
-    """A run whose file is gone: its shape on a grid, its numbers, its heart rate when the
-    journal kept one."""
+    """A run whose file is gone: its numbers, its shape on a grid under them, its heart rate
+    when the journal kept one."""
     win, section = gone_from_the_device(tmp_path, {
         "2026-10-28-07-00-00.fit": track(datetime(2026, 10, 28, 7, 0), 1, 3, ZIGZAG, km=21.3,
                                          minutes=171, ascent=640),
@@ -908,7 +908,7 @@ def test_the_page_from_the_journal_of_an_activity_with_a_track(tmp_path):
     tiles = tile_buttons(section)
     tiles[0].emit("clicked")
     found, buttons = journal_page(win)
-    assert found == ["heading", FROM_JOURNAL, "shape", "numbers"] and buttons == []
+    assert found == ["heading", FROM_JOURNAL, "numbers", "shape"] and buttons == []
 
 
 def test_the_page_from_the_journal_goes_with_the_device_and_with_the_journal(tmp_path):

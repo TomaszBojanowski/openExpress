@@ -1,9 +1,9 @@
 """The top of an activity's page (one_activity.Overview), over its chart, laps, training effect and
 details: its heading (its kind with its sub sport, when it started and on which device, a dot of
-its sport's colour before the title but in a narrow window), the shape of its track on a plain
-grid with its start marked (the activity journal's shape; the page of a file draws its map on
-the same grid, gui/activity_map.py), its numbers in a card (four on a line or two by two, as on
-the Activities page, gui/activities_since.py), its elevation (the lowest and the highest point
+its sport's colour before the title but in a narrow window), its numbers in a card (four on a
+line or two by two, as on the Activities page, gui/activities_since.py), the shape of its track
+on a plain grid with its start marked (the activity journal's shape; the page of a file draws
+its map on the same grid, gui/activity_map.py), its elevation (the lowest and the highest point
 beside the title, the profile under it) and its heart rate (gui/activity_zones.py). The words
 are in gui/words.py, in the units of its device; nothing here reads a file.
 Has: no attribute of the window."""

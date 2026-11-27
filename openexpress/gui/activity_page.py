@@ -1,8 +1,8 @@
 """The page of one activity, opened from its row on the Activities page or from its tile: the
 back arrow and the GPX export in its header bar; on top (gui/activity_overview.py) its heading
 (its kind, when it started and on which device, a dot of its sport's colour, gui/sports.py, but
-in a narrow window), the map of its track (gui/activity_map.py) with the place of the chart's
-cursor, its numbers, its elevation and its heart rate with the share and the rows of its zones
+in a narrow window), its numbers, the map of its track (gui/activity_map.py) with the place of
+the chart's cursor, its elevation and its heart rate with the share and the rows of its zones
 (gui/activity_zones.py); under them the chart of its records (gui/activity_chart.py), its laps
 or kilometres (gui/activity_laps.py; one chosen shown on the chart and the map), training
 effect (gui/activity_effect.py) and details (gui/activity_details.py, closed); and what a file
@@ -11,10 +11,10 @@ the units of its device, whether the activity journal is kept or not. Its file i
 each time it opens, in a task (fit.activity_data), from the device or from a copy in a backup;
 nothing is kept and nothing is written. An activity whose file is gone from the device and its
 backups opens, while the journal is kept, from its line of the journal (one_activity.py): the
-top alone, its shape on a grid, no chart, laps, details nor GPX, one line saying where it comes
-from. The page is pushed onto the window's navigation above the device view and goes with the
-pages of that view (the device gone, or drawn anew), the journal's page also with the journal
-turned off.
+top alone, its shape on a grid under its numbers, no chart, laps, details nor GPX, one line
+saying where it comes from. The page is pushed onto the window's navigation above the device
+view and goes with the pages of that view (the device gone, or drawn anew), the journal's page
+also with the journal turned off.
 Has: no attribute of the window; the page keeps what it needs in its closures."""
 from __future__ import annotations
 
@@ -236,15 +236,18 @@ class ActivityView:
         self.header.set_show_title(False)
         self.content.append(heading)
 
-    def _numbers_elevation_heart_rate(self, shown, zones=None) -> tuple[int, bool, bool]:
-        """The card of numbers (none without a number), the elevation and the heart rate (with
-        the rows of `zones`): how many numbers, whether there is an elevation and a heart
-        rate."""
+    def _numbers(self, shown) -> int:
+        """The card of numbers (none without a number): how many numbers."""
         numbers = overview_numbers(shown)
         if numbers:
             card = activity_overview.NumbersCard(numbers)
             card.set_margin_top(12)
             self.content.append(card)
+        return len(numbers)
+
+    def _elevation_heart_rate(self, shown, zones=None) -> tuple[bool, bool]:
+        """The elevation and the heart rate (with the rows of `zones`): whether there is
+        each."""
         found = []
         for section in (activity_overview.elevation(shown),
                         activity_overview.heart_rate(shown, zones)):
@@ -252,12 +255,12 @@ class ActivityView:
                 section.set_margin_top(12)
                 self.content.append(section)
             found.append(section is not None)
-        return len(numbers), *found
+        return found[0], found[1]
 
     def show(self, data, series, track=None, moving=None, shown=None) -> None:
         """What the file holds (fit.ActivityData): on top its heading, a damaged file said
-        under it, the map of `track` (activity_map.Track; none without positions, a line
-        without libshumate), its numbers, elevation and heart rate (`shown`,
+        under it, its numbers, the map of `track` (activity_map.Track; none without positions,
+        a line without libshumate), its elevation and heart rate (`shown`,
         one_activity.Overview); under them the chart of `series` (activity_chart.Series), or a
         line in its place when there is none, then its laps or kilometres (none for a
         workout), training effect and details (`moving`: the moving time worked out from its
@@ -276,6 +279,7 @@ class ActivityView:
             damaged = Gtk.Label(label=damaged_file_text(), wrap=True, xalign=0)
             damaged.add_css_class("warning")
             self.content.append(damaged)
+        numbers = self._numbers(shown)
         if track is not None and activity_map.available():
             mapped = activity_map.ActivityMap(track)
             mapped.set_margin_top(12)
@@ -285,7 +289,7 @@ class ActivityView:
                                      "installed"), wrap=True, xalign=0, margin_top=12)
             line.add_css_class("dim-label")
             self.content.append(line)
-        numbers, elevation, heart = self._numbers_elevation_heart_rate(shown, data.zones)
+        elevation, heart = self._elevation_heart_rate(shown, data.zones)
         if series:
             chart = ActivityChart(series, data.zones.bounds if data.zones else None)
             chart.set_margin_top(12)
@@ -323,17 +327,18 @@ class ActivityView:
 
     def show_journal(self, shown) -> None:
         """An activity from its line of the activity journal (one_activity.Overview): its
-        heading, where it comes from, the shape of its track, its numbers, elevation and heart
-        rate."""
+        heading, where it comes from, its numbers, the shape of its track, its elevation and
+        heart rate."""
         self._top(shown, sport_group(shown.sport))
         said = Gtk.Label(label=from_journal_text(), wrap=True, xalign=0)
         said.add_css_class("dim-label")
         self.content.append(said)
+        numbers = self._numbers(shown)
         if shown.shape:
             card = activity_overview.ShapeCard(shown.shape)
             card.set_margin_top(12)
             self.content.append(card)
-        numbers, elevation, heart = self._numbers_elevation_heart_rate(shown)
+        elevation, heart = self._elevation_heart_rate(shown)
         self.stack.set_visible_child_name("content")
         log.info("activity page: from the activity journal, %d numbers, %s, %s, %s", numbers,
                  "a shape" if shown.shape else "no shape",

@@ -1,6 +1,6 @@
 """The page of one activity, pushed onto the window's navigation from its row: the back arrow
 and the GPX export in its header bar; on top its heading (its kind, when and on which device),
-the shape of its track, its numbers, its elevation and heart rate; then the chart, laps,
+its numbers, the map of its track, its elevation and heart rate; then the chart, laps,
 training effect and details; what a file that could not be read, one still being written, a
 damaged one and one without a summary say; its file read again in a task from the device or
 from a backup's copy. Every file is made up from the public FIT protocol."""
@@ -207,7 +207,7 @@ def test_what_a_file_still_being_written_a_damaged_one_and_one_without_a_summary
     page = open_page(win, read_of())
     if state == "damaged":  # its numbers, and under its heading that the file is damaged
         assert "Damaged file" in labels(page) and f"12.40{NB}km" in labels(page)
-        assert modules(page)[:3] == ["heading", "damaged", "map"]
+        assert modules(page)[:4] == ["heading", "damaged", "numbers", "map"]
     else:
         said = {"still being written": ["Still Being Written",
                                         "Unplug the device and plug it in again"],
@@ -337,12 +337,12 @@ def walk_on_top(**fields):
 
 
 def test_the_page_of_a_file_from_its_heading_down(monkeypatch):
-    """Its heading, the map of its track, its numbers, its elevation, its heart rate; then the
+    """Its heading, its numbers, the map of its track, its elevation, its heart rate; then the
     chart, its laps, its training effect and its details."""
     from datetime import datetime
 
     win, page = page_of(monkeypatch, walk_on_top())
-    assert modules(page) == ["heading", "map", "numbers", "elevation", "heart rate", "chart",
+    assert modules(page) == ["heading", "numbers", "map", "elevation", "heart rate", "chart",
                              "laps", "effect", "details"]
     started = datetime.fromtimestamp(START + FIT_EPOCH)
     assert heading_of(page) == ["Walking", started.strftime(f"%Y-%m-%d{NB}· %H:%M")]

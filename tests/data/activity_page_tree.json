@@ -52,6 +52,103 @@
      ]
     },
     {
+     "type": "OpenExpressNumbersCard",
+     "css": [
+      "card",
+      "horizontal"
+     ],
+     "children": [
+      {
+       "type": "GtkBox",
+       "css": [
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">3.25</span> km"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Distance"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">43:20</span>"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Time"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">13:20</span> /km"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Average Pace"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10</span> m"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Total Ascent"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
      "type": "OpenExpressActivityMap",
      "css": [
       "vertical"
@@ -303,103 +400,6 @@
        ],
        "hidden": true,
        "label": "No internet connection: only the parts of the map downloaded before are shown"
-      }
-     ]
-    },
-    {
-     "type": "OpenExpressNumbersCard",
-     "css": [
-      "card",
-      "horizontal"
-     ],
-     "children": [
-      {
-       "type": "GtkBox",
-       "css": [
-        "horizontal"
-       ],
-       "children": [
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">3.25</span> km"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Distance"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">43:20</span>"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Time"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">13:20</span> /km"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Average Pace"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10</span> m"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Total Ascent"
-          }
-         ]
-        }
-       ]
       }
      ]
     },
@@ -2348,6 +2348,103 @@
      ]
     },
     {
+     "type": "OpenExpressNumbersCard",
+     "css": [
+      "card",
+      "horizontal"
+     ],
+     "children": [
+      {
+       "type": "GtkBox",
+       "css": [
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2.02</span> mi"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Distance"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">43:20</span>"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Time"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">21:27</span> /mi"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Average Pace"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">33</span> ft"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Total Ascent"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
      "type": "OpenExpressActivityMap",
      "css": [
       "vertical"
@@ -2599,103 +2696,6 @@
        ],
        "hidden": true,
        "label": "No internet connection: only the parts of the map downloaded before are shown"
-      }
-     ]
-    },
-    {
-     "type": "OpenExpressNumbersCard",
-     "css": [
-      "card",
-      "horizontal"
-     ],
-     "children": [
-      {
-       "type": "GtkBox",
-       "css": [
-        "horizontal"
-       ],
-       "children": [
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">2.02</span> mi"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Distance"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">43:20</span>"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Time"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">21:27</span> /mi"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Average Pace"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">33</span> ft"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Total Ascent"
-          }
-         ]
-        }
-       ]
       }
      ]
     },
@@ -4644,6 +4644,103 @@
      ]
     },
     {
+     "type": "OpenExpressNumbersCard",
+     "css": [
+      "card",
+      "horizontal"
+     ],
+     "children": [
+      {
+       "type": "GtkBox",
+       "css": [
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">3.25</span> km"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Distance"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">43:20</span>"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Time"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">13:20</span> /km"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Average Pace"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10</span> m"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Total Ascent"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
      "type": "OpenExpressActivityMap",
      "css": [
       "vertical"
@@ -4895,103 +4992,6 @@
        ],
        "hidden": true,
        "label": "No internet connection: only the parts of the map downloaded before are shown"
-      }
-     ]
-    },
-    {
-     "type": "OpenExpressNumbersCard",
-     "css": [
-      "card",
-      "horizontal"
-     ],
-     "children": [
-      {
-       "type": "GtkBox",
-       "css": [
-        "horizontal"
-       ],
-       "children": [
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">3.25</span> km"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Distance"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">43:20</span>"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Time"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">13:20</span> /km"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Average Pace"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">10</span> m"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Total Ascent"
-          }
-         ]
-        }
-       ]
       }
      ]
     },
@@ -8043,6 +8043,103 @@
      "label": "Damaged file"
     },
     {
+     "type": "OpenExpressNumbersCard",
+     "css": [
+      "card",
+      "horizontal"
+     ],
+     "children": [
+      {
+       "type": "GtkBox",
+       "css": [
+        "horizontal"
+       ],
+       "children": [
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">12.40</span> km"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Distance"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">3:50:00</span>"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Time"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">16:40</span> /km"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Average Pace"
+          }
+         ]
+        },
+        {
+         "type": "GtkBox",
+         "css": [
+          "vertical"
+         ],
+         "children": [
+          {
+           "type": "GtkLabel",
+           "css": [],
+           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">740</span> m"
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "dim-label"
+           ],
+           "label": "Total Ascent"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
      "type": "OpenExpressActivityMap",
      "css": [
       "vertical"
@@ -8294,103 +8391,6 @@
        ],
        "hidden": true,
        "label": "No internet connection: only the parts of the map downloaded before are shown"
-      }
-     ]
-    },
-    {
-     "type": "OpenExpressNumbersCard",
-     "css": [
-      "card",
-      "horizontal"
-     ],
-     "children": [
-      {
-       "type": "GtkBox",
-       "css": [
-        "horizontal"
-       ],
-       "children": [
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">12.40</span> km"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Distance"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">3:50:00</span>"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Time"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">16:40</span> /km"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Average Pace"
-          }
-         ]
-        },
-        {
-         "type": "GtkBox",
-         "css": [
-          "vertical"
-         ],
-         "children": [
-          {
-           "type": "GtkLabel",
-           "css": [],
-           "label": "<span font_features=\"tnum\" size=\"180%\" weight=\"heavy\">740</span> m"
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "dim-label"
-           ],
-           "label": "Total Ascent"
-          }
-         ]
-        }
-       ]
       }
      ]
     },
@@ -9300,38 +9300,6 @@
      "label": "The file of this activity is no longer on the device or in its backups; this is what the activity journal kept"
     },
     {
-     "type": "OpenExpressShapeCard",
-     "css": [
-      "horizontal"
-     ],
-     "children": [
-      {
-       "type": "GtkFrame",
-       "css": [],
-       "children": [
-        {
-         "type": "GtkOverlay",
-         "css": [],
-         "children": [
-          {
-           "type": "GtkDrawingArea",
-           "css": []
-          },
-          {
-           "type": "GtkLabel",
-           "css": [
-            "caption",
-            "dim-label"
-           ],
-           "label": "Shape only, no map underneath"
-          }
-         ]
-        }
-       ]
-      }
-     ]
-    },
-    {
      "type": "OpenExpressNumbersCard",
      "css": [
       "card",
@@ -9421,6 +9389,38 @@
             "dim-label"
            ],
            "label": "Total Ascent"
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    {
+     "type": "OpenExpressShapeCard",
+     "css": [
+      "horizontal"
+     ],
+     "children": [
+      {
+       "type": "GtkFrame",
+       "css": [],
+       "children": [
+        {
+         "type": "GtkOverlay",
+         "css": [],
+         "children": [
+          {
+           "type": "GtkDrawingArea",
+           "css": []
+          },
+          {
+           "type": "GtkLabel",
+           "css": [
+            "caption",
+            "dim-label"
+           ],
+           "label": "Shape only, no map underneath"
           }
          ]
         }
