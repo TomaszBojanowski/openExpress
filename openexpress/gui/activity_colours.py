@@ -189,6 +189,6 @@ class TrackLegend(Gtk.Box):
         if ends is None:
             return
         self.name.set_label(track_colour_text(series.kind))
-        self.low.set_label(chart_value_text(series.kind, ends[0]))
-        self.high.set_label(chart_value_text(series.kind, ends[1]))
+        self.low.set_label(chart_value_text(series.kind, ends[0], series.units))
+        self.high.set_label(chart_value_text(series.kind, ends[1], series.units))
         self.scale.set_visible(on)

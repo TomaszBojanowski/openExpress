@@ -3069,7 +3069,7 @@
                 "property"
                ],
                "title": "Lap 1",
-               "subtitle": "1.00 km · 13:18 · 100 bpm",
+               "subtitle": "0.62 mi · 13:18 · 21:27 /mi · 100 bpm",
                "activatable": true,
                "children": [
                 {
@@ -3114,7 +3114,7 @@
                      "css": [
                       "subtitle"
                      ],
-                     "label": "1.00 km · 13:18 · 100 bpm"
+                     "label": "0.62 mi · 13:18 · 21:27 /mi · 100 bpm"
                     }
                    ]
                   },
@@ -3144,7 +3144,7 @@
                 "property"
                ],
                "title": "Lap 2",
-               "subtitle": "1.00 km · 13:20 · 105 bpm",
+               "subtitle": "0.62 mi · 13:20 · 21:27 /mi · 105 bpm",
                "activatable": true,
                "children": [
                 {
@@ -3189,7 +3189,7 @@
                      "css": [
                       "subtitle"
                      ],
-                     "label": "1.00 km · 13:20 · 105 bpm"
+                     "label": "0.62 mi · 13:20 · 21:27 /mi · 105 bpm"
                     }
                    ]
                   },
@@ -3219,7 +3219,7 @@
                 "property"
                ],
                "title": "Lap 3",
-               "subtitle": "1.00 km · 13:20 · 110 bpm",
+               "subtitle": "0.62 mi · 13:20 · 21:27 /mi · 110 bpm",
                "activatable": true,
                "children": [
                 {
@@ -3264,7 +3264,7 @@
                      "css": [
                       "subtitle"
                      ],
-                     "label": "1.00 km · 13:20 · 110 bpm"
+                     "label": "0.62 mi · 13:20 · 21:27 /mi · 110 bpm"
                     }
                    ]
                   },
@@ -3294,7 +3294,7 @@
                 "property"
                ],
                "title": "Lap 4",
-               "subtitle": "0.25 km · 3:20 · 13:20 /km · 115 bpm",
+               "subtitle": "0.16 mi · 3:20 · 21:27 /mi · 115 bpm",
                "activatable": true,
                "children": [
                 {
@@ -3339,7 +3339,7 @@
                      "css": [
                       "subtitle"
                      ],
-                     "label": "0.25 km · 3:20 · 13:20 /km · 115 bpm"
+                     "label": "0.16 mi · 3:20 · 21:27 /mi · 115 bpm"
                     }
                    ]
                   },
@@ -3926,7 +3926,7 @@
                        "css": [
                         "numeric"
                        ],
-                       "label": "12 m"
+                       "label": "39 ft"
                       }
                      ]
                     }
@@ -4000,7 +4000,7 @@
                        "css": [
                         "numeric"
                        ],
-                       "label": "13:19 /km"
+                       "label": "21:26 /mi"
                       }
                      ]
                     }

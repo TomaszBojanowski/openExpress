@@ -6,7 +6,7 @@ the chart's cursor, its elevation and its heart rate with the share and the rows
 (gui/activity_zones.py); under them the chart of its records (gui/activity_chart.py), its laps
 or kilometres (gui/activity_laps.py; one chosen shown on the chart and the map), training
 effect (gui/activity_effect.py) and details (gui/activity_details.py, closed); and what a file
-that could not be read, one still being written and one without a summary say. The top is in
+that could not be read, one still being written and one without a summary say. The page is in
 the units of its device, whether the activity journal is kept or not. Its file is read again
 each time it opens, in a task (fit.activity_data), from the device or from a copy in a backup;
 nothing is kept and nothing is written. An activity whose file is gone from the device and its
@@ -301,10 +301,11 @@ class ActivityView:
             line = Gtk.Label(label=no_chart_text(), wrap=True, xalign=0, margin_top=12)
             line.add_css_class("dim-label")
             self.content.append(line)
-        laps, kilometres = laps_of(data)
+        laps, splits = laps_of(data)
         if laps:
-            listed = LapList(laps, kilometres, data.sport,
-                             data.samples[0].time if data.samples else data.start or 0)
+            listed = LapList(laps, splits, data.sport,
+                             data.samples[0].time if data.samples else data.start or 0,
+                             shown.units.miles)
             listed.set_margin_top(12)
             listed.connect("lap-chosen", _lap_chosen)
             self.content.append(listed)
@@ -323,7 +324,7 @@ class ActivityView:
                  "an elevation" if elevation else "no elevation",
                  "a heart rate" if heart else "no heart rate",
                  ", ".join(s.kind for s in series) or "nothing", len(laps),
-                 "kilometres" if kilometres else "laps")
+                 ("miles" if shown.units.miles else "kilometres") if splits else "laps")
 
     def show_journal(self, shown) -> None:
         """An activity from its line of the activity journal (one_activity.Overview): its

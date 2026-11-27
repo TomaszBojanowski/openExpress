@@ -4,8 +4,8 @@ gone from the device and its backups, from its line of the activity journal
 time, speed, ascent, calories, the rest time of a strength workout), the lowest and highest
 point with the elevation profile, the heart rate (average, highest, the time in each zone), the
 shape of its track (only the journal's: the page of a file draws its map) and the units its
-device shows. Its words are in gui/words.py. Nothing is read from a device and nothing is
-written.
+device shows (the whole page of a file is in them). Its words are in gui/words.py. Nothing is
+read from a device and nothing is written.
 Has: nothing of the window."""
 from __future__ import annotations
 
@@ -51,6 +51,15 @@ def _time(timer, elapsed) -> float | None:
     return timer if timer is not None else elapsed
 
 
+def units_of_file(data) -> since_last.Units:
+    """The units the device of an activity (fit.ActivityData) shows, as its file says them:
+    miles and feet when statute, else kilometres and metres (also when it does not say)."""
+    units = data.units
+    return since_last.Units(
+        miles=units is not None and units.distance == since_last.STATUTE,
+        feet=units is not None and units.elevation == since_last.STATUTE)
+
+
 def of_file(data) -> Overview:
     """An activity as its file holds it (fit.ActivityData): the lowest and highest point from
     its records when its sessions do not say them, its elevation profile from its records."""
@@ -60,7 +69,6 @@ def of_file(data) -> Overview:
     highest = data.max_altitude if data.max_altitude is not None else (
         max(altitudes) if altitudes else None)
     profile = activity_journal.profile(data.samples)
-    units = data.units
     time = _time(data.timer_time, data.elapsed_time)
     return Overview(
         sport=data.sport, sub_sport=data.sub_sport, start=data.start, utc_offset=data.utc_offset,
@@ -69,9 +77,7 @@ def of_file(data) -> Overview:
         highest=highest, profile=tuple(profile) if profile else None,
         avg_heart_rate=data.avg_heart_rate, max_heart_rate=data.max_heart_rate,
         zones=tuple(data.zones.times) if data.zones is not None else None, shape=None,
-        units=since_last.Units(
-            miles=units is not None and units.distance == since_last.STATUTE,
-            feet=units is not None and units.elevation == since_last.STATUTE))
+        units=units_of_file(data))
 
 
 def _points(shape) -> tuple[tuple[int, int], ...] | None:

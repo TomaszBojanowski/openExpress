@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 16:06+0100\n"
+"POT-Creation-Date: 2026-11-27 18:41+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10708,6 +10708,24 @@ msgstr ""
 msgid "That is the equator {times} times."
 msgstr ""
 
+#. TRANSLATORS: a pace, the time a mile takes ("12:56 /mi")
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{pace} /mi"
+msgstr ""
+
+#. TRANSLATORS: a pace of a swim, the time a hundred yards take ("2:00 /100 yd")
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{pace} /100 yd"
+msgstr ""
+
+#. TRANSLATORS: a speed in miles an hour ("24.9 mph")
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "{speed} mph"
+msgstr ""
+
 #. TRANSLATORS: a pace, the time a kilometre takes ("5:10 /km")
 #: openexpress/gui/words.py
 #, python-brace-format
@@ -10773,24 +10791,6 @@ msgstr ""
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "{value} yd"
-msgstr ""
-
-#. TRANSLATORS: a pace, the time a mile takes ("12:56 /mi")
-#: openexpress/gui/words.py
-#, python-brace-format
-msgid "{pace} /mi"
-msgstr ""
-
-#. TRANSLATORS: a pace of a swim, the time a hundred yards take ("2:00 /100 yd")
-#: openexpress/gui/words.py
-#, python-brace-format
-msgid "{pace} /100 yd"
-msgstr ""
-
-#. TRANSLATORS: a speed in miles an hour ("24.9 mph")
-#: openexpress/gui/words.py
-#, python-brace-format
-msgid "{speed} mph"
 msgstr ""
 
 #. TRANSLATORS: beside the title of the elevation of an activity: its lowest point
@@ -11018,6 +11018,13 @@ msgstr ""
 msgid "Lap {number}"
 msgstr ""
 
+#. TRANSLATORS: title of the list of mile splits worked out from an activity's records,
+#. shown in place of "Laps" on a device set to miles (not the unit)
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Miles"
+msgstr ""
+
 #. TRANSLATORS: title of the list of kilometre splits worked out from an activity's records,
 #. shown in place of "Laps" (not the unit)
 #: openexpress/gui/words.py
@@ -11036,6 +11043,13 @@ msgstr ""
 #: openexpress/gui/words.py
 #, python-brace-format
 msgid "Kilometre {number}"
+msgstr ""
+
+#. TRANSLATORS: the title of the row of a mile on the page of an activity whose device, set
+#. to miles, kept no laps
+#: openexpress/gui/words.py
+#, python-brace-format
+msgid "Mile {number}"
 msgstr ""
 
 #. TRANSLATORS: the title of the section of the heart rate zones on the page of an activity
@@ -11224,6 +11238,34 @@ msgstr ""
 #, python-brace-format
 msgctxt "activity chart"
 msgid "Speed"
+msgstr ""
+
+#. TRANSLATORS: the unit on top of the axis of the chart of an activity, on a device set
+#. to feet and miles
+#: openexpress/gui/words.py
+#, python-brace-format
+msgctxt "chart unit"
+msgid "ft"
+msgstr ""
+
+#. TRANSLATORS: the units on top of the axis of the chart of an activity, on a device
+#. set to miles: a pace a mile, a pace a hundred yards, miles an hour
+#: openexpress/gui/words.py
+#, python-brace-format
+msgctxt "chart unit"
+msgid "min/mi"
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgctxt "chart unit"
+msgid "min/100 yd"
+msgstr ""
+
+#: openexpress/gui/words.py
+#, python-brace-format
+msgctxt "chart unit"
+msgid "mph"
 msgstr ""
 
 #. TRANSLATORS: the unit on top of the axis of the chart of an activity

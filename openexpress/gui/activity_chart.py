@@ -1,13 +1,13 @@
 """The chart of an activity's page: one of the series its records give (heart rate, elevation,
-and pace or speed by its sport; their words in gui/words.py) over the time since its first
-record. A value not given and records that stop for a while (a pause) leave a gap in the line;
-so does a stop in the pace, never a slow climb. Pace is smoothed over about 30 s of moving and
-drawn with the faster on top, its axis from the pace of most of the moving records (a value
-beyond it drawn at its edge); the points are brought down to two a pixel column without losing a
-peak; the axes have round values. Heart rate has the bands of the heart rate zones 1-5 behind
-it, in their colours (gui/activity_zones.py). A click, a drag or the keys place a cursor, its
-value said beside the switch. The numbers need no screen; the drawing is Cairo in a
-Gtk.DrawingArea.
+and pace or speed by its sport; their words in gui/words.py, in the units of its device) over
+the time since its first record. A value not given and records that stop for a while (a
+pause) leave a gap in the line; so does a stop in the pace, never a slow climb. Pace is
+smoothed over about 30 s of moving and drawn with the faster on top, its axis from the pace of
+most of the moving records (a value beyond it drawn at its edge); the points are brought down
+to two a pixel column without losing a peak; the axes have round values. Heart rate has the
+bands of the heart rate zones 1-5 behind it, in their colours (gui/activity_zones.py). A click,
+a drag or the keys place a cursor, its value said beside the switch. The numbers need no
+screen; the drawing is Cairo in a Gtk.DrawingArea.
 Has: no attribute of the window; the chart's widgets keep their series and cursor themselves."""
 from __future__ import annotations
 
@@ -25,10 +25,14 @@ gi.require_version("PangoCairo", "1.0")
 
 from gi.repository import Gdk, GObject, Gtk, Pango, PangoCairo  # noqa: E402 - imports must follow gi.require_version
 
+from openexpress import since_last  # noqa: E402
 from openexpress.gui.activity_colours import accent_colour, plain_flow  # noqa: E402
 from openexpress.gui.activity_zones import ZONE_COLOURS  # noqa: E402
 from openexpress.gui.palette import rgba  # noqa: E402
 from openexpress.gui.words import (  # noqa: E402
+    METRES_A_FOOT,
+    METRES_A_MILE,
+    METRES_A_YARD,
     PACES,
     activity_clock,
     chart_accessible_name,
@@ -68,11 +72,13 @@ class Series:
     """A series of the chart: its kind ("heart rate", "elevation", "pace", "swim pace",
     "speed"), the time of each record in seconds since the first one, and its value there in
     the unit of the axis (beats a minute, metres, seconds a kilometre or a hundred metres,
-    kilometres an hour); None: a gap."""
+    kilometres an hour; in `units`, since_last.Units, feet, seconds a mile or a hundred yards,
+    miles an hour); None: a gap."""
 
     kind: str
     times: tuple[float, ...]
     values: tuple[float | None, ...]
+    units: since_last.Units | None = None  # None: kilometres and metres
 
     @property
     def duration(self) -> float:
@@ -191,29 +197,39 @@ def _smoothed(times, speeds, stopped, counted) -> list[float | None]:
 def chart_series(data) -> list[Series]:
     """The series of an activity (fit.ActivityData) its records give, in the order of the
     switch: heart rate, elevation, then for an activity with a distance its pace (smoothed;
-    none at a stop) or its speed, by its sport."""
+    none at a stop) or its speed, by its sport; in the units of its device
+    (one_activity.units_of_file)."""
+    from openexpress.one_activity import units_of_file
+
     samples = data.samples
     if not samples:
         return []
+    units = units_of_file(data)
     origin = samples[0].time
     times = tuple(s.time - origin for s in samples)
     found = []
+    altitudes = tuple(s.altitude for s in samples)
+    if units.feet:
+        altitudes = tuple(None if v is None else v / METRES_A_FOOT for v in altitudes)
     for kind, values in (("heart rate", tuple(s.heart_rate for s in samples)),
-                         ("elevation", tuple(s.altitude for s in samples))):
+                         ("elevation", altitudes)):
         if any(v is not None for v in values):
-            found.append(Series(kind, times, values))
+            found.append(Series(kind, times, values, units))
     if _has_distance(data):
         speeds = _speeds(samples)
         kind = speed_kind(data.sport)
         if kind == "speed":
-            values = tuple(None if v is None else v * 3.6 for v in speeds)
+            hour = 3600 / METRES_A_MILE if units.miles else 3.6
+            values = tuple(None if v is None else v * hour for v in speeds)
         else:
-            per = 1000 if kind == "pace" else 100
+            per = {("pace", False): 1000, ("pace", True): METRES_A_MILE,
+                   ("swim pace", False): 100, ("swim pace", True): 100 * METRES_A_YARD}[
+                kind, units.miles]
             stopped, counted = _stops(times, speeds, [s.altitude for s in samples])
             values = tuple(None if v is None or v <= 0 else per / v
                            for v in _smoothed(times, speeds, stopped, counted))
         if any(v is not None for v in values):
-            found.append(Series(kind, times, values))
+            found.append(Series(kind, times, values, units))
     return found
 
 
@@ -464,7 +480,7 @@ def _draw(area, cr, width: int, height: int) -> None:
         cr.stroke()
         _text(area, cr, chart_tick(kind, value, plot.values.step), plot.left - 6,
               y - text_height / 2, 1, fg)
-    _text(area, cr, chart_unit(kind), 0, 0, 0, fg)
+    _text(area, cr, chart_unit(kind, area.series.units), 0, 0, 0, fg)
     for at in plot.times.ticks:
         _text(area, cr, activity_clock(at), plot.x(at), plot.bottom + 4, 0.5, fg)
     cr.save()
@@ -633,7 +649,7 @@ class ChartArea(Gtk.DrawingArea):
         if self.cursor is None:
             return ""
         at, value = value_at(self.series, self.cursor)
-        return chart_cursor_text(at, self.series.kind, value)
+        return chart_cursor_text(at, self.series.kind, value, self.series.units)
 
 
 def _toggled(button) -> None:

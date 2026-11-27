@@ -437,18 +437,67 @@ def test_without_elevation_no_section_of_it(monkeypatch):
     assert "elevation" not in modules(page)
 
 
-def test_the_top_in_the_units_of_the_device_the_rest_in_kilometres(monkeypatch):
-    """A device in statute units: the numbers, the lowest and the highest point in miles and
-    feet; the chart, the laps and the details in kilometres and metres."""
+STATUTE = ("statute", "statute", "statute")  # fit.Units of a device in miles and feet
+
+
+def test_the_whole_page_in_the_units_of_the_device(monkeypatch):
+    """A device in statute units: its numbers, the lowest and the highest point, the chart's
+    axis and cursor, the legend of the track's colours, its laps and its details in miles and
+    feet; none of it in kilometres or metres."""
     from openexpress import fit
 
-    _win, page = page_of(monkeypatch, walk_on_top(units=fit.Units("statute", "statute",
-                                                                  "statute")))
+    _win, page = page_of(monkeypatch, with_details(walk_on_top(units=fit.Units(*STATUTE))))
     assert numbers_of(page) == [(f"2.02{NB}mi", "Distance"), ("43:20", "Time"),
                                 (f"21:27{NB}/mi", "Average Pace"), (f"33{NB}ft", "Total Ascent")]
     (elevation,) = [w for w in descendants(page) if type(w).__name__ == "ElevationSection"]
     assert section_words(elevation)[1] == f"312{NB}ft lowest{NB}· 344{NB}ft highest"
-    assert any("/km" in t for r in lap_rows(page) for t in row_texts(r))
+    lap = f"0.62 mi{NB}· 13:18{NB}· 21:27 /mi{NB}· 100 bpm"  # 1 km at 1.25 m/s
+    assert row_texts(lap_rows(page)[0]) == ["Lap 1", lap]
+    shown = detail_section(page)
+    details = dict((r.get_title(), r.value.get_label()) for r in shown.rows)
+    assert details["Total Descent"] == "39 ft"
+    assert details["Average Moving Pace"] == "21:26 /mi"
+    chart = chart_of(page)
+    legend = map_of(page).legend
+    chart.show("pace")
+    chart.area.place(600)
+    assert chart.value_label.get_label().endswith(" /mi")
+    assert legend.low.get_label().endswith(" /mi") and legend.high.get_label().endswith(" /mi")
+    chart.show("elevation")
+    assert chart.value_label.get_label().endswith(" ft")
+    assert (legend.low.get_label(), legend.high.get_label()) == ("312 ft", "344 ft")
+    shown_words = [t for t in labels(page) if " km" in t or " m " in t or t.endswith(" m")
+                   or "/km" in t or "km/h" in t]
+    assert shown_words == []
+
+
+def test_a_device_in_miles_splits_an_activity_without_laps_into_miles(monkeypatch):
+    """No laps kept and at least two miles long: a row of each mile worked out from the
+    records, the last one shorter."""
+    import dataclasses
+
+    from openexpress import fit
+
+    data = lapped_walk(device_laps=False)
+    _win, page = page_of(monkeypatch, dataclasses.replace(data, units=fit.Units(*STATUTE)))
+    assert "Miles" in labels(page) and "Kilometres" not in labels(page)
+    rows = lap_rows(page)
+    assert [r.get_title() for r in rows] == ["Mile 1", "Mile 2", "Mile 3"]
+    first, last = (row_texts(r)[1] for r in (rows[0], rows[-1]))
+    assert first.startswith(f"1.00 mi{NB}· ") and " /mi" not in first  # its pace is its time
+    assert last.startswith(f"0.02 mi{NB}· ")
+
+
+def test_a_device_in_miles_shorter_than_two_miles_has_no_splits(monkeypatch):
+    """3 km (1.86 miles) without laps: not two miles long, no rows; a device in kilometres
+    would have three."""
+    import dataclasses
+
+    from openexpress import fit
+
+    data = lapped_walk(device_laps=False, metres=3000)
+    _win, page = page_of(monkeypatch, dataclasses.replace(data, units=fit.Units(*STATUTE)))
+    assert lap_list(page) is None
 
 
 def test_the_header_bar_keeps_the_back_arrow_and_the_export_its_title_on_the_page(monkeypatch):

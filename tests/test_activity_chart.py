@@ -68,6 +68,25 @@ def test_the_time_since_the_first_record_and_the_values_in_their_units():
     assert found["speed"].values == pytest.approx((9.0, 9.0, 9.0))  # km/h, as recorded
 
 
+@pytest.mark.parametrize(("sport", "miles", "kind", "value"), [
+    (CYCLING, False, "speed", 9.0), (CYCLING, True, "speed", 9000 / 1609.344),
+    (WALKING, False, "pace", 400.0), (WALKING, True, "pace", 1609.344 / 2.5),
+    (SWIMMING, False, "swim pace", 40.0), (SWIMMING, True, "swim pace", 91.44 / 2.5)])
+def test_the_values_in_the_units_of_the_device(sport, miles, kind, value):
+    """A device set to miles and feet: the elevation in feet, the pace a mile or a hundred
+    yards, the speed in miles an hour; each series says its units."""
+    import dataclasses
+
+    data = activity([sample(s, distance=s * 2.5, speed=2.5, heart_rate=150, altitude=212.4)
+                     for s in range(60)], sport=sport)
+    statute = "statute" if miles else "metric"
+    found = series_of(dataclasses.replace(data, units=fit.Units(statute, statute, statute)))
+    assert found["elevation"].values[0] == pytest.approx(212.4 / 0.3048 if miles else 212.4)
+    assert found[kind].values[30] == pytest.approx(value)
+    assert {s.units.miles for s in found.values()} == {miles}
+    assert {s.units.feet for s in found.values()} == {miles}
+
+
 def test_pace_is_smoothed_over_about_thirty_seconds():
     """A speed that jumps between 1 and 2 m/s each second: the pace of 1.5 m/s, not a saw."""
     data = activity([sample(s, distance=s * 1.5, speed=1.0 if s % 2 else 2.0, heart_rate=120)
