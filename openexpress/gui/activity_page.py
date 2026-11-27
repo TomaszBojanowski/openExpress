@@ -225,7 +225,9 @@ class ActivityView:
         self.stack.set_visible_child_name("message")
 
     def _top(self, shown, group: str | None) -> None:
-        """The heading, its dot hidden in a narrow window; the header bar's title no longer."""
+        """The heading, its dot hidden in a narrow window; the header bar's title no longer;
+        the page named as its heading (its kind with its sub sport)."""
+        self.page.set_title(overview_title(shown))
         heading = activity_overview.Heading(shown, self.device, group)
         if heading.dot is not None:
             narrow = Adw.Breakpoint.new(Adw.BreakpointCondition.parse(NARROW))

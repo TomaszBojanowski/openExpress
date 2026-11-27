@@ -6297,7 +6297,7 @@
   }
  },
  "pool": {
-  "title": "Swimming",
+  "title": "Pool swimming",
   "tag": "activity",
   "header title": false,
   "buttons": [
@@ -6752,7 +6752,7 @@
   }
  },
  "strength": {
-  "title": "Training",
+  "title": "Strength training",
   "tag": "activity",
   "header title": false,
   "buttons": [

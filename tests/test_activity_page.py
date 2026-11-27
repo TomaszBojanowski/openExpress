@@ -454,6 +454,23 @@ def test_no_card_of_numbers_without_a_number(monkeypatch):
     assert modules(page)[:2] == ["heading", "heart rate"]
 
 
+def test_the_page_is_named_as_its_heading_once_read(monkeypatch):
+    """The page's own title (for a screen reader, and the window's navigation) is the kind its
+    heading says, with its sub sport, once the file is read."""
+    _win, page = page_of(monkeypatch, made_up(sport=TRAINING, sub_sport=20, timer_time=600.0),
+                         sport=TRAINING)
+    assert heading_of(page)[0] == "Strength training" == page.get_title()
+
+
+def test_the_bar_of_the_zones_and_its_legend_take_no_focus(monkeypatch):
+    """Nothing of the bar of the zones nor of its legend can be done: Tab never stops there."""
+    from openexpress.gui.activity_zones import ZoneShares
+
+    _win, page = page_of(monkeypatch, walk_on_top())
+    (shares,) = [w for w in descendants(page) if isinstance(w, ZoneShares)]
+    assert not [w for w in [shares, *descendants(shares)] if w.get_focusable()]
+
+
 def test_the_numbers_take_no_click_nor_focus(monkeypatch):
     """The card of numbers only says them: nothing in it is a button or takes the focus."""
     from gi.repository import Gtk
