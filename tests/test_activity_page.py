@@ -358,7 +358,8 @@ def test_the_page_of_a_file_from_its_heading_down(monkeypatch):
 
 def test_the_share_of_each_zone_on_a_bar_and_the_rows_of_the_zones_under_it(monkeypatch):
     """On top of the section of the heart rate: one bar of the zones' shares in their colours,
-    zone 1 first, with a legend of each zone and its share; the rows of the zones under it."""
+    zone 1 first; the rows of the zones right under it, which say each zone, its colour and
+    share: no legend under the bar."""
     from gi.repository import Gtk
 
     from openexpress.gui.activity_zones import ZONE_COLOURS, ZoneShares
@@ -368,13 +369,31 @@ def test_the_share_of_each_zone_on_a_bar_and_the_rows_of_the_zones_under_it(monk
     (shares,) = [w for w in descendants(zones) if isinstance(w, ZoneShares)]
     assert shares.bar.parts == [(1, 0.06), (2, 0.31), (3, 0.38), (4, 0.21), (5, 0.04)]
     assert [c for c in shares.bar.colours] == list(ZONE_COLOURS[1:])
-    legend = [w.get_label() for w in descendants(shares) if isinstance(w, Gtk.Label)]
-    assert legend == [f"Zone{NB}1{NB}· 6%", f"Zone{NB}2{NB}· 31%", f"Zone{NB}3{NB}· 38%",
-                      f"Zone{NB}4{NB}· 21%", f"Zone{NB}5{NB}· 4%"]
+    assert shares.legend is None
+    assert not [w for w in descendants(shares) if isinstance(w, Gtk.Label)]
     rows = [w for w in descendants(zones) if isinstance(w, Gtk.ListBoxRow)]
     assert rows[0].get_child() is shares and len(rows) == 7
     assert [row_texts(r)[0] for r in zones.rows] == ["Zone 5", "Zone 4", "Zone 3", "Zone 2",
                                                      "Zone 1", "Below Zone 1"]
+
+
+def test_from_the_journal_the_bar_of_the_zones_with_its_legend(monkeypatch):
+    """The journal keeps the time in each zone, never their bounds: no rows, so the bar has its
+    legend under it, each zone's name and share."""
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_page
+    from openexpress.gui.activity_zones import ZoneShares
+
+    win, _the_list = a_window(b"")
+    activity_page.open_from_journal(win, journal_line())
+    zones = zone_section(shown(win))
+    assert zones.rows == []
+    (shares,) = [w for w in descendants(zones) if isinstance(w, ZoneShares)]
+    assert shares.legend is not None
+    legend = [w.get_label() for w in descendants(shares) if isinstance(w, Gtk.Label)]
+    assert legend == [f"Zone{NB}1{NB}· 6%", f"Zone{NB}2{NB}· 31%", f"Zone{NB}3{NB}· 38%",
+                      f"Zone{NB}4{NB}· 21%", f"Zone{NB}5{NB}· 4%"]
 
 
 def test_the_time_below_zone_1_on_the_bar_only_when_there_is_some(monkeypatch):
@@ -463,12 +482,17 @@ def test_the_page_is_named_as_its_heading_once_read(monkeypatch):
 
 
 def test_the_bar_of_the_zones_and_its_legend_take_no_focus(monkeypatch):
-    """Nothing of the bar of the zones nor of its legend can be done: Tab never stops there."""
+    """Nothing of the bar of the zones nor of its legend (from the journal) can be done: Tab
+    never stops there."""
+    from openexpress.gui import activity_page
     from openexpress.gui.activity_zones import ZoneShares
 
     _win, page = page_of(monkeypatch, walk_on_top())
-    (shares,) = [w for w in descendants(page) if isinstance(w, ZoneShares)]
-    assert not [w for w in [shares, *descendants(shares)] if w.get_focusable()]
+    win, _the_list = a_window(b"")
+    activity_page.open_from_journal(win, journal_line())
+    for shown_page in (page, shown(win)):
+        (shares,) = [w for w in descendants(shown_page) if isinstance(w, ZoneShares)]
+        assert not [w for w in [shares, *descendants(shares)] if w.get_focusable()]
 
 
 def test_the_numbers_take_no_click_nor_focus(monkeypatch):

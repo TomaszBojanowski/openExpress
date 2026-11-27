@@ -1,10 +1,11 @@
 """The heart rate of an activity's page, over its chart: beside the title its average and highest
-heart rate; on top one bar of the share of each zone in the zone's colour, with a legend of each
-zone and its share; under it the zones as its device worked them out (fit.HeartRateZones), zone
-5 on top, then 4 to 1 and the time below zone 1, each with its bounds, its time and share, and a
-bar of its share; under the title how the bounds were worked out. From the activity journal
-(which keeps the time in each zone, never their bounds) the bar alone; a file with a heart rate
-but no zones, its average and highest alone. The zones' colours read on the cards of the light
+heart rate; on top one bar of the share of each zone in the zone's colour; right under it the
+zones as its device worked them out (fit.HeartRateZones), zone 5 on top, then 4 to 1 and the
+time below zone 1, each with its bounds, its time and share, and a bar of its share (they say
+the bar's colours); under the title how the bounds were worked out. From the activity journal
+(which keeps the time in each zone, never their bounds) the bar alone, with a legend of each
+zone and its share under it; a file with a heart rate but no zones, its average and highest
+alone. The zones' colours read on the cards of the light
 style and of the dark one alike (a contrast of 3:1 and a margin with both); the chart of heart
 rate draws its bands in them (gui/activity_chart.py).
 Has: no attribute of the window; the list keeps its rows."""
@@ -161,22 +162,26 @@ def _draw_dot(area, cr, width: int, height: int) -> None:
 
 
 class ZoneShares(Gtk.Box):
-    """The bar of the zones' shares and under it a legend: each zone's dot in its colour, its
-    name and share ("Zone 1 · 6%"), wrapping in a narrow window."""
+    """The bar of the zones' shares and, asked for (`legend`), a legend under it (`legend`,
+    None without one): each zone's dot in its colour, its name and share ("Zone 1 · 6%"),
+    wrapping in a narrow window."""
 
     __gtype_name__ = "OpenExpressZoneShares"
 
-    def __init__(self, times):
+    def __init__(self, times, legend: bool = True):
         super().__init__(orientation=Gtk.Orientation.VERTICAL, spacing=10, margin_top=14,
                          margin_bottom=12, margin_start=12, margin_end=12)
         self.bar = SharesBar(times)
         self.append(self.bar)
+        self.legend = None
+        if not legend:
+            return
         # Nothing selected and no background under the pointer (as activity_colours.plain_flow,
         # which needs this module's colours).
-        legend = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=1,
-                             max_children_per_line=6, column_spacing=16, row_spacing=4,
-                             halign=Gtk.Align.START)
-        legend.add_css_class("oe-plain")
+        flow = Gtk.FlowBox(selection_mode=Gtk.SelectionMode.NONE, min_children_per_line=1,
+                           max_children_per_line=6, column_spacing=16, row_spacing=4,
+                           halign=Gtk.Align.START)
+        flow.add_css_class("oe-plain")
         for number, share in zone_shares(times):
             item = Gtk.Box(spacing=6)
             dot = Gtk.DrawingArea(content_width=DOT, content_height=DOT,
@@ -188,16 +193,17 @@ class ZoneShares(Gtk.Box):
             said = Gtk.Label(label=zone_share_text(number, share), xalign=0)
             said.add_css_class("caption")
             item.append(said)
-            legend.append(Gtk.FlowBoxChild(child=item, focusable=False))
-        self.append(legend)
+            flow.append(Gtk.FlowBoxChild(child=item, focusable=False))
+        self.legend = flow
+        self.append(flow)
 
 
 class ZoneList(Gtk.Box):
     """The section of the heart rate: its title, the average and highest heart rate beside it
     (`said`), how the bounds were worked out under it; the bar of the shares of `times` (the
     seconds below zone 1, then in zones 1 to 5; those of `zones` when not given) and the rows of
-    `zones` (fit.HeartRateZones) under it. No time in any zone: titled the heart rate, its
-    average and highest alone."""
+    `zones` (fit.HeartRateZones) under it, or without them its legend. No time in any zone:
+    titled the heart rate, its average and highest alone."""
 
     __gtype_name__ = "OpenExpressZoneList"
 
@@ -206,7 +212,8 @@ class ZoneList(Gtk.Box):
         times = tuple(zones.times) if zones is not None and times is None else times
         self.rows = ([ZoneRow(number, zones) for number in reversed(range(len(zones.times)))]
                      if zones is not None else [])
-        self.shares = ZoneShares(times) if times and sum(times) > 0 else None
+        self.shares = (ZoneShares(times, legend=not self.rows) if times and sum(times) > 0
+                       else None)
         title = zones_title() if self.shares is not None or self.rows else detail_name(
             "heart rate")
         rows = [self.shares] if self.shares is not None else []
