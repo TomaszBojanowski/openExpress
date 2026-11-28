@@ -464,9 +464,10 @@ The first time you open the Activities page, a card asks **Keep an Activity Jour
 
 In Preferences → **Activity Journal**, **Keep an Activity Journal** turns it on or off (off keeps
 what it holds) and **Delete the Activity Journal** deletes the journal of every device, after
-asking. **Forget Device** deletes the journal of that device. No journal is kept for a device on
-another Garmin Connect account than the one signed in; the page says so at its bottom. On the
-command line: `openexpress setup --activity-journal on` (or `off`), and `openexpress activities
+asking. **Forget Device** deletes the journal of that device. When you are signed in, a device
+registered to another Garmin Connect account gets no journal (the page says so at its bottom);
+signed out, or when the account's devices cannot be read, openExpress cannot tell whose a device
+is and keeps one. On the command line: `openexpress setup --activity-journal on` (or `off`), and `openexpress activities
 journal`, which tells how many activities the journal of the connected device holds, since when,
 its gaps and its size (`--all`: of every device; `--delete --apply` deletes it).
 
@@ -480,10 +481,12 @@ one:
 - their distance, time, ascent and number in a card, and, when they climbed or went far enough,
   a comparison with a landmark (*That is the Eiffel Tower 2.1 times.*);
 - a tile for each of the newest six: the shape of its track in the colour of its sport (or its
-  sport's symbol), its numbers, *Uploaded* when this computer's syncs know it is in Garmin
-  Connect (sent by openExpress or found there already) or *Not uploaded yet* when its upload
-  failed and waits for the next sync, and its day. With nothing new, the newest three under
-  **Latest**;
+  sport's symbol), its numbers and its day; the page marks those that this computer's syncs know
+  to be in Garmin Connect *Uploaded* (sent by openExpress or found there already), and those
+  whose upload failed *Not uploaded yet* (tried again at the next sync). Files marked by a
+  baseline (**Upload New Data Only** at the first sync, or `openexpress baseline --apply`) are
+  *Uploaded* too; an activity this computer's syncs know nothing of has neither. With nothing
+  new, the newest three under **Latest**;
 - at the bottom how many earlier activities the device holds, and **Show All**, the list below.
 
 The first time, the page says *Activity journal started* and how many activities were read, from

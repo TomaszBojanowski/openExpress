@@ -138,10 +138,9 @@ written for it.
   [What is kept of each device](#what-is-kept-of-each-device)), readable only by you. Like the
   rest of that folder it goes into backups of your home folder.
 - **When it is written:** when a device is opened in the window, after a background sync and
-  after `openexpress sync --apply`; never for a device that is not on the list of devices of the
-  Garmin Connect account signed in. Signed out, or when that list cannot be read, openExpress
-  cannot tell whose a device is and writes the journal; a background sync and `sync --apply`
-  write it only after a sync, which needs the sign-in and a device of the account.
+  after `openexpress sync --apply`. When you are signed in, a device registered to another Garmin
+  Connect account gets no journal; signed out, or when the account's devices cannot be read,
+  openExpress cannot tell whose a device is and keeps one.
 - **Turning it off** stops it and keeps what it holds. **Delete the Activity Journal** in
   Preferences, or `openexpress activities journal --delete --apply`, deletes it; **Forget
   Device** deletes the journal of that device.
