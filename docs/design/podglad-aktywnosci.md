@@ -640,6 +640,15 @@ when both do not fit.
   - Bands of zones 1–5 only, in the zones' colours of D14 at about an eighth of their strength;
     none below zone 1, which is no zone (a walk's chart stays mostly bare, as its time is);
     above the top bound in the colour of zone 5, as its time.
+  - The names: right of the plot, each band within the axis named ("Zone 1"), level with the
+    middle of its band and moved apart when two would touch, after a square of the band's own
+    colour (the zone's colour as faint, on the same background) with an edge as strong as the
+    name, so that names moved apart still show which band is whose. In the band itself a name
+    would be crossed by the line or the grid, and a band lower than a line of text would have
+    none. Only a chart that draws bands has that margin, its width that of the widest name in
+    the window's language; elevation and pace have the whole width. The names narrowing the
+    plot keep the times' step of its whole width while two times stay 12 px apart (the times
+    reach under the names, never into them).
 - 19c. The fastest lap marked: not recommended (one more sign on each row).
 
 ### D20: the laps — chosen: 20a

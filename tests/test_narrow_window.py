@@ -1244,6 +1244,91 @@ def test_the_page_of_an_activity_fits_the_narrowest_window(narrow_window, monkey
     assert page.get_width() <= NARROWEST
 
 
+def _run_through_four_zones():
+    """A hike of 1:47:42 (made-up), a record every 6 s: its heart rate in waves from 97 to 170
+    bpm, through zones 1 to 4 (zone 5 above the axis), its distance and elevation."""
+    import math
+
+    from openexpress import activities, fit
+
+    start = int(datetime(2026, 12, 31, 9, 0).timestamp())
+    samples = tuple(fit.Sample(start + s, distance=s * 1.5, speed=1.5,
+                               heart_rate=round(133.5 + 36.5 * math.sin(2 * math.pi * s / 1800)),
+                               altitude=200 + 150 * math.sin(math.pi * s / 6462))
+                    for s in range(0, 6463, 6))
+    zones = fit.HeartRateZones(times=(600, 1800, 1800, 1200, 1062, 0),
+                               bounds=(120, 140, 155, 165, 178, 190), method="threshold",
+                               max_heart_rate=190, threshold_heart_rate=165)
+    data = fit.ActivityData(fit.FileState.WHOLE, start=start, sport=HIKING, timer_time=6462.0,
+                            distance=9_693.0, avg_heart_rate=134, max_heart_rate=170,
+                            samples=samples, zones=zones)
+    read = activities.Read(
+        activities.Activity(activities.Source.DEVICE, "GARMIN/Activity/hike.fit", "hike.fit", 1,
+                            1.0),
+        fit.ActivitySummary(fit.FileState.WHOLE, start=start, sport=HIKING, has_positions=False))
+    return read, data
+
+
+@pytest.mark.parametrize("dark", [False, True])
+@pytest.mark.parametrize("language", ["en", "pl"])
+@pytest.mark.parametrize(("width", "times"), [(NARROWEST, (0, 1800, 3600, 5400)),
+                                              (1000, tuple(range(0, 6001, 600)))])
+def test_the_chart_of_heart_rate_keeps_its_times_beside_the_names_of_the_zones(
+        narrow_window, monkeypatch, width, times, language, dark):
+    """The names of the four bands on the chart's right narrow its plot, not its times: every
+    half hour in the narrowest window, every ten minutes at 1000 px, as on the plot's full
+    width; the margin as wide as the widest of the four names in the window's language needs;
+    drawn again, the chart is the same. Elevation then has the whole width, and heart rate,
+    shown again, is drawn as at first."""
+    from fakes import RunNow, colours_of
+    from gi.repository import Adw, Gtk
+
+    from openexpress.gui import activity_chart, activity_page, words
+    from openexpress.gui.activity_chart import ActivityChart
+
+    win = narrow_window(language, width=width)
+    style = Adw.StyleManager.get_default()
+    style.set_color_scheme(Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
+    try:
+        _fill(win, "activities")
+        win.navigation.set_animate_transitions(False)
+        win.navigation.push(win.device_view)
+        win.select_section("activities")
+        read, data = _run_through_four_zones()
+        monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+        win.run_task = RunNow()
+        activity_page.open_activity(win, read)
+        _iterate(0.3)
+        page = win.navigation.get_visible_page()
+        (chart,) = [w for w in descendants(page) if isinstance(w, ActivityChart)]
+        area = chart.area
+
+        def drawn():
+            area.queue_draw()
+            _iterate(0.2)
+            return (activity_chart._plot(area, area.get_width(), area.get_height()),
+                    colours_of(area, "#222226" if dark else "#fafafb"))
+
+        plot, pixels = drawn()
+        assert plot.times.ticks == times
+        names = [words.zone_name(zone) for zone in range(1, 5)]
+        widest = max(activity_chart._layout(area, name).get_pixel_size()[0] for name in names)
+        assert area.get_width() - plot.right == (
+            2 * activity_chart.NAME_GAP + activity_chart.SQUARE + activity_chart.SQUARE_GAP
+            + widest)
+        assert drawn() == (plot, pixels)
+        buttons = [w for w in descendants(chart) if isinstance(w, Gtk.ToggleButton)]
+        buttons[1].set_active(True)
+        elevation, _pixels = drawn()
+        last = activity_chart._layout(area, words.activity_clock(6462)).get_pixel_size()[0]
+        assert area.series.kind == "elevation"
+        assert elevation.right == area.get_width() - max(8, last / 2 + 2)
+        buttons[0].set_active(True)
+        assert drawn() == (plot, pixels)
+    finally:
+        style.set_color_scheme(Adw.ColorScheme.DEFAULT)
+
+
 def _journal_line() -> dict:
     """A made-up line of the activity journal at its longest: a long kind, every zone, the
     largest numbers, its shape and profile."""

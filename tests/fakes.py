@@ -1438,6 +1438,30 @@ def luminance(colour: str) -> float:
     return 0.2126 * r + 0.7152 * g + 0.0722 * b
 
 
+def colours_of(widget, background="black"):
+    """The widget drawn at scale 1 on a background ("#rrggbb" or a name): (red, green, blue) of
+    each pixel, by rows."""
+    from gi.repository import Gdk, Graphene, Gtk
+
+    width, height = widget.get_width(), widget.get_height()
+    under = Gdk.RGBA()
+    under.parse(background)
+    snapshot = Gtk.Snapshot()
+    snapshot.append_color(under, Graphene.Rect().init(0, 0, width, height))
+    # Drawn within its own bounds, unscaled (a window's hold the border it is resized by).
+    _ok, bounds = widget.compute_bounds(widget)
+    snapshot.translate(Graphene.Point().init(bounds.get_x(), bounds.get_y()))
+    Gtk.WidgetPaintable.new(widget).snapshot(snapshot, bounds.get_width(), bounds.get_height())
+    texture = widget.get_native().get_renderer().render_texture(
+        snapshot.to_node(), Graphene.Rect().init(0, 0, width, height))
+    downloader = Gdk.TextureDownloader.new(texture)
+    downloader.set_format(Gdk.MemoryFormat.R8G8B8A8)
+    data, stride = downloader.download_bytes()
+    data = data.get_data()
+    return [[tuple(data[y * stride + x * 4:y * stride + x * 4 + 3]) for x in range(width)]
+            for y in range(height)]
+
+
 def contrast(a: str, b: str) -> float:
     """The contrast ratio of two colours "#rrggbb" (WCAG 2): 1 to 21."""
     high, low = sorted((luminance(a), luminance(b)), reverse=True)

@@ -2,8 +2,9 @@
 file has and only those (heart rate, elevation, pace or speed by sport), the time since the
 first record, pace smoothed over about 30 s, a gap where a value is missing or the records stop
 (a pause), the points brought down to two a column without losing a peak, axes with round
-values (the slowest pace of the stops left off its axis), the value at a place of the cursor
-and the cursor moved by the keys. Every value is made up."""
+values (the slowest pace of the stops left off its axis), the times keeping their step beside
+the names of the zones, the value at a place of the cursor and the cursor moved by the keys.
+Every value is made up."""
 
 import time
 
@@ -188,6 +189,30 @@ def test_the_time_axis_runs_from_the_start_to_the_end():
     assert (a.low, a.high, a.step) == (0, 4790, 600)
     assert a.ticks == tuple(range(0, 4201, 600))
     assert chart().time_axis(100, 8).ticks == tuple(range(0, 91, 15))
+
+
+@pytest.mark.parametrize(("full", "duration"), [(283.5, 6462), (745.5, 6462), (200, 4790),
+                                                (900, 100), (60, 3600)])
+def test_a_plot_as_wide_as_its_times_has_the_step_its_width_holds(full, duration):
+    """No names of the zones beside it: as many times as the width holds, 24 px between two
+    of the widest (43 px)."""
+    a = chart()._time_axis(duration, full, full, 43)
+    assert a == chart().time_axis(duration, max(2, int(full // (43 + 24))))
+
+
+def test_the_names_of_the_zones_narrowing_the_plot_keep_its_step_while_it_fits():
+    """A run of 1:47:42 whose times are 43 px wide at most: the step of the width without the
+    names (30:00 in 283.5 px, 10:00 in 745.5 px) stays on the plot they narrow (to 241 px, to
+    703 px), its times 22 to 24 px apart there; not a step coarser."""
+    assert chart()._time_axis(6462, 283.5, 241, 43).ticks == (0, 1800, 3600, 5400)
+    assert chart()._time_axis(6462, 745.5, 703, 43).step == 600
+
+
+def test_a_step_that_no_longer_fits_beside_the_names_gives_way_to_the_next_that_does():
+    """Narrowed so far that 30:00 brings two times nearer than 12 px: an hour, not more."""
+    a = chart()._time_axis(6462, 283.5, 190, 43)
+    assert 1800 * 190 / 6462 < 43 + 12 <= a.step * 190 / 6462
+    assert a.ticks == (0, 3600)
 
 
 def test_pace_is_drawn_with_the_faster_on_top():

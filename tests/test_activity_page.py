@@ -20,6 +20,7 @@ from fakes import (
     FitData,
     FitDefinition,
     RunNow,
+    colours_of,
     contrast,
     descendants,
     fit_file,
@@ -1883,28 +1884,6 @@ def fit_of(data: bytes):
     return fit.activity_data(data)
 
 
-def colours_of(widget, background="black"):
-    """The widget drawn at scale 1 on a background: (red, green, blue) of each pixel, by
-    rows."""
-    from gi.repository import Gdk, Graphene, Gtk
-
-    width, height = widget.get_width(), widget.get_height()
-    snapshot = Gtk.Snapshot()
-    snapshot.append_color(rgba(background), Graphene.Rect().init(0, 0, width, height))
-    # Drawn within its own bounds, unscaled (a window's hold the border it is resized by).
-    _ok, bounds = widget.compute_bounds(widget)
-    snapshot.translate(Graphene.Point().init(bounds.get_x(), bounds.get_y()))
-    Gtk.WidgetPaintable.new(widget).snapshot(snapshot, bounds.get_width(), bounds.get_height())
-    texture = widget.get_native().get_renderer().render_texture(
-        snapshot.to_node(), Graphene.Rect().init(0, 0, width, height))
-    downloader = Gdk.TextureDownloader.new(texture)
-    downloader.set_format(Gdk.MemoryFormat.R8G8B8A8)
-    data, stride = downloader.download_bytes()
-    data = data.get_data()
-    return [[tuple(data[y * stride + x * 4:y * stride + x * 4 + 3]) for x in range(width)]
-            for y in range(height)]
-
-
 def test_the_chosen_lap_is_a_band_behind_the_chart(monkeypatch):
     """A column of the chart within the lap's time is tinted, one outside is not."""
     from openexpress.gui import activity_chart
@@ -2299,85 +2278,99 @@ def a_walk_below_zone_1():
                             samples=samples)
 
 
-def a_run_in_waves():
+def a_run_in_waves(climbs=False):
     """An hour of a run (made-up): its heart rate in three waves from 128 to 168 bpm, beginning
-    and ending at 148, in zone 2 (ZONE_BOUNDS), where its name would be in the band's middle at
-    either edge."""
+    and ending at 148, through zones 1 to 4 (ZONE_BOUNDS); `climbs`: a hike, with its distance
+    and elevation too (the chart's switch: heart rate, elevation, pace)."""
     import math
 
     from openexpress import fit
 
     begin = START + FIT_EPOCH
+    more = (lambda s: {"distance": s * 3.0, "speed": 3.0,
+                       "altitude": 100 + 40 * math.sin(math.pi * s / 3600)}) if climbs else (
+        lambda s: {})
     samples = tuple(fit.Sample(begin + s, heart_rate=round(148 + 20 * math.sin(
-        6 * math.pi * s / 3600))) for s in range(0, 3600, 5))
-    return fit.ActivityData(fit.FileState.WHOLE, start=begin, sport=TRAINING, timer_time=3600.0,
-                            avg_heart_rate=148, max_heart_rate=168, calories=600,
-                            samples=samples)
+        6 * math.pi * s / 3600)), **more(s)) for s in range(0, 3600, 5))
+    return fit.ActivityData(fit.FileState.WHOLE, start=begin, sport=HIKING if climbs else TRAINING,
+                            timer_time=3600.0, avg_heart_rate=148, max_heart_rate=168,
+                            calories=600, samples=samples, distance=10_800.0 if climbs else None)
 
 
-def zone_names_drawn(monkeypatch, data, language="en") -> dict:
-    """The page of `data` in `language`: the names its chart of heart rate draws over the
-    bands of the zones, each with its box (left, top, right, bottom), the band of each zone
-    (its top and bottom), the height of a line of text, the edges of the plot, how many points
-    of the line each name's box holds, and what the cursor and the chart's labels say."""
-    from gi.repository import Gtk
+def hex_of(pixel) -> str:
+    return "#" + "".join(f"{c:02x}" for c in pixel)
+
+
+def zone_names_drawn(monkeypatch, data, language="en", dark=False, sport=TRAINING) -> dict:
+    """The page of `data` in `language` and a style: what its chart of heart rate draws beside
+    the bands of the zones. Each name's box (left, top, right, bottom) and its square's, by
+    the name; every text drawn; the band of each zone (its top and bottom); the times under the
+    plot with their boxes; the plot, the chart's width, the plot's right without the names
+    (`full`: the room the widest time leaves) and the margin; the chart drawn on the window's
+    background, then drawn again; what the cursor and the chart's labels say."""
+    from gi.repository import Adw, Gtk
 
     from openexpress import i18n
     from openexpress.gui import activity_chart, words
 
+    style = Adw.StyleManager.get_default()
+    style.set_color_scheme(Adw.ColorScheme.FORCE_DARK if dark else Adw.ColorScheme.FORCE_LIGHT)
     i18n.setup(language)
     try:
-        win, page = page_of(monkeypatch, data, sport=TRAINING)
+        win, page = page_of(monkeypatch, data, sport=sport)
         present(win)
         try:
             chart = chart_of(page)
             area = chart.area
             turn(0.2)
-            drawn = []
-            real = activity_chart._text
+            drawn, squares = [], {}
+            real_text, real_square = activity_chart._text, activity_chart._zone_square
 
             def text(area_, cr, said, x, y, align, *rest, **named):
                 drawn.append((said, x, y, align))
-                real(area_, cr, said, x, y, align, *rest, **named)
+                real_text(area_, cr, said, x, y, align, *rest, **named)
 
-            ticks = {activity_chart.chart_tick("heart rate", value, step) for step in (5, 10, 20)
-                     for value in range(0, 250, 5)}
-            left_out = []
-            real_grid = activity_chart._grid
-
-            def grid(cr, plot, fg, values, around):
-                left_out.extend(around)
-                real_grid(cr, plot, fg, values, around)
-
-            monkeypatch.setattr(activity_chart, "_grid", grid)
+            def square(cr, zone, left, top, fg):
+                squares[words.zone_name(zone)] = (left, top, left + activity_chart.SQUARE,
+                                                  top + activity_chart.SQUARE)
+                real_square(cr, zone, left, top, fg)
 
             monkeypatch.setattr(activity_chart, "_text", text)
+            monkeypatch.setattr(activity_chart, "_zone_square", square)
             area.queue_draw()
             turn(0.2)
-            plot = activity_chart._plot(area, area.get_width(), area.get_height())
+            width = area.get_width()
+            plot = activity_chart._plot(area, width, area.get_height())
             tall = activity_chart._layout(area, "0").get_pixel_size()[1]
             zones = {words.zone_name(zone) for zone in range(1, 6)}
-            names = {}
-            for said, x, y, align in drawn:
-                if said in zones:
-                    wide = activity_chart._layout(area, said).get_pixel_size()[0]
-                    names[said] = (x - wide * align, y, x - wide * align + wide, y + tall)
-            line = [(plot.x(at), activity_chart._within(plot, value))
-                    for run in activity_chart._drawn_runs(area, plot) for at, value in run]
+
+            def box(said, x, y, align):
+                wide = activity_chart._layout(area, said).get_pixel_size()[0]
+                return (x - wide * align, y, x - wide * align + wide, y + tall)
+
+            names = {said: box(said, x, y, align) for said, x, y, align in drawn if said in zones}
+            times = {said: box(said, x, y, align) for said, x, y, align in drawn
+                     if y == plot.bottom + 4}
+            last = activity_chart._layout(
+                area, words.activity_clock(area.series.duration)).get_pixel_size()[0]
+            background = "#222226" if dark else "#fafafb"
+            pixels = colours_of(area, background)
+            area.queue_draw()
+            turn(0.2)
+            again = colours_of(area, background)
             area.place(300)
-            order = [said for said, *_where in drawn]
             return {
-                "names": names,
-                "over_the_grid": all(order.index(name) > max(
-                    i for i, said in enumerate(order) if said in ticks) for name in names),
-                "grid_left_out": left_out,
-                "crossed": {said: sum(1 for x, y in line if left - 1 <= x <= right + 1
-                                      and top - 1 <= y <= bottom + 1)
-                            for said, (left, top, right, bottom) in names.items()},
+                "names": names, "squares": squares,
+                "widths": {said: box(said, x, y, align)[2] - box(said, x, y, align)[0]
+                           for said, x, y, align in drawn},
+                "times": times,
                 "bands": {words.zone_name(zone): (plot.y(top), plot.y(bottom))
                           for zone, bottom, top in activity_chart._zone_bands(
-                              area.zones, plot.values.low, plot.values.high)},
-                "tall": tall, "left": plot.left, "right": plot.right,
+                              area.zones, plot.values.low, plot.values.high)}
+                if area.zones is not None else {},
+                "tall": tall, "plot": plot, "width": width,
+                "full": width - max(8, last / 2 + 2), "margin": width - plot.right,
+                "background": background, "pixels": pixels, "again": again,
                 "cursor": [area.cursor_text(), chart.value_label.get_label()],
                 "labels": [w.get_label() for w in descendants(chart)
                            if isinstance(w, Gtk.Label)],
@@ -2386,38 +2379,58 @@ def zone_names_drawn(monkeypatch, data, language="en") -> dict:
             win.toplevel.destroy()
     finally:
         i18n.setup("en")
+        style.set_color_scheme(Adw.ColorScheme.DEFAULT)
 
 
-def placed_well(found) -> list[str]:
-    """The names drawn in their band, at an edge of the plot, the line through none."""
-    wrong = []
+def room_for(*names) -> int:
+    """The margin of names this wide (px): the gaps, the square and the widest name."""
+    from openexpress.gui import activity_chart
+
+    return (activity_chart.NAME_GAP + activity_chart.SQUARE + activity_chart.SQUARE_GAP
+            + max(names) + activity_chart.NAME_GAP)
+
+
+def placed_beside(found) -> list[str]:
+    """The names drawn elsewhere than right of the plot after their square, within the plot's
+    height and the chart's width, each square level with its name's line."""
+    from openexpress.gui import activity_chart
+
+    plot, wrong = found["plot"], []
     for said, (left, top, right, bottom) in found["names"].items():
-        upper, lower = found["bands"][said]
-        at_an_edge = abs(left - (found["left"] + 4)) < 1 or abs(right - (found["right"] - 4)) < 1
-        if not (upper - 0.5 <= top and bottom <= lower + 0.5 and at_an_edge
-                and found["crossed"][said] == 0):
+        square_left, square_top, square_right, square_bottom = found["squares"][said]
+        if not (square_left == round(plot.right + activity_chart.NAME_GAP)
+                and left == square_right + activity_chart.SQUARE_GAP
+                and plot.top <= top and bottom <= plot.bottom
+                and abs((square_top + square_bottom) / 2 - (top + bottom) / 2) <= 1
+                and right <= found["width"] - activity_chart.NAME_GAP):
             wrong.append(said)
     return wrong
 
 
-def test_a_lone_band_of_a_zone_has_its_name_at_the_chart_s_edge(monkeypatch):
-    """A slow walk: the one band behind its chart (zone 1, on top) has its name, in the band,
-    at an edge of the plot, where the line does not pass (it ends in zone 1); drawn only, not
-    said: the cursor says its time and value as ever, and no label of the chart is a zone's
-    name."""
+def test_a_lone_band_of_a_zone_has_its_name_beside_the_chart(monkeypatch):
+    """A slow walk: the one band behind its chart (zone 1, on top) has its name right of the
+    plot, after a square, level with the band's middle, the margin as wide as that name needs;
+    drawn only, not said: the cursor says its time and value as ever, and no label of the chart
+    is a zone's name."""
     found = zone_names_drawn(monkeypatch, zoned(a_walk_below_zone_1(), times=(590, 10, 0, 0,
                                                                                0, 0)))
     assert list(found["bands"]) == ["Zone 1"] and list(found["names"]) == ["Zone 1"]
-    assert placed_well(found) == []
+    assert placed_beside(found) == []
+    left, top, right, bottom = found["names"]["Zone 1"]
+    upper, lower = found["bands"]["Zone 1"]
+    assert abs((top + bottom) / 2 - (upper + lower) / 2) <= 1
+    assert found["margin"] == room_for(right - left)
     assert not any(name in text for text in [*found["cursor"], *found["labels"]]
                    for name in found["names_of_zones"])
     assert found["cursor"][0]
 
 
-def test_a_band_lower_than_a_line_of_text_has_no_name(monkeypatch):
-    """Several bands: each as tall as a line of text has its zone's name, from zone 1 up; one
-    lower than that none (made-up bounds: zone 3 begins 3 bpm under the top of the chart)."""
+def test_every_band_within_the_axis_has_its_name_the_names_moved_apart(monkeypatch):
+    """Bands lower than a line of text too (made-up bounds: zone 3 begins 3 bpm under the top
+    of the chart): each named, zone 3 on top, two names never nearer than two pixels, none
+    beyond the plot's height; zones 4 and 5, above the axis, none."""
     import dataclasses
+    import itertools
 
     data = zoned(plateaus())
     data = dataclasses.replace(data, zones=dataclasses.replace(
@@ -2425,60 +2438,137 @@ def test_a_band_lower_than_a_line_of_text_has_no_name(monkeypatch):
     found = zone_names_drawn(monkeypatch, data)
     heights = {said: lower - upper for said, (upper, lower) in found["bands"].items()}
     assert list(heights) == ["Zone 1", "Zone 2", "Zone 3"]
-    assert heights["Zone 3"] < found["tall"] <= min(heights["Zone 1"], heights["Zone 2"])
-    assert list(found["names"]) == ["Zone 1", "Zone 2"]
-    assert placed_well(found) == []
+    assert heights["Zone 3"] < found["tall"]
+    names = found["names"]
+    assert sorted(names, key=lambda said: names[said][1]) == ["Zone 3", "Zone 2", "Zone 1"]
+    tops = sorted(top for _left, top, _right, _bottom in names.values())
+    assert all(lower - upper >= found["tall"] + 2 for upper, lower in itertools.pairwise(tops))
+    assert placed_beside(found) == []
 
 
-def test_the_names_of_the_bands_are_over_the_lines_of_the_grid(monkeypatch):
-    """No line of the grid strikes a name through (a band whose middle is a round value): the
-    grid leaves out the place of each name, and the names come after it (and its values),
-    the line of heart rate still after them."""
+def test_the_names_are_beside_the_plot_and_the_times_under_it(monkeypatch):
+    """A run in waves through zones 1 to 4: each band named; the bands, the grid and the line
+    end where the plot does, before the squares; the times are under the plot, none reaching a
+    name or a square, the last within the chart; drawn again, the chart is the same."""
     found = zone_names_drawn(monkeypatch, zoned(a_run_in_waves(), times=(0, 600, 1800, 1200,
                                                                           0, 0)))
-    assert found["names"] and found["over_the_grid"]
-    left_out = found["grid_left_out"]
-    assert all(any(l0 <= left and top >= t0 and right <= r0 and bottom <= b0
-                   for l0, t0, r0, b0 in left_out)
-               for left, top, right, bottom in found["names"].values())
+    plot, pixels = found["plot"], found["pixels"]
+    assert len(found["bands"]) >= 4 and sorted(found["names"]) == sorted(found["bands"])
+    assert placed_beside(found) == []
+    boxes = [*found["names"].values(), *found["squares"].values()]
+    beyond = round(plot.right) + 2
+    assert all(left > beyond for left, *_rest in boxes)
+    assert {hex_of(pixels[y][beyond]) for y in range(round(plot.top), round(plot.bottom))} == {
+        found["background"]}
+    times = found["times"].values()
+    assert len(times) >= 4 and all(top >= plot.bottom + 4 for _left, top, _right, _bottom in times)
+    assert not any(a[0] < b[2] and b[0] < a[2] and a[1] < b[3] and b[1] < a[3]
+                   for a in times for b in boxes)
+    assert max(right for _left, _top, right, _bottom in times) <= found["width"]
+    assert found["again"] == pixels
 
 
-def test_the_grid_leaves_out_the_places_it_is_given():
-    """A line of the grid stops at a place left out and goes on after it (made-up plot)."""
-    import cairo
-    import gi
+@pytest.mark.parametrize("dark", [False, True])
+def test_the_square_of_a_name_is_its_band_s_colour_with_an_edge_seen_in_either_style(
+        monkeypatch, dark):
+    """Inside each square, the colour its band has where nothing else is drawn on it; the
+    square's edge stands out 3:1 from the window's background."""
+    import collections
 
-    gi.require_version("Gdk", "4.0")
-    from gi.repository import Gdk
-
-    from openexpress.gui import activity_chart
-
-    axis = activity_chart.Axis(0, 100, 50)
-    plot = activity_chart.Plot(10, 10, 190, 90, axis, axis, False)
-    surface = cairo.ImageSurface(cairo.FORMAT_ARGB32, 200, 100)
-    black = Gdk.RGBA()
-    black.parse("black")
-    activity_chart._grid(cairo.Context(surface), plot, black, [50], [(100, 40, 150, 60)])
-    surface.flush()
-    row = round(plot.y(50))
-    data, stride = surface.get_data(), surface.get_stride()
-    alpha = [data[row * stride + x * 4 + 3] for x in (50, 99 - 2, 120, 152 + 2, 170)]
-    assert [a > 0 for a in alpha] == [True, True, False, True, True]
-
-
-def test_the_name_of_a_band_goes_where_the_line_does_not_pass(monkeypatch):
-    """The line crossing the middle of a band at both edges: its name moves up or down in its
-    band, at an edge, to a place the line does not pass; at the right edge when it can."""
     found = zone_names_drawn(monkeypatch, zoned(a_run_in_waves(), times=(0, 600, 1800, 1200,
-                                                                          0, 0)))
-    assert "Zone 2" in found["names"]
-    assert placed_well(found) == []
+                                                                          0, 0)), dark=dark)
+    plot, pixels = found["plot"], found["pixels"]
+    tall = [said for said, (upper, lower) in found["bands"].items() if lower - upper >= 8]
+    assert len(tall) >= 4 and set(found["squares"]) == set(found["bands"])
+    for said in tall:
+        left, top, right, bottom = found["squares"][said]
+        upper, lower = found["bands"][said]
+        band = collections.Counter(
+            pixels[y][x] for y in range(round(upper) + 2, round(lower) - 2)
+            for x in range(round(plot.left) + 2, round(plot.right) - 2)).most_common(1)[0][0]
+        inside = pixels[(top + bottom) // 2][(left + right) // 2]
+        assert all(abs(a - b) <= 1 for a, b in zip(inside, band, strict=True)), said
+        edge = pixels[top][(left + right) // 2]
+        assert contrast(hex_of(edge), found["background"]) >= 3, said
 
 
-def test_the_name_of_a_band_in_polish(monkeypatch):
+def test_the_names_of_the_bands_in_polish_and_the_margin_as_they_need(monkeypatch):
     found = zone_names_drawn(monkeypatch, zoned(a_walk_below_zone_1(), times=(590, 10, 0, 0,
                                                                                0, 0)), "pl")
     assert list(found["names"]) == ["Strefa 1"]
+    left, _top, right, _bottom = found["names"]["Strefa 1"]
+    assert found["margin"] == room_for(right - left)
+
+
+def test_the_margin_is_as_wide_as_the_names_of_the_bands_within_the_axis(monkeypatch,
+                                                                          in_the_window):
+    """Made-up names, each longer than the one below it: a walk whose axis holds zone 1's band
+    alone has room for its name, not for one of a zone above."""
+    def zone_name(zone):
+        return "Zone " + "W" * 4 * zone
+
+    in_the_window("zone_name", zone_name)
+    found = zone_names_drawn(monkeypatch, zoned(a_walk_below_zone_1(), times=(590, 10, 0, 0,
+                                                                               0, 0)))
+    assert list(found["bands"]) == [zone_name(1)]
+    assert zone_name(1) in found["widths"] and zone_name(2) not in found["widths"]
+    assert found["margin"] == room_for(found["widths"][zone_name(1)])
+    assert found["plot"].right < found["full"]
+
+
+def test_without_a_band_the_chart_has_its_whole_width(monkeypatch):
+    """No room for names where no band is drawn: heart rate without zones in the file, and a
+    walk whose axis is under zone 1 (made-up bounds above it)."""
+    import dataclasses
+
+    walk = zoned(a_walk_below_zone_1())
+    for data in (plateaus(), dataclasses.replace(walk, zones=dataclasses.replace(
+            walk.zones, bounds=(150, 160, 170, 180, 190, 200)))):
+        found = zone_names_drawn(monkeypatch, data)
+        assert found["bands"] == {} and not found["squares"]
+        assert found["plot"].right == found["full"]
+
+
+def test_heart_rate_elevation_pace_and_heart_rate_again_in_one_window(monkeypatch):
+    """The names' margin only on heart rate: elevation and pace have the whole width (a line of
+    the grid runs on there), and heart rate again is drawn as at first, its margin the same."""
+    from gi.repository import Adw
+
+    from openexpress.gui import activity_chart, words
+
+    style = Adw.StyleManager.get_default()
+    style.set_color_scheme(Adw.ColorScheme.FORCE_LIGHT)
+    win, page = page_of(monkeypatch, zoned(a_run_in_waves(climbs=True), times=(
+        0, 600, 1800, 1200, 0, 0)), sport=HIKING)
+    present(win)
+    try:
+        area = chart_of(page).area
+
+        def drawn():
+            area.queue_draw()
+            turn(0.2)
+            width = area.get_width()
+            last = activity_chart._layout(
+                area, words.activity_clock(area.series.duration)).get_pixel_size()[0]
+            return (activity_chart._plot(area, width, area.get_height()),
+                    width - max(8, last / 2 + 2), colours_of(area, "white"))
+
+        buttons = switch_of(page)
+        assert [b.get_label() for b in buttons] == ["Heart rate", "Elevation", "Pace"]
+        first, full, pixels = drawn()
+        assert first.right < full - 30
+        for button in buttons[1:]:
+            button.set_active(True)
+            plot, full, other = drawn()
+            assert plot.right == full, button.get_label()
+            row = round(plot.y(plot.values.ticks[len(plot.values.ticks) // 2]))
+            assert other[row][round(first.right) + 10] != (255, 255, 255), button.get_label()
+        buttons[0].set_active(True)
+        again, _full, pixels_again = drawn()
+        assert again == first and pixels_again == pixels
+    finally:
+        win.toplevel.destroy()
+        style.set_color_scheme(Adw.ColorScheme.DEFAULT)
 
 
 def test_the_bar_of_the_chart_s_switch_has_no_background_under_the_pointer(monkeypatch):
