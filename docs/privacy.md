@@ -113,8 +113,8 @@ readable only by you, each kind within its limit, the oldest removed first:
 
 ### The activity journal
 
-Devices keep a limited number of activities and delete the oldest themselves (an Edge 1050
-keeps about 200). So that your activities are kept after that, and the Activities page can show
+Devices keep a limited number of activities and delete the oldest themselves. So that your
+activities are kept after that, and the Activities page can show
 what is new since the device's last connection, openExpress can keep an activity journal on this
 computer, only after your yes: the card on the Activities
 page, the switch **Keep an Activity Journal** in Preferences, or
@@ -138,8 +138,10 @@ written for it.
   [What is kept of each device](#what-is-kept-of-each-device)), readable only by you. Like the
   rest of that folder it goes into backups of your home folder.
 - **When it is written:** when a device is opened in the window, after a background sync and
-  after `openexpress sync --apply`; never for a device on another Garmin Connect account than
-  the one signed in.
+  after `openexpress sync --apply`; never for a device that is not on the list of devices of the
+  Garmin Connect account signed in. Signed out, or when that list cannot be read, openExpress
+  cannot tell whose a device is and writes the journal; a background sync and `sync --apply`
+  write it only after a sync, which needs the sign-in and a device of the account.
 - **Turning it off** stops it and keeps what it holds. **Delete the Activity Journal** in
   Preferences, or `openexpress activities journal --delete --apply`, deletes it; **Forget
   Device** deletes the journal of that device.

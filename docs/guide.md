@@ -480,8 +480,10 @@ one:
 - their distance, time, ascent and number in a card, and, when they climbed or went far enough,
   a comparison with a landmark (*That is the Eiffel Tower 2.1 times.*);
 - a tile for each of the newest six: the shape of its track in the colour of its sport (or its
-  sport's symbol), its numbers, *Uploaded* or *Not uploaded yet* as this computer's syncs know
-  it, and its day. With nothing new, the newest three under **Latest**;
+  sport's symbol), its numbers, *Uploaded* when this computer's syncs know it is in Garmin
+  Connect (sent by openExpress or found there already) or *Not uploaded yet* when its upload
+  failed and waits for the next sync, and its day. With nothing new, the newest three under
+  **Latest**;
 - at the bottom how many earlier activities the device holds, and **Show All**, the list below.
 
 The first time, the page says *Activity journal started* and how many activities were read, from
