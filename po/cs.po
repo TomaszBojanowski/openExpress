@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.9.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 22:37+0100\n"
+"POT-Creation-Date: 2026-11-28 00:11+0100\n"
 "PO-Revision-Date: 2026-11-26 21:16+0000\n"
 "Last-Translator: prajzner <prajzner@users.noreply.hosted.weblate.org>\n"
 "Language-Team: Czech <https://hosted.weblate.org/projects/openexpress/"
@@ -11541,7 +11541,8 @@ msgstr[0] "{count} není v zařízení"
 msgstr[1] "{count} není v zařízení"
 msgstr[2] "{count} není v zařízení"
 
-#. TRANSLATORS: on the tile of an activity: openExpress uploaded it to Garmin Connect
+#. TRANSLATORS: on the tile of an activity: Garmin Connect has this activity, as far as
+#. this computer's syncs know
 #: openexpress/gui/words.py
 #, fuzzy, python-brace-format
 #| msgid "Upload"
