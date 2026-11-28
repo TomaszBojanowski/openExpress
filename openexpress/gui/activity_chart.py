@@ -5,11 +5,12 @@ pause) leave a gap in the line; so does a stop in the pace, never a slow climb. 
 smoothed over about 30 s of moving and drawn with the faster on top, its axis from the pace of
 most of the moving records (a value beyond it drawn at its edge); the points are brought down
 to two a pixel column without losing a peak; the axes have round values. Heart rate has the
-bands of the heart rate zones 1-5 behind it, in their colours (gui/activity_zones.py), each as
-tall as a line of text with its zone's name in it, at an edge, where the line does not pass,
-faint (drawn only: the screen reader has the chart's name and the value at its cursor). A click, a
-drag or the keys place a cursor, its value said beside the switch. The numbers need no screen;
-the drawing is Cairo in a Gtk.DrawingArea.
+bands of the heart rate zones 1-5 behind it, in their colours (gui/activity_zones.py), and on
+its right the name of each band within its axis after a square of the band's colour, level
+with the band, faint (drawn only: the screen reader has the chart's name and the value at its
+cursor); only then has the chart that margin, and its times keep the step of its full width
+while they fit. A click, a drag or the keys place a cursor, its value said beside the switch.
+The numbers need no screen; the drawing is Cairo in a Gtk.DrawingArea.
 Has: no attribute of the window; the chart's widgets keep their series and cursor themselves."""
 from __future__ import annotations
 
@@ -63,7 +64,12 @@ CHART_HEIGHT = 200
 LAP_SHADE = 0.14  # the strength of the accent colour behind the lap chosen
 ZONE_SHADE = 0.13  # the strength of the zones' colours behind the line of heart rate
 TEXT_SHADE = 0.7  # the strength of the text's colour of the axes' values and times
-NAME_SHADE = 0.55  # and of the names of the zones' bands: fainter, as a dimmed label
+NAME_SHADE = 0.55  # and of the names of the zones' bands (their squares' edges too): fainter
+NAME_GAP = 6  # pixels between the plot and a zone's square, and after its name
+SQUARE = 8  # pixels of the square of a band's colour before its zone's name
+SQUARE_GAP = 4  # pixels between the square and the name
+TIME_GAP = 24  # pixels between two times under the plot, as its step is chosen…
+LEAST_TIME_GAP = 12  # …and at least, for the full width's step to stay beside the zones' names
 WHOLE = ("heart rate", "elevation")  # their axes have whole steps
 LEAST_SPAN = {"heart rate": 10, "elevation": 10, "speed": 1, "pace": 60, "swim pace": 10}
 NICE = (1, 2, 2.5, 5, 10)
@@ -439,7 +445,8 @@ def _layout(area, text: str):
 
 def _plot(area, width: int, height: int) -> Plot:
     """The place of the plot in a widget of this size: room for the unit on top, the values
-    on the left and the times below; as many round values as fit."""
+    on the left, the times below and, when the bands of the zones are drawn, their names on
+    the right; as many round values as fit."""
     series = area.series
     text_height = _layout(area, "0").get_pixel_size()[1]
     top, bottom = text_height + 8, height - text_height - 6
@@ -448,9 +455,27 @@ def _plot(area, width: int, height: int) -> Plot:
                  for v in values.ticks)
     left = widest + 8
     last = _layout(area, activity_clock(series.duration)).get_pixel_size()[0]
-    right = width - max(8, last / 2 + 2)
-    times = time_axis(series.duration, max(2, int((right - left) // (last + 24))))
+    full = width - max(8, last / 2 + 2)  # the last time's half beyond the plot
+    names = [_layout(area, zone_name(zone)).get_pixel_size()[0]
+             for zone, _bottom, _top in _bands(area, values)]
+    right = min(full, width - NAME_GAP - SQUARE - SQUARE_GAP - max(names) - NAME_GAP) if names \
+        else full
+    times = _time_axis(series.duration, full - left, right - left, last)
     return Plot(left, top, right, bottom, times, values, faster_on_top(series.kind))
+
+
+def _time_axis(duration: float, full: float, plot: float, last: float) -> Axis:
+    """The times under a plot `plot` pixels wide, `full` without the names of the zones beside
+    it, the widest time `last` pixels: the step that `full` pixels hold with TIME_GAP between
+    two times. The names narrowing the plot keep that step while its times stay LEAST_TIME_GAP
+    apart on it, else the least step that keeps them so (the times may reach under the names,
+    which are beside the plot, never under it)."""
+    count = max(2, int(full // (last + TIME_GAP)))
+    axis = time_axis(duration, count)
+    while count > 2 and axis.step * plot < (last + LEAST_TIME_GAP) * max(duration, 1):
+        count -= 1
+        axis = time_axis(duration, count)
+    return axis
 
 
 def _text(area, cr, text: str, x: float, y: float, align: float, color,
@@ -464,30 +489,31 @@ def _text(area, cr, text: str, x: float, y: float, align: float, color,
 
 
 def _draw(area, cr, width: int, height: int) -> None:
-    """The draw function of the chart (Gtk.DrawingArea): the band of a lap chosen, grid, values,
-    times, the line, the cursor and, with the keyboard's focus, a frame."""
+    """The draw function of the chart (Gtk.DrawingArea): the bands of the zones, the band of a
+    lap chosen, grid, values, times, the names of the zones, the line, the cursor and, with the
+    keyboard's focus, a frame."""
     series, kind = area.series, area.series.kind
     plot = _plot(area, width, height)
     fg, accent = area.get_color(), accent_colour()
     text_height = _layout(area, "0").get_pixel_size()[1]
-    if area.zones is not None and kind == "heart rate":
-        _draw_zones(cr, plot, area.zones)
+    bands = _bands(area, plot.values)
+    _draw_zones(cr, plot, bands)
     if area.lap is not None:  # the lap chosen under the page: a band behind the line
         start, end = (min(max(plot.x(at), plot.left), plot.right) for at in area.lap)
         cr.set_source_rgba(accent.red, accent.green, accent.blue, LAP_SHADE)
         cr.rectangle(start, plot.top, end - start, plot.bottom - plot.top)
         cr.fill()
-    names = (_zone_names(area, plot, area.zones, text_height)
-             if area.zones is not None and kind == "heart rate" else [])
-    _grid(cr, plot, fg, plot.values.ticks, [box for *_place, box in names])
+    _grid(cr, plot, fg, plot.values.ticks)
     for value in plot.values.ticks:
         _text(area, cr, chart_tick(kind, value, plot.values.step), plot.left - 6,
               round(plot.y(value)) + 0.5 - text_height / 2, 1, fg)
     _text(area, cr, chart_unit(kind, area.series.units), 0, 0, 0, fg)
     for at in plot.times.ticks:
         _text(area, cr, activity_clock(at), plot.x(at), plot.bottom + 4, 0.5, fg)
-    for name, x, y, align, _box in names:  # over the grid, under the line
-        _text(area, cr, name, x, y, align, fg, NAME_SHADE)
+    square = round(plot.right + NAME_GAP)
+    for zone, y in _zone_names(plot, bands, text_height):
+        _zone_square(cr, zone, square, y + round((text_height - SQUARE) / 2), fg)
+        _text(area, cr, zone_name(zone), square + SQUARE + SQUARE_GAP, y, 0, fg, NAME_SHADE)
     cr.save()
     cr.rectangle(plot.left, plot.top - 2, plot.right - plot.left, plot.bottom - plot.top + 4)
     cr.clip()
@@ -540,25 +566,24 @@ def _zone_bands(bounds, low: float, high: float) -> list[tuple[int, float, float
     return bands
 
 
-def _draw_zones(cr, plot: Plot, bounds) -> None:
-    for zone, bottom, top in _zone_bands(bounds, plot.values.low, plot.values.high):
+def _bands(area, values: Axis) -> list[tuple[int, float, float]]:
+    """The bands the chart draws: those of the zones within the axis of heart rate, when it
+    has the zones' bounds; none on another series."""
+    if area.zones is None or area.series.kind != "heart rate":
+        return []
+    return _zone_bands(area.zones, values.low, values.high)
+
+
+def _draw_zones(cr, plot: Plot, bands) -> None:
+    for zone, bottom, top in bands:
         color = rgba(ZONE_COLOURS[zone])
         cr.set_source_rgba(color.red, color.green, color.blue, ZONE_SHADE)
         cr.rectangle(plot.left, plot.y(top), plot.right - plot.left, plot.y(bottom) - plot.y(top))
         cr.fill()
 
 
-def _grid(cr, plot: Plot, fg, values, around) -> None:
-    """The faint lines of the grid at the axis' round `values`, none in the boxes `around`
-    (left, top, right, bottom: the names of the zones), which no line strikes through."""
-    cr.save()
-    if around:
-        cr.rectangle(plot.left - 1, plot.top - 1, plot.right - plot.left + 2,
-                     plot.bottom - plot.top + 2)
-        for left, top, right, bottom in around:
-            cr.rectangle(left - 2, top, right - left + 4, bottom - top)
-        cr.set_fill_rule(cairo.FILL_RULE_EVEN_ODD)
-        cr.clip()
+def _grid(cr, plot: Plot, fg, values) -> None:
+    """The faint lines of the grid at the axis' round `values`."""
     cr.set_line_width(1)
     cr.set_source_rgba(fg.red, fg.green, fg.blue, 0.12)
     for value in values:
@@ -566,46 +591,36 @@ def _grid(cr, plot: Plot, fg, values, around) -> None:
         cr.move_to(plot.left, y)
         cr.line_to(plot.right, y)
         cr.stroke()
-    cr.restore()
 
 
-def _zone_names(area, plot: Plot, bounds, text_height: float) -> list[tuple]:
-    """The name of each band of a zone as tall as a line of text ("Zone 1"), in its band, at
-    the right edge of the plot or else at the left one, as near the band's middle as the line
-    leaves room: the first place the line does not pass, else the one it passes least; a lower
-    band none. Each (name, x, y, align, box) as _text takes them, its box (left, top, right,
-    bottom) for the grid to leave out."""
-    points = [(plot.x(at), _within(plot, value)) for run in _drawn_runs(area, plot)
-              for at, value in run]
-    found = []
-    for zone, bottom, top in _zone_bands(bounds, plot.values.low, plot.values.high):
-        upper, lower = plot.y(top), plot.y(bottom)
-        if lower - upper < text_height:
-            continue
-        name = zone_name(zone)
-        width = _layout(area, name).get_pixel_size()[0]
-        middle = (upper + lower - text_height) / 2
-        room = int((lower - upper - text_height) / 2)
-        heights = [middle + shift * sign for shift in range(0, room + 1, 2)
-                   for sign in ((1,) if shift == 0 else (-1, 1))]
-        places = [(edge, y) for edge in ("right", "left") for y in heights]
-        starts = {"right": plot.right - 4 - width, "left": plot.left + 4}
-        # The heights of the line under the name at each edge, looked for once.
-        under = {edge: [at for x, at in points if start - 2 <= x <= start + width + 2]
-                 for edge, start in starts.items()}
+def _zone_names(plot: Plot, bands, text_height: float) -> list[tuple[int, int]]:
+    """Where the name of each band goes in the margin right of the plot: (zone, the top of its
+    line), level with its band's middle; names that would touch moved apart, none above the
+    plot's top or below its bottom."""
+    found = [[zone, round((plot.y(top) + plot.y(bottom) - text_height) / 2)]
+             for zone, bottom, top in bands]
+    found.sort(key=lambda item: item[1])
+    for k in range(1, len(found)):
+        found[k][1] = max(found[k][1], found[k - 1][1] + text_height + 2)
+    if found:
+        over = max(0, found[-1][1] + text_height - round(plot.bottom))
+        under = max(0, round(plot.top) - (found[0][1] - over))
+        for item in found:
+            item[1] += under - over
+    return [(zone, y) for zone, y in found]
 
-        def crossed(place, under=under) -> int:
-            edge, y = place
-            return sum(1 for at in under[edge] if y - 2 <= at <= y + text_height + 2)
 
-        edge, y = next((place for place in places if not crossed(place)), None) or min(
-            places, key=crossed)
-        box = (starts[edge], y, starts[edge] + width, y + text_height)
-        if edge == "right":
-            found.append((name, plot.right - 4, y, 1, box))
-        else:
-            found.append((name, plot.left + 4, y, 0, box))
-    return found
+def _zone_square(cr, zone: int, left: int, top: int, fg) -> None:
+    """The square before the name of a zone: inside, the colour of its band (the zone's colour
+    as faint, on the same background); its edge as strong as the name."""
+    color = rgba(ZONE_COLOURS[zone])
+    cr.set_source_rgba(color.red, color.green, color.blue, ZONE_SHADE)
+    cr.rectangle(left, top, SQUARE, SQUARE)
+    cr.fill()
+    cr.set_source_rgba(fg.red, fg.green, fg.blue, NAME_SHADE)
+    cr.set_line_width(1)
+    cr.rectangle(left + 0.5, top + 0.5, SQUARE - 1, SQUARE - 1)
+    cr.stroke()
 
 
 def _within(plot: Plot, value: float) -> float:

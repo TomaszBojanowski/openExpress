@@ -524,8 +524,8 @@ A tile or a row (a click, or Enter) opens the page of the activity, read from it
   of the share of each and a row for each with its bounds, time and share. When the whole time
   was below zone 1, one sentence says so instead.
 - The chart shows heart rate, elevation and pace or speed, one at a time; behind the heart rate,
-  the bands of the zones, each named when it is tall enough. The place of its cursor is marked
-  on the map.
+  the bands of the zones, each named on the chart's right after a square of its colour. The
+  place of its cursor is marked on the map.
 - The laps: the device's or, when it kept none and the activity is at least two kilometres
   long, each kilometre (each mile from two miles, on a device set to miles). Choose one to see it
   on the map and on the chart.
