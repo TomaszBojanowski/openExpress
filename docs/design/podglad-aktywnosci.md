@@ -641,9 +641,10 @@ when both do not fit.
     none below zone 1, which is no zone (a walk's chart stays mostly bare, as its time is);
     above the top bound in the colour of zone 5, as its time.
   - The names: right of the plot, each band within the axis named ("Zone 1"), level with the
-    middle of its band and moved apart when two would touch, after a square of the band's own
-    colour (the zone's colour as faint, on the same background) with an edge as strong as the
-    name, so that names moved apart still show which band is whose. In the band itself a name
+    middle of its band and moved apart when two would touch, after a square of its zone's
+    colour at full strength (as on the bar of the zones' shares) with an edge as strong as the
+    name, so that names moved apart still show which band is whose; the band's own faint colour
+    in a square of a few pixels read as the background, an empty frame. In the band itself a name
     would be crossed by the line or the grid, and a band lower than a line of text would have
     none. Only a chart that draws bands has that margin, its width that of the widest name in
     the window's language; elevation and pace have the whole width. The names narrowing the
