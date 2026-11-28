@@ -187,7 +187,8 @@ def test_the_totals():
     (149_000, 0.0, ("climbed", "everest", 16.8)),
     (139.5, 0.0, ("climbed", "statue-of-liberty", 1.5)),
     (103, 0.0, ("climbed", "statue-of-liberty", 1.1)),  # the smallest: 1.1 times is enough
-    (102, 50_000.0, ("distance", "marathon", 1.1)),  # below 1.1 statues: the distance; 1.185
+    # 102 m is below 1.1 Statues of Liberty, so the distance: 50 km is 1.185 marathons, shown 1.1
+    (102, 50_000.0, ("distance", "marathon", 1.1)),
     (0, 63_292.5, ("distance", "marathon", 1.5)),
     (0, 123_000.0, ("distance", "panama-canal", 1.5)),
     (0, 122_900.0, ("distance", "marathon", 2.9)),  # the Panama Canal 1.49 times: not it

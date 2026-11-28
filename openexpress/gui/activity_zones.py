@@ -42,7 +42,7 @@ ZONE_COLOURS = (GREY, BLUE, GREEN, "#bd8100", "#e66100", "#f0384a")
 BAR_HEIGHT = 8
 SHARES_HEIGHT = 12  # pixels of the bar of every zone's share
 GAP = 2  # pixels between two zones on it
-DOT = 8  # pixels of a zone's dot in the legend
+DOT = 8  # pixels of a zone's dot in the legend (and of its square beside its name on the chart)
 # The header of a section, placed as libadwaita's group (1.10) places its own.
 HEADER_GAP = 12  # pixels at least between a title or its description and the words beside it
 LABELS_SPACING = 6  # pixels between the title, its description and the words under them

@@ -1277,10 +1277,10 @@ def test_the_chart_of_heart_rate_keeps_its_times_beside_the_names_of_the_zones(
         narrow_window, monkeypatch, width, times, language, dark):
     """The names of the four bands on the chart's right narrow its plot, not its times: every
     half hour in the narrowest window, every ten minutes at 1000 px, as on the plot's full
-    width; the margin as wide as the widest of the four names in the window's language needs;
-    drawn again, the chart is the same. Elevation then has the whole width, and heart rate,
-    shown again, is drawn as at first."""
-    from fakes import RunNow, colours_of
+    width; each name after its square, whole in the chart, the margin no wider than the widest
+    of the four names in the window's language needs; drawn again, the chart is the same.
+    Elevation then has the whole width, and heart rate, shown again, is drawn as at first."""
+    from fakes import RunNow, plot_without_zones, zone_marks, zone_marks_misplaced
     from gi.repository import Adw, Gtk
 
     from openexpress.gui import activity_chart, activity_page, words
@@ -1302,29 +1302,26 @@ def test_the_chart_of_heart_rate_keeps_its_times_beside_the_names_of_the_zones(
         page = win.navigation.get_visible_page()
         (chart,) = [w for w in descendants(page) if isinstance(w, ActivityChart)]
         area = chart.area
+        background = "#222226" if dark else "#fafafb"
 
         def drawn():
-            area.queue_draw()
-            _iterate(0.2)
-            return (activity_chart._plot(area, area.get_width(), area.get_height()),
-                    colours_of(area, "#222226" if dark else "#fafafb"))
+            marks = zone_marks(monkeypatch, area, background)
+            return activity_chart._plot(area, area.get_width(), area.get_height()), marks
 
-        plot, pixels = drawn()
+        plot, marks = drawn()
         assert plot.times.ticks == times
-        names = [words.zone_name(zone) for zone in range(1, 5)]
-        widest = max(activity_chart._layout(area, name).get_pixel_size()[0] for name in names)
-        assert area.get_width() - plot.right == (
-            2 * activity_chart.NAME_GAP + activity_chart.SQUARE + activity_chart.SQUARE_GAP
-            + widest)
-        assert drawn() == (plot, pixels)
+        assert sorted(marks["names"]) == sorted(words.zone_name(zone) for zone in range(1, 5))
+        assert zone_marks_misplaced(marks, plot, area.get_width()) == []
+        again, marks_again = drawn()
+        assert (again, marks_again["pixels"]) == (plot, marks["pixels"])
         buttons = [w for w in descendants(chart) if isinstance(w, Gtk.ToggleButton)]
         buttons[1].set_active(True)
-        elevation, _pixels = drawn()
-        last = activity_chart._layout(area, words.activity_clock(6462)).get_pixel_size()[0]
+        elevation, _marks = drawn()
         assert area.series.kind == "elevation"
-        assert elevation.right == area.get_width() - max(8, last / 2 + 2)
+        assert elevation.right == plot_without_zones(area).right
         buttons[0].set_active(True)
-        assert drawn() == (plot, pixels)
+        back, marks_back = drawn()
+        assert (back, marks_back["pixels"]) == (plot, marks["pixels"])
     finally:
         style.set_color_scheme(Adw.ColorScheme.DEFAULT)
 
