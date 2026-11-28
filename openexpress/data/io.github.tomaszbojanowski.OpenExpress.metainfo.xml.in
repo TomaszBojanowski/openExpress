@@ -105,6 +105,34 @@
   </supports>
   <content_rating type="oars-1.1"/>
   <releases>
+    <release version="0.14.0" date="2026-11-28">
+      <description translate="no">
+        <p>An activity journal, the Activities page of what is new, and a new look for the page of each activity.</p>
+        <ul>
+          <li><em>Activity journal.</em> openExpress can keep a summary and the shape of each activity on this computer,
+          so that these are still there after the device deletes its old files. It is optional: the Activities page
+          asks once, and until you answer, or after “Not Now”, nothing is read or written for it. The journal keeps the
+          shape of a track without its place and sends nothing anywhere. You can turn it off or delete it in
+          Preferences, or with <code>openexpress setup --activity-journal off</code> and
+          <code>openexpress activities journal --delete --apply</code>. When you are signed in, a device registered to
+          another Garmin Connect account gets no journal; signed out, or when the account's devices cannot be read,
+          openExpress cannot tell whose a device is and keeps one.</li>
+          <li><em>What is new.</em> With the journal kept, the Activities page shows what is new since the device's last
+          connection: how many activities, their distance, time and ascent, a tile for each of the newest six, and
+          marks those that this computer's syncs know to be in Garmin Connect. Show All opens the list as it was.</li>
+          <li><em>The page of an activity.</em> Every activity's page has a new look: its numbers on top, then its map,
+          elevation and heart rate zones, then the chart, laps, training effect and details, in the units the device
+          shows (kilometres or miles, metres or feet). The chart of heart rate names the bands of the zones, and when
+          the whole time was below zone 1, one sentence says so.</li>
+          <li><em>Without its file.</em> When the file of an activity is no longer on the device or in its backups, its
+          tile opens what the journal kept: its numbers, the shape of its track, its elevation profile and the share of
+          each heart rate zone.</li>
+          <li><em>Translations.</em> 107 new texts. Polish has all 2153; Czech 2056, French 2043 and German 1843 of them
+          are translated, and the rest shows in English.</li>
+        </ul>
+        <p>Thanks to prajzner for the Czech translation.</p>
+      </description>
+    </release>
     <release version="0.13.3" date="2026-11-25">
       <description translate="no">
         <p>A maintenance release: the Maps page and the command line say more exactly what is on the device.</p>
