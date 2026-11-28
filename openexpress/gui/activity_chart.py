@@ -6,7 +6,7 @@ smoothed over about 30 s of moving and drawn with the faster on top, its axis fr
 most of the moving records (a value beyond it drawn at its edge); the points are brought down
 to two a pixel column without losing a peak; the axes have round values. Heart rate has the
 bands of the heart rate zones 1-5 behind it, in their colours (gui/activity_zones.py), and on
-its right the name of each band within its axis after a square of the band's colour, level
+its right the name of each band within its axis after a square of its zone's colour, level
 with the band, faint (drawn only: the screen reader has the chart's name and the value at its
 cursor); only then has the chart that margin, and its times keep the step of its full width
 while they fit. A click, a drag or the keys place a cursor, its value said beside the switch.
@@ -66,7 +66,7 @@ ZONE_SHADE = 0.13  # the strength of the zones' colours behind the line of heart
 TEXT_SHADE = 0.7  # the strength of the text's colour of the axes' values and times
 NAME_SHADE = 0.55  # and of the names of the zones' bands (their squares' edges too): fainter
 NAME_GAP = 6  # pixels between the plot and a zone's square, and after its name
-SQUARE = 8  # pixels of the square of a band's colour before its zone's name
+SQUARE = 8  # pixels of the square of a zone's colour before its name
 SQUARE_GAP = 4  # pixels between the square and the name
 TIME_GAP = 24  # pixels between two times under the plot, as its step is chosen…
 LEAST_TIME_GAP = 12  # …and at least, for the full width's step to stay beside the zones' names
@@ -611,10 +611,11 @@ def _zone_names(plot: Plot, bands, text_height: float) -> list[tuple[int, int]]:
 
 
 def _zone_square(cr, zone: int, left: int, top: int, fg) -> None:
-    """The square before the name of a zone: inside, the colour of its band (the zone's colour
-    as faint, on the same background); its edge as strong as the name."""
+    """The square before the name of a zone: inside, its zone's colour at full strength (as on
+    the bar of the zones' shares; the band's own faint colour, a few pixels across, reads as
+    the background); its edge as strong as the name."""
     color = rgba(ZONE_COLOURS[zone])
-    cr.set_source_rgba(color.red, color.green, color.blue, ZONE_SHADE)
+    cr.set_source_rgba(color.red, color.green, color.blue, 1)
     cr.rectangle(left, top, SQUARE, SQUARE)
     cr.fill()
     cr.set_source_rgba(fg.red, fg.green, fg.blue, NAME_SHADE)

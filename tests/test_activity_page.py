@@ -2469,27 +2469,36 @@ def test_the_names_are_beside_the_plot_and_the_times_under_it(monkeypatch):
 
 
 @pytest.mark.parametrize("dark", [False, True])
-def test_the_square_of_a_name_is_its_band_s_colour_with_an_edge_seen_in_either_style(
+def test_the_square_of_a_name_is_its_zone_s_colour_with_an_edge_seen_in_either_style(
         monkeypatch, dark):
-    """Inside each square, the colour its band has where nothing else is drawn on it; the
-    square's edge stands out 3:1 from the window's background."""
-    import collections
+    """Inside each square its zone's colour at full strength (that of the bar of the zones'
+    shares), standing out 3:1 from the window's background, so that the zones are told apart
+    by it: the squares of two zones next to each other differ. The square's edge stands out
+    3:1 too."""
+    import itertools
+
+    from openexpress.gui import words
+    from openexpress.gui.activity_zones import ZONE_COLOURS
 
     found = zone_names_drawn(monkeypatch, zoned(a_run_in_waves(), times=(0, 600, 1800, 1200,
                                                                           0, 0)), dark=dark)
-    plot, pixels = found["plot"], found["pixels"]
-    tall = [said for said, (upper, lower) in found["bands"].items() if lower - upper >= 8]
-    assert len(tall) >= 4 and set(found["squares"]) == set(found["bands"])
-    for said in tall:
+    pixels = found["pixels"]
+    assert len(found["squares"]) >= 4 and set(found["squares"]) == set(found["bands"])
+    insides = []
+    for zone in range(1, 6):
+        said = words.zone_name(zone)
+        if said not in found["squares"]:
+            continue
         left, top, right, bottom = found["squares"][said]
-        upper, lower = found["bands"][said]
-        band = collections.Counter(
-            pixels[y][x] for y in range(round(upper) + 2, round(lower) - 2)
-            for x in range(round(plot.left) + 2, round(plot.right) - 2)).most_common(1)[0][0]
         inside = pixels[(top + bottom) // 2][(left + right) // 2]
-        assert all(abs(a - b) <= 1 for a, b in zip(inside, band, strict=True)), said
+        assert contrast(hex_of(inside), found["background"]) >= 3, said
+        assert all(abs(a - int(ZONE_COLOURS[zone][k:k + 2], 16)) <= 1
+                   for a, k in zip(inside, (1, 3, 5), strict=True)), said
         edge = pixels[top][(left + right) // 2]
         assert contrast(hex_of(edge), found["background"]) >= 3, said
+        insides.append(inside)
+    assert all(max(abs(a - b) for a, b in zip(one, next_one, strict=True)) >= 40
+               for one, next_one in itertools.pairwise(insides))
 
 
 def test_the_names_of_the_bands_in_polish_and_the_margin_as_they_need(monkeypatch):
