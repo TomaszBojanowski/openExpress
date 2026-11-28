@@ -1398,7 +1398,6 @@ def test_the_numbers_of_an_activity_are_seen_without_scrolling(narrow_window, mo
     (and the line of where the page comes from), the whole of it seen before the page is
     scrolled; the map, or the journal's shape, under it."""
     from fakes import RunNow
-    from gi.repository import Gtk
 
     from openexpress.gui import activity_map, activity_overview, activity_page
 
@@ -1416,10 +1415,10 @@ def test_the_numbers_of_an_activity_are_seen_without_scrolling(narrow_window, mo
         activity_page.open_activity(win, read)
     else:
         activity_page.open_from_journal(win, _journal_line())
-    _iterate(0.3)
     page = win.navigation.get_visible_page()
-    (scrolled,) = [w for w in descendants(page) if isinstance(w, Gtk.ScrolledWindow)
-                   and w.get_mapped()]
+    _crossfaded(page)
+    _iterate(0.1)
+    scrolled = _page_scroll(page)
     (card,) = [w for w in descendants(page) if isinstance(w, activity_overview.NumbersCard)]
     below = activity_map.ActivityMap if kind == "file" else activity_overview.ShapeCard
     (under,) = [w for w in descendants(page) if isinstance(w, below)]
@@ -1428,6 +1427,63 @@ def test_the_numbers_of_an_activity_are_seen_without_scrolling(narrow_window, mo
     _found, seen = card.compute_bounds(scrolled)
     assert seen.get_y() >= 0
     assert seen.get_y() + seen.get_height() <= scrolled.get_height()
+
+
+def _page_stack(page):
+    """The stack of an activity's page: its spinner, its content, its message."""
+    from gi.repository import Gtk
+
+    (stack,) = [w for w in descendants(page) if isinstance(w, Gtk.Stack)]
+    return stack
+
+
+def _page_scroll(page):
+    """The scrolled window of an activity's page: its stack's child "content" (while the stack
+    crossfades from the spinner, the spinner's status page is mapped too, with a scrolled
+    window of its own)."""
+    return _page_stack(page).get_child_by_name("content")
+
+
+def _crossfaded(page) -> None:
+    """The stack of an activity's page done with its crossfade (200 ms, longer on a loaded
+    machine), however long it takes."""
+    from fakes import turn_until
+
+    stack = _page_stack(page)
+    assert turn_until(lambda: not stack.get_transition_running())
+
+
+def test_the_scroll_of_an_activity_s_page_while_its_spinner_fades(narrow_window, monkeypatch):
+    """While the page's stack crossfades from its spinner to its content, two scrolled windows
+    are mapped (the spinner's status page has one of its own): the page's is its content's.
+    The crossfade made long, so that it is under way whatever the machine's load."""
+    from fakes import RunNow
+    from gi.repository import Gtk
+
+    from openexpress.gui import activity_map, activity_page
+
+    win = narrow_window("en", width=NARROWEST)
+    _fill(win, "activities")
+    win.navigation.set_animate_transitions(False)
+    win.navigation.push(win.device_view)
+    win.select_section("activities")
+    activity_map.set_tiles(False)
+    read, data = _long_hike()
+    monkeypatch.setattr(activity_page, "_data", lambda found, activity: data)
+    win.run_task = RunNow()
+    activity_page.open_activity(win, read)
+    page = win.navigation.get_visible_page()
+    (stack,) = [w for w in descendants(page) if isinstance(w, Gtk.Stack)]
+    stack.set_transition_duration(0)
+    stack.set_visible_child_name("loading")
+    _iterate(0.1)
+    stack.set_transition_duration(60_000)
+    stack.set_visible_child_name("content")
+    _iterate(0.1)
+    assert stack.get_transition_running()
+    assert len([w for w in descendants(page) if isinstance(w, Gtk.ScrolledWindow)
+                and w.get_mapped()]) == 2
+    assert _page_scroll(page) is stack.get_child_by_name("content")
 
 
 def _open_long_hike(narrow_window, monkeypatch, language, width):

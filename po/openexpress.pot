@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 21:39+0100\n"
+"POT-Creation-Date: 2026-11-27 22:37+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -5981,15 +5981,16 @@ msgstr ""
 msgid "Keep an Activity Journal?"
 msgstr ""
 
-#. TRANSLATORS: text of the card about the activity journal; "your weeks and your year":
-#. what the Activities page will show of them
+#. TRANSLATORS: text of the card about the activity journal; "the device's last connection":
+#. the one before the device is plugged in now
 #: openexpress/gui/activities_journal.py
 #, python-brace-format
 msgid ""
 "openExpress can keep a summary and the shape of each activity on this "
-"computer, so that the Activities page shows your weeks and your year even "
-"after the device deletes old files. Nothing is sent anywhere. You can turn "
-"it off or delete it in Preferences."
+"computer, so that the Activities page shows what is new since the device's "
+"last connection and keeps your activities after the device deletes old "
+"files. Nothing is sent anywhere. You can turn it off or delete it in "
+"Preferences."
 msgstr ""
 
 #. TRANSLATORS: button of the card about the activity journal: the no
@@ -6008,7 +6009,7 @@ msgstr ""
 #. activity journal, beside the button Preferences
 #: openexpress/gui/activities_journal.py
 #, python-brace-format
-msgid "An activity journal shows your weeks and your year"
+msgid "An activity journal shows what is new since the last connection"
 msgstr ""
 
 #. TRANSLATORS: line at the very bottom of the Activities page of a device on another

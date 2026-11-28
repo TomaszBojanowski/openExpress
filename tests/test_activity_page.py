@@ -356,6 +356,21 @@ def test_the_page_of_a_file_from_its_heading_down(monkeypatch):
                                     f"105{NB}bpm average{NB}· 120{NB}bpm highest")
 
 
+@pytest.mark.journal_answer
+def test_after_an_update_from_before_the_journal_an_activity_s_page_has_its_new_look(monkeypatch):
+    """No answer about the activity journal yet (settings.json as the release before the journal
+    left it): the page of an activity is in its new look all the same, from its heading down."""
+    from fakes import settings_before_the_journal
+
+    from openexpress import activity_journal
+
+    settings_before_the_journal()
+    assert activity_journal.answered() is None
+    _win, page = page_of(monkeypatch, walk_on_top())
+    assert modules(page) == ["heading", "numbers", "map", "elevation", "heart rate", "chart",
+                             "laps", "effect", "details"]
+
+
 def test_the_share_of_each_zone_on_a_bar_and_the_rows_of_the_zones_under_it(monkeypatch):
     """On top of the section of the heart rate: one bar of the zones' shares in their colours,
     zone 1 first; the rows of the zones right under it, which say each zone, its colour and
