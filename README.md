@@ -132,6 +132,7 @@ command line call it a direct USB connection; in the Flatpak it needs the USB pe
 | Venu 2S | MTP | [#60](https://github.com/TomaszBojanowski/openExpress/issues/60) (read-only: another account) |
 | Venu X1 | MTP | [#70](https://github.com/TomaszBojanowski/openExpress/issues/70) |
 | Forerunner 970 | MTP | [#72](https://github.com/TomaszBojanowski/openExpress/issues/72) |
+| Forerunner 955 | MTP | [#86](https://github.com/TomaszBojanowski/openExpress/issues/86) |
 | vívoactive 5 | MTP | [#73](https://github.com/TomaszBojanowski/openExpress/issues/73) (another account: sync and Connect IQ apps not tried) |
 | inReach Mini 2 | USB drive | [#11](https://github.com/TomaszBojanowski/openExpress/issues/11) |
 | Forerunner 55 | USB drive | [#19](https://github.com/TomaszBojanowski/openExpress/issues/19) |
