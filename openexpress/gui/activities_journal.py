@@ -115,8 +115,8 @@ def card(win, sec) -> None:
 
 def line(win, sec) -> None:
     """The line at the very bottom of the Activities page: after a no, that a journal shows
-    the weeks and the year, with the way to the preferences; after the yes, for a device on
-    another Garmin Connect account, that it gets none."""
+    what is new since the last connection, with the way to the preferences; after the yes, for
+    a device on another Garmin Connect account, that it gets none."""
     win.activities_note = None
     said = activity_journal.answered()
     if said is False:

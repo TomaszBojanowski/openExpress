@@ -1,6 +1,6 @@
 """The activity journal: what this computer keeps of each activity of a device, so that the
-Activities page can show weeks and a year even after the device deleted the files (an Edge 1050
-keeps about 200 activities and deletes the oldest).
+Activities page can show what is new since the device's last connection, and an activity whose
+file the device deleted (a device deletes its oldest files itself).
 One file a device, activities.jsonl in its folder of the program's data (0600), JSON Lines:
 - a line for each activity: its file's name and size (not read again), when it was written,
   where it came from (the device or a backup), the start, the time zone, the sport, the totals,

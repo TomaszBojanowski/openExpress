@@ -609,7 +609,8 @@ def upload_state_text(state: str) -> str:
     """The upload state of a tile: "uploaded" (the sync's record has the file), "waiting"
     (kept to upload again)."""
     if state == "uploaded":
-        # TRANSLATORS: on the tile of an activity: openExpress uploaded it to Garmin Connect
+        # TRANSLATORS: on the tile of an activity: Garmin Connect has this activity, as far as
+        # this computer's syncs know
         return pgettext("upload state", "Uploaded")
     # TRANSLATORS: on the tile of an activity: its upload to Garmin Connect failed and is tried
     # again at the next sync

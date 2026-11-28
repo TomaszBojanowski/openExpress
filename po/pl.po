@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 22:37+0100\n"
+"POT-Creation-Date: 2026-11-28 00:11+0100\n"
 "PO-Revision-Date: 2026-10-11 02:36+0200\n"
 "Last-Translator: Tomasz Bojanowski\n"
 "Language-Team: none\n"
@@ -6629,7 +6629,12 @@ msgid ""
 "last connection and keeps your activities after the device deletes old "
 "files. Nothing is sent anywhere. You can turn it off or delete it in "
 "Preferences."
-msgstr "openExpress może przechowywać na tym komputerze podsumowanie i kształt każdej aktywności, aby strona Aktywności pokazywała, co nowego od ostatniego podłączenia urządzenia, i zachowywała Twoje aktywności po usunięciu starych plików przez urządzenie. Nic nie jest nigdzie wysyłane. Dziennik możesz wyłączyć albo usunąć w Preferencjach."
+msgstr ""
+"openExpress może przechowywać na tym komputerze podsumowanie i kształt "
+"każdej aktywności, aby strona Aktywności pokazywała, co nowego od ostatniego "
+"podłączenia urządzenia, i zachowywała Twoje aktywności po usunięciu starych "
+"plików przez urządzenie. Nic nie jest nigdzie wysyłane. Dziennik możesz "
+"wyłączyć albo usunąć w Preferencjach."
 
 #. TRANSLATORS: button of the card about the activity journal: the no
 #: openexpress/gui/activities_journal.py
@@ -11550,7 +11555,8 @@ msgstr[0] "{count} wcześniejsza aktywność na tym urządzeniu"
 msgstr[1] "{count} wcześniejsze aktywności na tym urządzeniu"
 msgstr[2] "{count} wcześniejszych aktywności na tym urządzeniu"
 
-#. TRANSLATORS: on the tile of an activity: openExpress uploaded it to Garmin Connect
+#. TRANSLATORS: on the tile of an activity: Garmin Connect has this activity, as far as
+#. this computer's syncs know
 #: openexpress/gui/words.py
 #, python-brace-format
 msgctxt "upload state"

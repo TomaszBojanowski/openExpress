@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: openexpress 0.13.3\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-11-27 22:37+0100\n"
+"POT-Creation-Date: 2026-11-28 00:11+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -10572,7 +10572,8 @@ msgid_plural "{count} earlier activities on this device"
 msgstr[0] ""
 msgstr[1] ""
 
-#. TRANSLATORS: on the tile of an activity: openExpress uploaded it to Garmin Connect
+#. TRANSLATORS: on the tile of an activity: Garmin Connect has this activity, as far as
+#. this computer's syncs know
 #: openexpress/gui/words.py
 #, python-brace-format
 msgctxt "upload state"
