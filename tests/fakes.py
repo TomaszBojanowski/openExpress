@@ -1462,6 +1462,88 @@ def colours_of(widget, background="black"):
             for y in range(height)]
 
 
+# WCAG 2.1, 1.4.11: a mark that is not text (a line, a square, a bar) against what is next to it.
+NON_TEXT_CONTRAST = 3.0
+# The same with a twentieth more: the zones' own colours on the light card and the dark one, so
+# that a small change of the cards' shade does not bring a zone under the limit.
+NON_TEXT_CONTRAST_WITH_MARGIN = 3.15
+
+
+def zone_marks(monkeypatch, area, background: str) -> dict:
+    """What the chart `area` (gui/activity_chart.py) draws beside its bands of the zones, drawn
+    once more: the box (left, top, right, bottom) of each zone's name, from where it is drawn and
+    how wide its text is, and of its square, from where it is drawn to where its pixels end on
+    `background`; the chart's pixels on it (`colours_of`) and every text drawn with its box."""
+    from openexpress.gui import activity_chart, words
+
+    drawn, corners = [], {}
+    real_text, real_square = activity_chart._text, activity_chart._zone_square
+
+    def text(area_, cr, said, x, y, align, *rest, **named):
+        drawn.append((said, x, y, align))
+        real_text(area_, cr, said, x, y, align, *rest, **named)
+
+    def square(cr, zone, left, top, fg):
+        corners[words.zone_name(zone)] = (left, top)
+        real_square(cr, zone, left, top, fg)
+
+    monkeypatch.setattr(activity_chart, "_text", text)
+    monkeypatch.setattr(activity_chart, "_zone_square", square)
+    area.queue_draw()
+    iterate(0.2)
+    pixels = colours_of(area, background)
+    tall = activity_chart._layout(area, "0").get_pixel_size()[1]
+    texts = {}
+    for said, x, y, align in drawn:
+        wide = activity_chart._layout(area, said).get_pixel_size()[0]
+        texts[said] = (x - wide * align, y, x - wide * align + wide, y + tall)
+    under = tuple(int(background[i:i + 2], 16) for i in (1, 3, 5))
+    squares = {}
+    for name, (left, top) in corners.items():
+        right, bottom = left, top
+        while right < len(pixels[0]) and pixels[top][right] != under:
+            right += 1
+        while bottom < len(pixels) and pixels[bottom][left] != under:
+            bottom += 1
+        squares[name] = (left, top, right, bottom)
+    names = {name: texts[name] for name in corners if name in texts}
+    return {"names": names, "squares": squares, "pixels": pixels, "texts": texts, "tall": tall}
+
+
+def zone_marks_misplaced(marks: dict, plot, width: int) -> list[str]:
+    """The zones whose square or name is not where the chart's margin wants them: the square right
+    of the plot, before its name and level with its line; the name whole within the chart, ending
+    as far from the chart's edge as the squares stand from the plot; the widest name exactly
+    that far (the margin leaves no room empty)."""
+    wrong = []
+    names, squares = marks["names"], marks["squares"]
+    if not names:
+        return wrong
+    gap = min(left for left, *_rest in squares.values()) - plot.right
+    for said, (left, top, right, bottom) in names.items():
+        square_left, square_top, square_right, square_bottom = squares.get(said, (0, 0, 0, 0))
+        if not (gap > 0 and square_left - plot.right == gap and square_right > square_left
+                and square_bottom > square_top and square_right < left
+                and abs((square_top + square_bottom) / 2 - (top + bottom) / 2) <= 1
+                and plot.top <= top and bottom <= plot.bottom and width - right >= gap):
+            wrong.append(said)
+    if max(right for *_rest, right, _bottom in names.values()) != width - gap:
+        wrong.append("(the margin's room)")
+    return wrong
+
+
+def plot_without_zones(area):
+    """Where the chart `area` would put its plot without the bounds of the zones (no bands, no
+    names): the whole width its axes leave."""
+    from openexpress.gui import activity_chart
+
+    zones, area.zones = area.zones, None
+    try:
+        return activity_chart._plot(area, area.get_width(), area.get_height())
+    finally:
+        area.zones = zones
+
+
 def contrast(a: str, b: str) -> float:
     """The contrast ratio of two colours "#rrggbb" (WCAG 2): 1 to 21."""
     high, low = sorted((luminance(a), luminance(b)), reverse=True)

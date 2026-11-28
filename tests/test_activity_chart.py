@@ -194,16 +194,19 @@ def test_the_time_axis_runs_from_the_start_to_the_end():
 @pytest.mark.parametrize(("full", "duration"), [(283.5, 6462), (745.5, 6462), (200, 4790),
                                                 (900, 100), (60, 3600)])
 def test_a_plot_as_wide_as_its_times_has_the_step_its_width_holds(full, duration):
-    """No names of the zones beside it: as many times as the width holds, 24 px between two
+    """No names of the zones beside it: as many times as the width holds, TIME_GAP between two
     of the widest (43 px)."""
     a = chart()._time_axis(duration, full, full, 43)
-    assert a == chart().time_axis(duration, max(2, int(full // (43 + 24))))
+    assert a == chart().time_axis(duration, max(2, int(full // (43 + chart().TIME_GAP))))
 
 
 def test_the_names_of_the_zones_narrowing_the_plot_keep_its_step_while_it_fits():
     """A run of 1:47:42 whose times are 43 px wide at most: the step of the width without the
     names (30:00 in 283.5 px, 10:00 in 745.5 px) stays on the plot they narrow (to 241 px, to
-    703 px), its times 22 to 24 px apart there; not a step coarser."""
+    703 px), its times 22 to 24 px apart there; not a step coarser. The widths (283.5, 241,
+    745.5, 703) and the widest time (43) were measured on that run's chart in the window (360 px
+    and 1000 px, in English): cases of the function, not the requirement, which
+    test_narrow_window checks in the window itself."""
     assert chart()._time_axis(6462, 283.5, 241, 43).ticks == (0, 1800, 3600, 5400)
     assert chart()._time_axis(6462, 745.5, 703, 43).step == 600
 
