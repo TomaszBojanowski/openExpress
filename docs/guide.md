@@ -511,10 +511,14 @@ A tile or a row (a click, or Enter) opens the page of the activity, read from it
   a distance: its time, calories, rest time and ascent. Each only when the file gives it.
 - An activity with positions has a map of its track, its start and finish marked, the track
   coloured by what the chart shows: from blue (low, or a slow pace) to red (high, or a fast
-  pace), with the legend and the **Colours** switch under the map. Streets and terrain come from
-  OpenStreetMap only once you turn them on, with **Show the Map** or in Preferences → **Activity
-  Maps** ([Activity maps from OpenStreetMap](privacy.md#activity-maps-from-openstreetmap)); until
-  then the track is drawn on a plain grid. Ctrl + scroll or the buttons on the map zoom it.
+  pace), with the legend and the **Colours** switch under the map. The colours cover the middle
+  of the activity's range. The lowest and the highest twentieth of the values take the colour of
+  the nearer end, so that one spike does not wash out the rest. The legend shows the two values
+  between which the colours change, so they can differ from the lowest and highest values given
+  elsewhere on the page. Streets and terrain come from OpenStreetMap only once you turn them on,
+  with **Show the Map** or in Preferences → **Activity Maps**
+  ([Activity maps from OpenStreetMap](privacy.md#activity-maps-from-openstreetmap)); until then
+  the track is drawn on a plain grid. Ctrl + scroll or the buttons on the map zoom it.
 - Its elevation: the lowest and the highest point, and its profile along the distance.
 - Its heart rate: the average and the highest, and the zones as the device worked them out, a bar
   of the share of each and a row for each with its bounds, time and share. When the whole time

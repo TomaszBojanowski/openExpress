@@ -436,7 +436,10 @@ when both do not fit.
     of that end, without a value grey `#8a898e`; a series of one value is the middle. The
     series is the chart's: another chosen there, the track and the legend follow.
   - The legend is under the map, before the note of the tiles: "Track colour: heart rate", the
-    two ends with their unit around the scale, and the switch "Colours".
+    two ends with their unit around the scale, and the switch "Colours". The guide
+    (`docs/guide.md`, "The page of an activity") explains the ends: the lowest and the highest
+    twentieth of the values take the colour of the nearer end, so the legend's two values can
+    differ from the lowest and highest values given elsewhere on the page.
   - The pieces: each stretch between two points is in the colour of the point it starts at.
     Each piece of one colour ends flat where the next one begins, and starts a pixel back along
     the stretch before, so that its round join fills a bend and no gap opens there; a round end
